@@ -6,6 +6,7 @@
   --text: #e7edff;
   --muted: #8995b8;
   --accent: #8cb4ff;
+  --good: #9be7b0;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
@@ -35,23 +36,39 @@ h1 { margin: 8px 0 0; font: 700 clamp(34px, 6vw, 68px)/.98 system-ui, sans-serif
 .join-row { display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px; }
 button { border: 1px solid rgba(140,180,255,.45); background: #111a31; color: var(--text); padding: 12px 14px; cursor: pointer; }
 button:hover:not(:disabled) { border-color: var(--accent); background: #162241; }
-button:disabled { opacity: .45; cursor: wait; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.active { border-color: var(--accent); background: #1b2a4d; color: #fff; }
 .message { color: var(--muted); line-height: 1.5; min-height: 42px; margin: 16px 0 0; font-size: 12px; }
 .room-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 .room-heading .section-label { margin: 0 0 7px; }
 #activeRoomCode { font-size: 28px; letter-spacing: .16em; }
-#roomCount { color: var(--muted); font-size: 12px; }
+.room-meta { display: grid; justify-items: end; gap: 6px; color: var(--muted); font-size: 11px; }
+#roomStatus { color: var(--accent); }
 .player-list { display: grid; gap: 7px; margin-top: 14px; }
-.player-row { display: grid; grid-template-columns: 34px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid rgba(155,184,255,.12); background: rgba(4,8,16,.45); }
-.player-index, .player-team, .player-host { color: var(--muted); font-size: 11px; }
+.player-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid rgba(155,184,255,.12); background: rgba(4,8,16,.45); }
+.player-row.current-player { border-color: rgba(140,180,255,.45); }
+.player-index, .player-team, .player-host, .player-ready { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .player-host { color: var(--accent); }
+.player-ready.is-ready { color: var(--good); }
 .empty-room { color: var(--muted); padding: 28px 0; text-align: center; }
+.room-controls { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.room-controls[hidden] { display: none; }
+.control-group { display: grid; gap: 8px; }
+.control-label { color: var(--muted); font-size: 10px; letter-spacing: .1em; }
+.button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ready-button.active { border-color: rgba(155,231,176,.65); color: var(--good); }
+.start-button { border-color: rgba(140,180,255,.75); font-weight: 800; letter-spacing: .08em; }
+.lobby-hint { margin: 2px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .game-frame { position: relative; border: 1px solid var(--line); background: #03050a; overflow: hidden; }
 #gameCanvas { display: block; width: 100%; height: auto; aspect-ratio: 16/9; }
 .overlay { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
 .overlay p { margin: 0; color: var(--text); letter-spacing: .16em; font-weight: 800; }
 .overlay span { margin-top: 8px; color: var(--muted); font-size: 12px; }
 footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; color: var(--muted); font-size: 11px; }
+@media (max-width: 850px) {
+  .player-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .player-ready, .player-host { grid-column: 3; }
+}
 @media (max-width: 700px) {
   .shell { width: min(100% - 18px, 1200px); padding-top: 24px; }
   .panel, .lobby-grid { grid-template-columns: 1fr; }
