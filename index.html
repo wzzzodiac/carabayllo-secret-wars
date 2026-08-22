@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070a12">
+  <meta name="description" content="Orbital Artillery — multiplayer artillery game project scaffold.">
+  <title>Orbital Artillery // Project Scaffold</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">ORBITAL ARTILLERY // PHASE 0</p>
+      <h1>Multiplayer artillery, under construction.</h1>
+      <p class="subtitle">Client scaffold for a future 2–8 player turn-based artillery game. Networking and gameplay come next.</p>
+    </header>
+
+    <section class="panel">
+      <div class="status-row">
+        <span>CLIENT</span>
+        <strong id="clientStatus">BOOTING</strong>
+      </div>
+      <div class="status-row">
+        <span>SERVER</span>
+        <strong id="serverStatus">NOT CONFIGURED</strong>
+      </div>
+      <div class="status-row">
+        <span>PHASE</span>
+        <strong>SCAFFOLD ONLY</strong>
+      </div>
+    </section>
+
+    <section class="game-frame" aria-label="Future game viewport">
+      <canvas id="gameCanvas" width="1600" height="900"></canvas>
+      <div class="overlay">
+        <p>ARENA PLACEHOLDER</p>
+        <span>Canvas 1600 × 900 internal coordinates</span>
+      </div>
+    </section>
+
+    <footer>
+      <span>NO ACCOUNTS // PRIVATE ROOMS // UP TO 8 PLAYERS</span>
+      <span>CLIENT SCAFFOLD</span>
+    </footer>
+  </main>
+
+  <script type="module" src="client.js"></script>
+</body>
+</html>
