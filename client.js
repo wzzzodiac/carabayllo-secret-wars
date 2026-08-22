@@ -49,6 +49,7 @@ function humanError(code) {
 function renderRoom(room) {
   currentRoom = room;
   ui.renderRoom(room, playerId);
+  renderer.drawArena(room, playerId);
 }
 
 async function ensureConnection() {
@@ -148,7 +149,7 @@ async function startGame() {
   const result = await request('start_game');
   if (!result.ok) return ui.setMessage(humanError(result.error));
   renderRoom(result.room);
-  ui.setMessage('Lobby locked successfully. Phase 2 arena comes next.');
+  ui.setMessage('Arena initialized. Compare this viewport with the other connected clients.');
 }
 
 ui.createRoomButton.addEventListener('click', createRoom);
@@ -163,7 +164,7 @@ ui.roomCode.addEventListener('input', () => {
 
 window.addEventListener('pagehide', () => socketBoundary.disconnect());
 
-console.info('Orbital Artillery Phase 1 lobby ready.', {
+console.info('Orbital Artillery Phase 2 arena sync ready.', {
   maxPlayers: CLIENT_CONFIG.maxPlayers,
   serverConfigured: socketBoundary.isConfigured,
   playerId
