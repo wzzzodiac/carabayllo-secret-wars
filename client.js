@@ -10,6 +10,7 @@ const socketBoundary = createSocketBoundary();
 
 let activeSocket = null;
 let playerId = null;
+let disconnectHandlerBound = false;
 
 renderer.drawScaffold();
 ui.setClientStatus('READY');
@@ -31,7 +32,8 @@ function humanError(code) {
     room_already_started: 'That room has already started.',
     server_room_capacity: 'The server has reached its temporary room limit.',
     room_action_rate_limited: 'Too many room requests. Wait a moment and try again.',
-    already_in_room: 'This tab is already inside a room.'
+    already_in_room: 'This tab is already inside a room.',
+    request_timeout: 'The server did not answer in time. Try again.'
   };
   return messages[code] || `Server rejected the request: ${code || 'unknown_error'}`;
 }
@@ -45,11 +47,14 @@ async function ensureConnection() {
     ui.setServerStatus('CONNECTED');
     activeSocket.off('room_state');
     activeSocket.on('room_state', room => ui.renderRoom(room));
-    activeSocket.off('disconnect');
-    activeSocket.on('disconnect', () => {
-      ui.setServerStatus('OFFLINE');
-      ui.setMessage('Connection closed. Reload or create/join again to reconnect.');
-    });
+    if (!disconnectHandlerBound) {
+      activeSocket.on('disconnect', () => {
+        disconnectHandlerBound = false;
+        ui.setServerStatus('OFFLINE');
+        ui.setMessage('Connection closed. Create or join again to reconnect.');
+      });
+      disconnectHandlerBound = true;
+    }
     return activeSocket;
   } catch (error) {
     ui.setServerStatus('ERROR');
