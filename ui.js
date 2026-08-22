@@ -18,6 +18,7 @@ export function createUI() {
   const lobbyHint = document.getElementById('lobbyHint');
   const arenaTitle = document.getElementById('arenaTitle');
   const arenaSubtitle = document.getElementById('arenaSubtitle');
+  const arenaOverlay = arenaTitle.closest('.overlay');
 
   function setBusy(busy) {
     createRoomButton.disabled = busy;
@@ -27,11 +28,12 @@ export function createUI() {
   function renderRoom(room, playerId) {
     activeRoomCode.textContent = room?.code ?? '----';
     roomCount.textContent = `${room?.players?.length ?? 0} / ${room?.maxPlayers ?? 8}`;
-    roomStatus.textContent = room?.status === 'started' ? 'LOCKED / STARTED' : 'LOBBY';
+    roomStatus.textContent = room?.status === 'started' ? 'ARENA ACTIVE' : 'LOBBY';
 
     if (!room?.players?.length) {
       playerList.innerHTML = '<div class="empty-room">No room joined yet.</div>';
       roomControls.hidden = true;
+      arenaOverlay.hidden = false;
       return;
     }
 
@@ -62,17 +64,20 @@ export function createUI() {
     startGameButton.disabled = locked;
 
     if (locked) {
-      lobbyHint.textContent = 'Lobby locked. Phase 2 arena implementation comes next.';
-      arenaTitle.textContent = 'MATCH LOCKED IN';
-      arenaSubtitle.textContent = 'Lobby validation passed — arena logic is the next milestone';
+      lobbyHint.textContent = 'Arena synchronized. Phase 2 verifies identical spawn state on every client.';
+      arenaTitle.textContent = 'SYNCHRONIZED ARENA';
+      arenaSubtitle.textContent = 'Server-assigned positions are now rendered below';
+      arenaOverlay.hidden = true;
     } else if (me.isHost) {
       lobbyHint.textContent = 'Host: wait until everyone is READY, then start the match.';
-      arenaTitle.textContent = 'ARENA PLACEHOLDER';
-      arenaSubtitle.textContent = 'Gameplay starts after the networking milestone';
+      arenaTitle.textContent = 'ARENA STANDBY';
+      arenaSubtitle.textContent = 'Start the match to receive server-assigned spawn positions';
+      arenaOverlay.hidden = false;
     } else {
       lobbyHint.textContent = 'Choose a team and mark yourself ready.';
-      arenaTitle.textContent = 'ARENA PLACEHOLDER';
-      arenaSubtitle.textContent = 'Gameplay starts after the networking milestone';
+      arenaTitle.textContent = 'ARENA STANDBY';
+      arenaSubtitle.textContent = 'Waiting for the host to start the match';
+      arenaOverlay.hidden = false;
     }
   }
 
