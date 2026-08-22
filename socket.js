@@ -17,33 +17,41 @@ export function createSocketBoundary() {
       return Boolean(socket?.connected);
     },
     async connect() {
-      if (!BACKEND_URL) {
-        throw new Error('Backend URL is not configured.');
-      }
-
+      if (!BACKEND_URL) throw new Error('Backend URL is not configured.');
       if (socket?.connected) return socket;
+      if (socketPromise) return socketPromise;
 
-      if (!socketPromise) {
-        socketPromise = loadSocketIO().then(io => {
-          socket = io(BACKEND_URL, {
-            autoConnect: false,
-            transports: ['websocket', 'polling'],
-            reconnection: true,
-            reconnectionAttempts: 3,
-            timeout: 8_000
-          });
-
-          socket.on('disconnect', () => {
-            socketPromise = null;
-          });
-
-          socket.connect();
-          return socket;
-        }).catch(error => {
-          socketPromise = null;
-          throw error;
+      socketPromise = loadSocketIO().then(io => new Promise((resolve, reject) => {
+        socket = io(BACKEND_URL, {
+          autoConnect: false,
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 3,
+          timeout: 8_000
         });
-      }
+
+        const onConnect = () => {
+          cleanup();
+          resolve(socket);
+        };
+        const onError = error => {
+          cleanup();
+          socketPromise = null;
+          reject(error);
+        };
+        const cleanup = () => {
+          socket.off('connect', onConnect);
+          socket.off('connect_error', onError);
+        };
+
+        socket.once('connect', onConnect);
+        socket.once('connect_error', onError);
+        socket.on('disconnect', () => { socketPromise = null; });
+        socket.connect();
+      })).catch(error => {
+        socketPromise = null;
+        throw error;
+      });
 
       return socketPromise;
     },
