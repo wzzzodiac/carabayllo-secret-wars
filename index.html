@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#070a12">
   <meta name="description" content="Orbital Artillery — multiplayer artillery game project.">
   <title>Orbital Artillery // Phase 1</title>
-  <link rel="stylesheet" href="style.css?v=phase1-1">
+  <link rel="stylesheet" href="style.css?v=phase1-lobby-2">
 </head>
 <body>
   <main class="shell">
@@ -27,7 +27,7 @@
       </div>
       <div class="status-row">
         <span>PHASE</span>
-        <strong>ROOM NETWORKING</strong>
+        <strong>LOBBY CONTROL</strong>
       </div>
     </section>
 
@@ -53,10 +53,27 @@
             <p class="section-label">PRIVATE ROOM</p>
             <strong id="activeRoomCode">----</strong>
           </div>
-          <span id="roomCount">0 / 8</span>
+          <div class="room-meta">
+            <span id="roomStatus">WAITING</span>
+            <span id="roomCount">0 / 8</span>
+          </div>
         </div>
+
         <div id="playerList" class="player-list">
           <div class="empty-room">No room joined yet.</div>
+        </div>
+
+        <div id="roomControls" class="room-controls" hidden>
+          <div class="control-group">
+            <span class="control-label">YOUR TEAM</span>
+            <div class="button-row">
+              <button id="teamAButton" type="button">TEAM A</button>
+              <button id="teamBButton" type="button">TEAM B</button>
+            </div>
+          </div>
+          <button id="readyButton" class="ready-button" type="button">READY</button>
+          <button id="startGameButton" class="start-button" type="button" hidden>START GAME</button>
+          <p id="lobbyHint" class="lobby-hint">Choose a team and mark yourself ready.</p>
         </div>
       </div>
     </section>
@@ -64,8 +81,8 @@
     <section class="game-frame" aria-label="Future game viewport">
       <canvas id="gameCanvas" width="1600" height="900"></canvas>
       <div class="overlay">
-        <p>ARENA PLACEHOLDER</p>
-        <span>Gameplay starts after the networking milestone</span>
+        <p id="arenaTitle">ARENA PLACEHOLDER</p>
+        <span id="arenaSubtitle">Gameplay starts after the networking milestone</span>
       </div>
     </section>
 
@@ -75,6 +92,6 @@
     </footer>
   </main>
 
-  <script type="module" src="client.js?v=phase1-1"></script>
+  <script type="module" src="client.js?v=phase1-lobby-2"></script>
 </body>
 </html>
