@@ -13,24 +13,28 @@ export function createRenderer(canvas, config) {
   let dragging = false;
   let dragStart = null;
 
-  const camera = {
-    centerX: 2500,
-    centerY: 2500,
-    viewUnits: 5,
-    targetCenterX: 2500,
-    targetCenterY: 2500,
-    targetViewUnits: 5,
-    manual: false,
-    transitionUntil: 0
-  };
-
   const MIN_VIEW_UNITS = 1;
   const MAX_VIEW_UNITS = 5;
   const WORLD_UNITS = 5;
+  const MATCH_DIVE_MS = 1800;
+  const VEHICLE_WORLD_WIDTH = 28;
+  const VEHICLE_WORLD_HEIGHT = 15;
+
+  const camera = {
+    centerX: 2500,
+    centerY: 2500,
+    viewUnits: MAX_VIEW_UNITS,
+    targetCenterX: 2500,
+    targetCenterY: 2500,
+    targetViewUnits: MAX_VIEW_UNITS,
+    manual: false,
+    transition: null
+  };
 
   const terrainY = worldX => 3370 + Math.sin(worldX / 430) * 180 + Math.sin(worldX / 970 + 0.7) * 130;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const lerp = (a, b, t) => a + (b - a) * t;
+  const smoothstep = t => t * t * (3 - 2 * t);
 
   function drawBackground() {
     const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -52,10 +56,17 @@ export function createRenderer(canvas, config) {
     ctx.restore();
   }
 
+  function cancelLoop() {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = null;
+  }
+
   function drawScaffold() {
     cancelLoop();
     activeRoom = null;
     cameraInitialized = false;
+    lastRoomStatus = null;
+    camera.transition = null;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackground();
     ctx.fillStyle = '#18243d';
@@ -85,14 +96,23 @@ export function createRenderer(canvas, config) {
     };
   }
 
-  function clampCamera(arena) {
-    const size = viewSize(arena);
+  function clampCenter(arena, centerX, centerY, units = camera.viewUnits) {
+    const size = viewSize(arena, units);
     const halfW = size.width / 2;
     const halfH = size.height / 2;
-    camera.centerX = clamp(camera.centerX, halfW, arena.worldWidth - halfW);
-    camera.centerY = clamp(camera.centerY, halfH, arena.worldHeight - halfH);
-    camera.targetCenterX = clamp(camera.targetCenterX, halfW, arena.worldWidth - halfW);
-    camera.targetCenterY = clamp(camera.targetCenterY, halfH, arena.worldHeight - halfH);
+    return {
+      x: clamp(centerX, halfW, arena.worldWidth - halfW),
+      y: clamp(centerY, halfH, arena.worldHeight - halfH)
+    };
+  }
+
+  function clampCamera(arena) {
+    const current = clampCenter(arena, camera.centerX, camera.centerY, camera.viewUnits);
+    camera.centerX = current.x;
+    camera.centerY = current.y;
+    const target = clampCenter(arena, camera.targetCenterX, camera.targetCenterY, camera.targetViewUnits);
+    camera.targetCenterX = target.x;
+    camera.targetCenterY = target.y;
   }
 
   function setFollowTarget(room, immediate = false) {
@@ -109,32 +129,50 @@ export function createRenderer(canvas, config) {
 
   function beginCountdownOverview(room) {
     camera.manual = false;
+    camera.transition = null;
     camera.viewUnits = MAX_VIEW_UNITS;
     camera.targetViewUnits = MAX_VIEW_UNITS;
     camera.centerX = room.arena.worldWidth / 2;
     camera.centerY = room.arena.worldHeight / 2;
     camera.targetCenterX = camera.centerX;
     camera.targetCenterY = camera.centerY;
-    camera.transitionUntil = 0;
     cameraInitialized = true;
     clampCamera(room.arena);
   }
 
-  function beginMatchTransition(room) {
+  function beginMatchTransition(room, now = performance.now()) {
     const target = cameraTarget(room);
+    const targetX = target?.spawn?.x ?? room.arena.worldWidth / 2;
+    const targetY = target?.spawn?.y ?? room.arena.worldHeight / 2;
+    const clampedTarget = clampCenter(room.arena, targetX, targetY, MIN_VIEW_UNITS);
+
     camera.manual = false;
+    camera.transition = {
+      startedAt: now,
+      endsAt: now + MATCH_DIVE_MS,
+      fromCenterX: camera.centerX,
+      fromCenterY: camera.centerY,
+      fromViewUnits: camera.viewUnits,
+      toCenterX: clampedTarget.x,
+      toCenterY: clampedTarget.y,
+      toViewUnits: MIN_VIEW_UNITS
+    };
+    camera.targetCenterX = clampedTarget.x;
+    camera.targetCenterY = clampedTarget.y;
     camera.targetViewUnits = MIN_VIEW_UNITS;
-    camera.targetCenterX = target?.spawn?.x ?? room.arena.worldWidth / 2;
-    camera.targetCenterY = target?.spawn?.y ?? room.arena.worldHeight / 2;
-    camera.transitionUntil = performance.now() + 1500;
-    clampCamera(room.arena);
+  }
+
+  function controlsLocked(now = performance.now()) {
+    return activeRoom?.status === 'countdown' || Boolean(camera.transition && now < camera.transition.endsAt);
   }
 
   function ensureCameraState(room) {
     if (!room?.arena) return;
+
     if (!cameraInitialized) {
-      if (room.status === 'countdown') beginCountdownOverview(room);
-      else {
+      if (room.status === 'countdown') {
+        beginCountdownOverview(room);
+      } else {
         camera.viewUnits = MIN_VIEW_UNITS;
         camera.targetViewUnits = MIN_VIEW_UNITS;
         setFollowTarget(room, true);
@@ -144,7 +182,6 @@ export function createRenderer(canvas, config) {
 
     if (lastRoomStatus === 'countdown' && room.status === 'started') beginMatchTransition(room);
     if (room.status === 'countdown' && lastRoomStatus !== 'countdown') beginCountdownOverview(room);
-
     lastRoomStatus = room.status;
   }
 
@@ -176,21 +213,78 @@ export function createRenderer(canvas, config) {
   function updateCamera(room, now) {
     if (!room?.arena) return;
 
-    if (!camera.manual && room.status === 'started' && now >= camera.transitionUntil) {
-      setFollowTarget(room, false);
+    if (camera.transition) {
+      const transition = camera.transition;
+      const rawT = clamp((now - transition.startedAt) / (transition.endsAt - transition.startedAt), 0, 1);
+      const t = smoothstep(rawT);
+      camera.centerX = lerp(transition.fromCenterX, transition.toCenterX, t);
+      camera.centerY = lerp(transition.fromCenterY, transition.toCenterY, t);
+      camera.viewUnits = lerp(transition.fromViewUnits, transition.toViewUnits, t);
+
+      if (rawT >= 1) {
+        camera.centerX = transition.toCenterX;
+        camera.centerY = transition.toCenterY;
+        camera.viewUnits = transition.toViewUnits;
+        camera.targetCenterX = transition.toCenterX;
+        camera.targetCenterY = transition.toCenterY;
+        camera.targetViewUnits = transition.toViewUnits;
+        camera.transition = null;
+      }
+      clampCamera(room.arena);
+      return;
     }
 
-    const transitionActive = now < camera.transitionUntil;
-    const posEase = transitionActive ? .075 : .16;
-    const zoomEase = transitionActive ? .055 : .14;
-    camera.centerX = lerp(camera.centerX, camera.targetCenterX, posEase);
-    camera.centerY = lerp(camera.centerY, camera.targetCenterY, posEase);
-    camera.viewUnits = lerp(camera.viewUnits, camera.targetViewUnits, zoomEase);
+    if (!camera.manual && room.status === 'started') setFollowTarget(room, false);
+
+    camera.centerX = lerp(camera.centerX, camera.targetCenterX, .16);
+    camera.centerY = lerp(camera.centerY, camera.targetCenterY, .16);
+    camera.viewUnits = lerp(camera.viewUnits, camera.targetViewUnits, .14);
 
     if (Math.abs(camera.viewUnits - camera.targetViewUnits) < .002) camera.viewUnits = camera.targetViewUnits;
     if (Math.abs(camera.centerX - camera.targetCenterX) < .2) camera.centerX = camera.targetCenterX;
     if (Math.abs(camera.centerY - camera.targetCenterY) < .2) camera.centerY = camera.targetCenterY;
     clampCamera(room.arena);
+  }
+
+  function drawVehicle(room, player, screen, view, local, active) {
+    const pxPerWorldX = canvas.width / view.width;
+    const pxPerWorldY = canvas.height / view.height;
+    const vehicleW = clamp(VEHICLE_WORLD_WIDTH * pxPerWorldX, 8, 52);
+    const vehicleH = clamp(VEHICLE_WORLD_HEIGHT * pxPerWorldY, 5, 30);
+    const wheelR = clamp(vehicleH * .28, 2, 7);
+    const cannonLength = clamp(vehicleW * .42, 5, 18);
+    const cannonThickness = clamp(vehicleH * .16, 2, 5);
+
+    ctx.save();
+    ctx.translate(screen.x, screen.y);
+    ctx.scale(player.spawn.facing || 1, 1);
+    ctx.fillStyle = room.mode === 'survival' ? '#d6b4ff' : player.team === 'A' ? '#8cb4ff' : '#ff9aa8';
+    ctx.strokeStyle = active ? '#ffe89a' : local ? '#ffffff' : 'rgba(231,237,255,.55)';
+    ctx.lineWidth = active ? 3 : local ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.roundRect(-vehicleW / 2, -vehicleH * .62, vehicleW, vehicleH, Math.max(2, vehicleH * .25));
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#08101d';
+    ctx.fillRect(vehicleW * .08, -vehicleH * .83, cannonLength, cannonThickness);
+    ctx.beginPath();
+    ctx.arc(-vehicleW * .27, vehicleH * .24, wheelR, 0, Math.PI * 2);
+    ctx.arc(vehicleW * .27, vehicleH * .24, wheelR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (camera.viewUnits <= 3.25 || active || local) {
+      const labelOffset = Math.max(22, vehicleH * 1.65);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#e7edff';
+      ctx.font = '700 15px ui-monospace,monospace';
+      ctx.fillText(player.name, screen.x, screen.y - labelOffset);
+      ctx.font = '700 10px ui-monospace,monospace';
+      ctx.fillStyle = active ? '#ffe89a' : '#8cb4ff';
+      const role = room.mode === 'survival' ? 'SURVIVAL' : `TEAM ${player.team}`;
+      const flags = `${local ? ' // YOU' : ''}${active ? ' // ACTIVE' : ''}`;
+      ctx.fillText(`${role}${flags}`, screen.x, screen.y - labelOffset + 15);
+    }
   }
 
   function drawWorld(room) {
@@ -216,57 +310,38 @@ export function createRenderer(canvas, config) {
     for (const player of room.players) {
       if (!player.spawn) continue;
       const screen = worldToScreen(player.spawn.x, player.spawn.y, view);
-      if (screen.x < -120 || screen.x > canvas.width + 120 || screen.y < -120 || screen.y > canvas.height + 120) continue;
-
-      const local = player.id === localPlayerId;
-      const active = player.id === room.camera?.targetPlayerId;
-      const scale = clamp(1.28 - (camera.viewUnits - 1) * .12, .58, 1.28);
-
-      ctx.save();
-      ctx.translate(screen.x, screen.y);
-      ctx.scale((player.spawn.facing || 1) * scale, scale);
-      ctx.fillStyle = room.mode === 'survival' ? '#d6b4ff' : player.team === 'A' ? '#8cb4ff' : '#ff9aa8';
-      ctx.strokeStyle = active ? '#ffe89a' : local ? '#ffffff' : 'rgba(231,237,255,.55)';
-      ctx.lineWidth = active ? 6 : local ? 5 : 3;
-      ctx.beginPath();
-      ctx.roundRect(-42, -26, 84, 43, 14);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#08101d';
-      ctx.fillRect(9, -36, 40, 8);
-      ctx.beginPath();
-      ctx.arc(-24, 20, 12, 0, Math.PI * 2);
-      ctx.arc(24, 20, 12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      if (camera.viewUnits <= 3.25 || active || local) {
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#e7edff';
-        ctx.font = '700 18px ui-monospace,monospace';
-        ctx.fillText(player.name, screen.x, screen.y - 58 * scale);
-        ctx.font = '700 12px ui-monospace,monospace';
-        ctx.fillStyle = active ? '#ffe89a' : '#8cb4ff';
-        const role = room.mode === 'survival' ? 'SURVIVAL' : `TEAM ${player.team}`;
-        const flags = `${local ? ' // YOU' : ''}${active ? ' // ACTIVE' : ''}`;
-        ctx.fillText(`${role}${flags}`, screen.x, screen.y - 38 * scale);
-      }
+      if (screen.x < -80 || screen.x > canvas.width + 80 || screen.y < -80 || screen.y > canvas.height + 80) continue;
+      drawVehicle(
+        room,
+        player,
+        screen,
+        view,
+        player.id === localPlayerId,
+        player.id === room.camera?.targetPlayerId
+      );
     }
 
     drawHud(room, target, view);
+  }
+
+  function visiblePlayerCount(room, view) {
+    return room.players.filter(player => player.spawn
+      && player.spawn.x >= view.x && player.spawn.x <= view.x + view.width
+      && player.spawn.y >= view.y && player.spawn.y <= view.y + view.height).length;
   }
 
   function drawHud(room, target, view) {
     const local = room.players.find(player => player.id === localPlayerId);
     const zoomLabel = camera.viewUnits.toFixed(camera.viewUnits % 1 < .03 ? 0 : 1);
     const modeLabel = room.mode === 'survival' ? 'SURVIVAL' : 'TEAM';
-    const viewMode = camera.manual ? 'FREE CAMERA' : 'FOLLOW CAMERA';
+    const locked = controlsLocked();
+    const viewMode = locked ? 'CAMERA LOCKED' : camera.manual ? 'FREE CAMERA' : 'FOLLOW CAMERA';
 
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(7,10,18,.84)';
-    ctx.fillRect(24, 24, 560, 126);
+    ctx.fillRect(24, 24, 590, 126);
     ctx.strokeStyle = 'rgba(155,184,255,.25)';
-    ctx.strokeRect(24, 24, 560, 126);
+    ctx.strokeRect(24, 24, 590, 126);
 
     ctx.fillStyle = '#8cb4ff';
     ctx.font = '700 13px ui-monospace,monospace';
@@ -279,14 +354,8 @@ export function createRenderer(canvas, config) {
     ctx.fillStyle = '#8995b8';
     ctx.font = '12px ui-monospace,monospace';
     ctx.fillText(`view ${zoomLabel}x${zoomLabel} of world 5x5 // center ${Math.round(camera.centerX)}, ${Math.round(camera.centerY)}`, 42, 100);
-    ctx.fillText(`drag = pan // wheel = zoom 1x1..5x5 // double click = follow active`, 42, 122);
+    ctx.fillText(locked ? 'camera controls unlock after the opening dive finishes' : 'drag = pan // wheel = zoom 1x1..5x5 // double click = follow active', 42, 122);
     ctx.fillText(`you: ${local?.name ?? '—'} // visible players: ${visiblePlayerCount(room, view)}/${room.players.length}`, 42, 142);
-  }
-
-  function visiblePlayerCount(room, view) {
-    return room.players.filter(player => player.spawn
-      && player.spawn.x >= view.x && player.spawn.x <= view.x + view.width
-      && player.spawn.y >= view.y && player.spawn.y <= view.y + view.height).length;
   }
 
   function countdownLabel(room) {
@@ -308,7 +377,7 @@ export function createRenderer(canvas, config) {
     ctx.fillText(room.mode === 'survival' ? 'SURVIVAL MODE // FULL MAP OVERVIEW' : 'TEAM MODE // FULL MAP OVERVIEW', canvas.width / 2, canvas.height / 2 + 54);
     ctx.font = '12px ui-monospace,monospace';
     ctx.fillStyle = '#8995b8';
-    ctx.fillText('Camera will smoothly dive to the opening player after START', canvas.width / 2, canvas.height / 2 + 82);
+    ctx.fillText('Camera controls are locked until the automatic dive reaches the opening player', canvas.width / 2, canvas.height / 2 + 82);
   }
 
   function frame(now) {
@@ -318,11 +387,6 @@ export function createRenderer(canvas, config) {
     drawWorld(activeRoom);
     if (activeRoom.status === 'countdown') drawCountdownOverlay(activeRoom);
     animationFrame = requestAnimationFrame(frame);
-  }
-
-  function cancelLoop() {
-    if (animationFrame) cancelAnimationFrame(animationFrame);
-    animationFrame = null;
   }
 
   function drawArena(room, nextLocalPlayerId = null) {
@@ -345,7 +409,7 @@ export function createRenderer(canvas, config) {
   }
 
   canvas.addEventListener('pointerdown', event => {
-    if (!activeRoom?.arena || activeRoom.status === 'countdown') return;
+    if (!activeRoom?.arena || controlsLocked()) return;
     dragging = true;
     canvas.setPointerCapture?.(event.pointerId);
     const p = pointerPosition(event);
@@ -354,7 +418,7 @@ export function createRenderer(canvas, config) {
   });
 
   canvas.addEventListener('pointermove', event => {
-    if (!dragging || !dragStart || !activeRoom?.arena) return;
+    if (!dragging || !dragStart || !activeRoom?.arena || controlsLocked()) return;
     const p = pointerPosition(event);
     const size = viewSize(activeRoom.arena);
     camera.targetCenterX = dragStart.centerX - (p.x - dragStart.x) / canvas.width * size.width;
@@ -364,35 +428,44 @@ export function createRenderer(canvas, config) {
     clampCamera(activeRoom.arena);
   });
 
-  function stopDrag() {
+  function stopDragging(event) {
     dragging = false;
     dragStart = null;
+    if (event?.pointerId != null) canvas.releasePointerCapture?.(event.pointerId);
   }
-  canvas.addEventListener('pointerup', stopDrag);
-  canvas.addEventListener('pointercancel', stopDrag);
+
+  canvas.addEventListener('pointerup', stopDragging);
+  canvas.addEventListener('pointercancel', stopDragging);
+  canvas.addEventListener('pointerleave', event => {
+    if (dragging && event.buttons === 0) stopDragging(event);
+  });
 
   canvas.addEventListener('wheel', event => {
-    if (!activeRoom?.arena || activeRoom.status === 'countdown') return;
+    if (!activeRoom?.arena || controlsLocked()) return;
     event.preventDefault();
+
     const arena = activeRoom.arena;
-    const pointer = pointerPosition(event);
-    const before = screenToWorld(pointer.x, pointer.y, arena);
-    const step = event.deltaY > 0 ? .35 : -.35;
-    camera.targetViewUnits = clamp(camera.targetViewUnits + step, MIN_VIEW_UNITS, MAX_VIEW_UNITS);
-    camera.viewUnits = camera.targetViewUnits;
-    const after = screenToWorld(pointer.x, pointer.y, arena);
-    camera.centerX += before.x - after.x;
-    camera.centerY += before.y - after.y;
+    const p = pointerPosition(event);
+    const before = screenToWorld(p.x, p.y, arena);
+    const direction = event.deltaY > 0 ? 1 : -1;
+    const nextUnits = clamp(camera.viewUnits + direction * .35, MIN_VIEW_UNITS, MAX_VIEW_UNITS);
+    if (Math.abs(nextUnits - camera.viewUnits) < .001) return;
+
+    camera.manual = true;
+    camera.viewUnits = nextUnits;
+    camera.targetViewUnits = nextUnits;
+
+    const newSize = viewSize(arena, nextUnits);
+    camera.centerX = before.x - (p.x / canvas.width - .5) * newSize.width;
+    camera.centerY = before.y - (p.y / canvas.height - .5) * newSize.height;
     camera.targetCenterX = camera.centerX;
     camera.targetCenterY = camera.centerY;
-    camera.manual = true;
     clampCamera(arena);
   }, { passive: false });
 
   canvas.addEventListener('dblclick', () => {
-    if (!activeRoom?.arena || activeRoom.status === 'countdown') return;
+    if (!activeRoom?.arena || controlsLocked()) return;
     camera.manual = false;
-    camera.targetViewUnits = MIN_VIEW_UNITS;
     setFollowTarget(activeRoom, false);
   });
 
