@@ -1,102 +1,13 @@
-import { drawTerrainScaffold } from './terrain-renderer.js';
-
 export function createRenderer(canvas, config) {
-  if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new TypeError('A valid game canvas is required.');
-  }
-
-  canvas.width = config.internalWidth;
-  canvas.height = config.internalHeight;
-  const ctx = canvas.getContext('2d');
-
-  function drawBackground() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#071224');
-    gradient.addColorStop(0.62, '#0a1221');
-    gradient.addColorStop(1, '#02040a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.globalAlpha = 0.55;
-    for (let i = 0; i < 70; i += 1) {
-      const x = (i * 233 + 91) % canvas.width;
-      const y = (i * 137 + 47) % 430;
-      const size = i % 9 === 0 ? 2 : 1;
-      ctx.fillStyle = '#8cb4ff';
-      ctx.fillRect(x, y, size, size);
-    }
-    ctx.restore();
-  }
-
-  function drawScaffold() {
-    drawBackground();
-    drawTerrainScaffold(ctx, canvas.width, canvas.height);
-  }
-
-  function drawArena(room, localPlayerId = null) {
-    if (room?.status !== 'started' || !room?.arena) {
-      drawScaffold();
-      return;
-    }
-
-    drawBackground();
-    drawTerrainScaffold(ctx, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    for (const player of room.players) {
-      if (!player.spawn) continue;
-      const { x, y, facing } = player.spawn;
-      const isLocal = player.id === localPlayerId;
-      const teamLabel = player.team === 'A' ? 'A' : 'B';
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(facing || 1, 1);
-
-      ctx.fillStyle = player.team === 'A' ? '#8cb4ff' : '#ff9aa8';
-      ctx.strokeStyle = isLocal ? '#ffffff' : 'rgba(231,237,255,.55)';
-      ctx.lineWidth = isLocal ? 5 : 3;
-      ctx.beginPath();
-      ctx.roundRect(-42, -26, 84, 43, 14);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#08101d';
-      ctx.fillRect(9, -36, 40, 8);
-      ctx.beginPath();
-      ctx.arc(-24, 20, 12, 0, Math.PI * 2);
-      ctx.arc(24, 20, 12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.font = '700 18px ui-monospace, monospace';
-      ctx.fillStyle = '#e7edff';
-      ctx.fillText(player.name, x, y - 58);
-      ctx.font = '700 13px ui-monospace, monospace';
-      ctx.fillStyle = player.team === 'A' ? '#8cb4ff' : '#ff9aa8';
-      ctx.fillText(`TEAM ${teamLabel}${isLocal ? ' // YOU' : ''}`, x, y - 38);
-    }
-
-    ctx.restore();
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(7,10,18,.74)';
-    ctx.fillRect(24, 24, 360, 64);
-    ctx.strokeStyle = 'rgba(155,184,255,.25)';
-    ctx.strokeRect(24, 24, 360, 64);
-    ctx.fillStyle = '#8cb4ff';
-    ctx.font = '700 13px ui-monospace, monospace';
-    ctx.fillText('PHASE 2 // SYNCHRONIZED SPAWN TEST', 42, 50);
-    ctx.fillStyle = '#8995b8';
-    ctx.font = '12px ui-monospace, monospace';
-    ctx.fillText(`${room.players.length} players // arena ${room.arena.id}`, 42, 72);
-    ctx.restore();
-  }
-
-  return Object.freeze({ drawScaffold, drawArena });
+  if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError('A valid game canvas is required.');
+  canvas.width = config.internalWidth; canvas.height = config.internalHeight; const ctx = canvas.getContext('2d'); let countdownFrame = null;
+  const terrainY = worldX => 3370 + Math.sin(worldX / 430) * 180 + Math.sin(worldX / 970 + 0.7) * 130;
+  function drawBackground(){const g=ctx.createLinearGradient(0,0,0,canvas.height);g.addColorStop(0,'#071224');g.addColorStop(.62,'#0a1221');g.addColorStop(1,'#02040a');ctx.fillStyle=g;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.save();ctx.globalAlpha=.55;for(let i=0;i<70;i+=1){const x=(i*233+91)%canvas.width,y=(i*137+47)%430,s=i%9===0?2:1;ctx.fillStyle='#8cb4ff';ctx.fillRect(x,y,s,s);}ctx.restore();}
+  function drawScaffold(){if(countdownFrame)cancelAnimationFrame(countdownFrame);countdownFrame=null;ctx.clearRect(0,0,canvas.width,canvas.height);drawBackground();ctx.fillStyle='#18243d';ctx.beginPath();ctx.moveTo(0,canvas.height*.72);ctx.quadraticCurveTo(canvas.width*.2,canvas.height*.58,canvas.width*.38,canvas.height*.70);ctx.quadraticCurveTo(canvas.width*.58,canvas.height*.84,canvas.width*.72,canvas.height*.63);ctx.quadraticCurveTo(canvas.width*.86,canvas.height*.50,canvas.width,canvas.height*.68);ctx.lineTo(canvas.width,canvas.height);ctx.lineTo(0,canvas.height);ctx.fill();}
+  function cameraFor(room,localPlayerId){const a=room.arena,targetId=room.camera?.targetPlayerId||localPlayerId,target=room.players.find(p=>p.id===targetId)||room.players.find(p=>p.id===localPlayerId)||room.players[0],tx=target?.spawn?.x??a.worldWidth/2,ty=target?.spawn?.y??a.worldHeight/2;return{x:Math.max(0,Math.min(a.worldWidth-a.viewportWidth,tx-a.viewportWidth/2)),y:Math.max(0,Math.min(a.worldHeight-a.viewportHeight,ty-a.viewportHeight/2)),target};}
+  const worldToScreen=(x,y,c,a)=>({x:(x-c.x)/a.viewportWidth*canvas.width,y:(y-c.y)/a.viewportHeight*canvas.height});
+  function drawWorld(room,localPlayerId){const a=room.arena,c=cameraFor(room,localPlayerId);ctx.clearRect(0,0,canvas.width,canvas.height);drawBackground();ctx.fillStyle='#18243d';ctx.beginPath();for(let sx=0;sx<=canvas.width;sx+=16){const wx=c.x+(sx/canvas.width)*a.viewportWidth,sy=worldToScreen(wx,terrainY(wx),c,a).y;if(sx===0)ctx.moveTo(sx,sy);else ctx.lineTo(sx,sy);}ctx.lineTo(canvas.width,canvas.height);ctx.lineTo(0,canvas.height);ctx.fill();for(const p of room.players){if(!p.spawn)continue;const s=worldToScreen(p.spawn.x,p.spawn.y,c,a);if(s.x<-100||s.x>canvas.width+100||s.y<-100||s.y>canvas.height+100)continue;const local=p.id===localPlayerId;ctx.save();ctx.translate(s.x,s.y);ctx.scale(p.spawn.facing||1,1);ctx.fillStyle=room.mode==='survival'?'#d6b4ff':p.team==='A'?'#8cb4ff':'#ff9aa8';ctx.strokeStyle=local?'#fff':'rgba(231,237,255,.55)';ctx.lineWidth=local?5:3;ctx.beginPath();ctx.roundRect(-42,-26,84,43,14);ctx.fill();ctx.stroke();ctx.fillStyle='#08101d';ctx.fillRect(9,-36,40,8);ctx.beginPath();ctx.arc(-24,20,12,0,Math.PI*2);ctx.arc(24,20,12,0,Math.PI*2);ctx.fill();ctx.restore();ctx.textAlign='center';ctx.fillStyle='#e7edff';ctx.font='700 18px ui-monospace,monospace';ctx.fillText(p.name,s.x,s.y-58);ctx.font='700 12px ui-monospace,monospace';ctx.fillStyle='#8cb4ff';ctx.fillText(`${room.mode==='survival'?'SURVIVAL':`TEAM ${p.team}`}${local?' // YOU':''}`,s.x,s.y-38);}ctx.textAlign='left';ctx.fillStyle='rgba(7,10,18,.78)';ctx.fillRect(24,24,470,72);ctx.strokeStyle='rgba(155,184,255,.25)';ctx.strokeRect(24,24,470,72);ctx.fillStyle='#8cb4ff';ctx.font='700 13px ui-monospace,monospace';ctx.fillText(`PHASE 2.5 // ${room.mode.toUpperCase()} // CAMERA FOLLOW`,42,50);ctx.fillStyle='#8995b8';ctx.font='12px ui-monospace,monospace';ctx.fillText(`world 5x5 // viewport 1x1 // following ${c.target?.name??'player'}`,42,74);}
+  function countdownLabel(room){const elapsed=Date.now()-(room.match?.countdownStartedAt??Date.now());if(elapsed<1000)return'GET READY';const n=6-Math.floor(elapsed/1000);return n>0?String(n):'START';}
+  function drawArena(room,localPlayerId=null){if(countdownFrame)cancelAnimationFrame(countdownFrame);countdownFrame=null;if(!room?.arena||!['countdown','started'].includes(room.status)){drawScaffold();return;}const render=()=>{drawWorld(room,localPlayerId);if(room.status==='countdown'){ctx.fillStyle='rgba(2,4,10,.60)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign='center';ctx.fillStyle='#e7edff';ctx.font='800 76px system-ui,sans-serif';ctx.fillText(countdownLabel(room),canvas.width/2,canvas.height/2);ctx.font='700 18px ui-monospace,monospace';ctx.fillStyle='#8cb4ff';ctx.fillText(room.mode==='survival'?'SURVIVAL MODE':'TEAM MODE',canvas.width/2,canvas.height/2+54);countdownFrame=requestAnimationFrame(render);}};render();}
+  return Object.freeze({drawScaffold,drawArena});
 }
