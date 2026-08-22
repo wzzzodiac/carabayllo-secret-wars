@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070a12">
-  <meta name="description" content="Orbital Artillery — multiplayer artillery game project scaffold.">
-  <title>Orbital Artillery // Project Scaffold</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="description" content="Orbital Artillery — multiplayer artillery game project.">
+  <title>Orbital Artillery // Phase 1</title>
+  <link rel="stylesheet" href="style.css?v=phase1-1">
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ORBITAL ARTILLERY // PHASE 0</p>
-      <h1>Multiplayer artillery, under construction.</h1>
-      <p class="subtitle">Client scaffold for a future 2–8 player turn-based artillery game. Networking and gameplay come next.</p>
+      <p class="eyebrow">ORBITAL ARTILLERY // PHASE 1</p>
+      <h1>Private multiplayer lobby.</h1>
+      <p class="subtitle">Create a room or join one by code. The backend only wakes when you actually try to play.</p>
     </header>
 
     <section class="panel">
@@ -23,11 +23,41 @@
       </div>
       <div class="status-row">
         <span>SERVER</span>
-        <strong id="serverStatus">NOT CONFIGURED</strong>
+        <strong id="serverStatus">OFFLINE</strong>
       </div>
       <div class="status-row">
         <span>PHASE</span>
-        <strong>SCAFFOLD ONLY</strong>
+        <strong>ROOM NETWORKING</strong>
+      </div>
+    </section>
+
+    <section class="lobby-grid">
+      <div class="lobby-card" id="entryPanel">
+        <p class="section-label">PLAYER ACCESS</p>
+        <label for="playerName">NAME</label>
+        <input id="playerName" maxlength="20" autocomplete="nickname" placeholder="Walter">
+
+        <div class="entry-actions">
+          <button id="createRoom" type="button">CREATE ROOM</button>
+          <div class="join-row">
+            <input id="roomCode" maxlength="4" autocomplete="off" placeholder="X7K2" aria-label="Room code">
+            <button id="joinRoom" type="button">JOIN ROOM</button>
+          </div>
+        </div>
+        <p id="actionMessage" class="message" aria-live="polite">Cloud Run stays asleep until CREATE or JOIN is pressed.</p>
+      </div>
+
+      <div class="lobby-card room-card">
+        <div class="room-heading">
+          <div>
+            <p class="section-label">PRIVATE ROOM</p>
+            <strong id="activeRoomCode">----</strong>
+          </div>
+          <span id="roomCount">0 / 8</span>
+        </div>
+        <div id="playerList" class="player-list">
+          <div class="empty-room">No room joined yet.</div>
+        </div>
       </div>
     </section>
 
@@ -35,16 +65,16 @@
       <canvas id="gameCanvas" width="1600" height="900"></canvas>
       <div class="overlay">
         <p>ARENA PLACEHOLDER</p>
-        <span>Canvas 1600 × 900 internal coordinates</span>
+        <span>Gameplay starts after the networking milestone</span>
       </div>
     </section>
 
     <footer>
       <span>NO ACCOUNTS // PRIVATE ROOMS // UP TO 8 PLAYERS</span>
-      <span>CLIENT SCAFFOLD</span>
+      <span>ON-DEMAND SERVER CONNECTION</span>
     </footer>
   </main>
 
-  <script type="module" src="client.js"></script>
+  <script type="module" src="client.js?v=phase1-1"></script>
 </body>
 </html>
