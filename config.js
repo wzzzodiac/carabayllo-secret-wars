@@ -1,6 +1,4 @@
-// Set this after the Cloud Run backend exists.
-// Example: export const BACKEND_URL = 'https://orbital-artillery-server-...run.app';
-export const BACKEND_URL = '';
+export const BACKEND_URL = 'https://orbital-artillery-server-git-873648916633.us-east1.run.app';
 
 export const CLIENT_CONFIG = Object.freeze({
   maxPlayers: 8,
