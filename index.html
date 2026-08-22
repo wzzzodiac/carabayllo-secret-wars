@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#070a12">
   <meta name="description" content="Orbital Artillery — multiplayer artillery game project.">
-  <title>Orbital Artillery // Phase 1</title>
-  <link rel="stylesheet" href="style.css?v=phase1-lobby-2">
+  <title>Orbital Artillery // Phase 2</title>
+  <link rel="stylesheet" href="style.css?v=phase2-arena-1">
 </head>
 <body>
   <main class="shell">
     <header class="hero">
-      <p class="eyebrow">ORBITAL ARTILLERY // PHASE 1</p>
-      <h1>Private multiplayer lobby.</h1>
-      <p class="subtitle">Create a room or join one by code. The backend only wakes when you actually try to play.</p>
+      <p class="eyebrow">ORBITAL ARTILLERY // PHASE 2</p>
+      <h1>Synchronized multiplayer arena.</h1>
+      <p class="subtitle">The server now assigns deterministic spawn positions when the host starts the match, and every connected client renders the same arena state.</p>
     </header>
 
     <section class="panel">
@@ -27,7 +27,7 @@
       </div>
       <div class="status-row">
         <span>PHASE</span>
-        <strong>LOBBY CONTROL</strong>
+        <strong>ARENA SYNC</strong>
       </div>
     </section>
 
@@ -78,20 +78,20 @@
       </div>
     </section>
 
-    <section class="game-frame" aria-label="Future game viewport">
+    <section class="game-frame" aria-label="Synchronized game arena">
       <canvas id="gameCanvas" width="1600" height="900"></canvas>
       <div class="overlay">
-        <p id="arenaTitle">ARENA PLACEHOLDER</p>
-        <span id="arenaSubtitle">Gameplay starts after the networking milestone</span>
+        <p id="arenaTitle">ARENA STANDBY</p>
+        <span id="arenaSubtitle">Start a match to receive synchronized spawn positions</span>
       </div>
     </section>
 
     <footer>
       <span>NO ACCOUNTS // PRIVATE ROOMS // UP TO 8 PLAYERS</span>
-      <span>ON-DEMAND SERVER CONNECTION</span>
+      <span>SERVER-AUTHORITATIVE SPAWN STATE</span>
     </footer>
   </main>
 
-  <script type="module" src="client.js?v=phase1-lobby-2"></script>
+  <script type="module" src="client.js?v=phase2-arena-1"></script>
 </body>
 </html>
