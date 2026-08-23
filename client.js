@@ -15,6 +15,7 @@ const socketBoundary = createSocketBoundary();
 let activeSocket = null, playerId = null, currentRoom = null, disconnectHandlerBound = false;
 let heldMoveDirection = 0, moveTimer = null, moveInFlight = false, pendingAngleDelta = 0, pendingPowerDelta = 0, aimPumpPromise = null;
 const lastAuthoritativeSpawns = new Map();
+const visualMotionClock = new Map();
 const MOVE_INTERVAL_MS = 70, MOVE_VISUAL_MS = 110;
 
 const terrainGroup = document.createElement('div');
@@ -33,6 +34,18 @@ const humanError = code => ({
   invalid_name:'Enter a player name first.', invalid_room_code:'Room code must contain 4 valid characters.', room_not_found:'That room does not exist.', room_full:'That room already has 8 players.', room_already_started:'That room has already started.', server_room_capacity:'The server has reached its temporary room limit.', room_action_rate_limited:'Too many lobby requests. Wait a moment.', already_in_room:'This tab is already inside a room.', not_in_room:'This tab is not currently inside a room.', invalid_team:'That team selection is invalid.', team_full:'That team already has 4 players.', teams_disabled:'Teams are disabled in Survival mode.', invalid_mode:'That game mode is invalid.', invalid_terrain:'That terrain is invalid.', host_only:'Only the host can do that.', not_enough_players:'At least 2 players are required.', players_not_ready:'Every player must be READY.', both_teams_required:'Both teams need at least one player.', request_timeout:'The server did not answer in time.', match_not_started:'The match is not active yet.', not_your_turn:'Wait for your turn.', shot_in_flight:'Your shot is already in flight.', player_in_motion:'Wait until the jump finishes.', invalid_direction:'Invalid movement direction.', movement_limit:'You reached this turn\'s movement radius.', terrain_too_steep:'That ledge is too steep to drive onto. Use a jump.', no_jumps_remaining:'No jumps remaining this turn.', player_missing:'Your vehicle is no longer active.'
 }[code] || `Server rejected the request: ${code || 'unknown_error'}`);
 
+function normalizeServerMotion(playerId, motion, now) {
+  if (!motion || motion.type !== 'jump') return motion;
+  const duration = Math.max(280, Number(motion.endsAt) - Number(motion.startedAt) || 620);
+  const signature = `${motion.type}:${motion.startedAt}:${motion.fromX}:${motion.fromY}:${motion.toX}:${motion.toY}`;
+  let visual = visualMotionClock.get(playerId);
+  if (!visual || visual.signature !== signature) {
+    visual = { signature, startedAt: now, endsAt: now + duration };
+    visualMotionClock.set(playerId, visual);
+  }
+  return { ...motion, startedAt: visual.startedAt, endsAt: visual.endsAt };
+}
+
 function makeDisplayRoom(room) {
   const now = Date.now();
   return {
@@ -42,6 +55,7 @@ function makeDisplayRoom(room) {
     arena: room.arena ? { ...room.arena, craters: (room.arena.craters ?? []).map(crater => ({ ...crater })), previewSpawns: [...(room.arena.previewSpawns ?? [])] } : null,
     players: room.players.map(player => {
       const next = { ...player, spawn: player.spawn ? { ...player.spawn } : null, motion: player.motion ? { ...player.motion } : null, lastDamage: player.lastDamage ? { ...player.lastDamage } : null };
+      if (next.motion) next.motion = normalizeServerMotion(player.id, next.motion, now);
       const previous = lastAuthoritativeSpawns.get(player.id);
       if (next.spawn && previous && !next.motion && next.alive !== false) {
         const moved = Math.abs(next.spawn.x - previous.x) > .01 || Math.abs(next.spawn.y - previous.y) > .01;
