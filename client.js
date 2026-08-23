@@ -1,9 +1,9 @@
 import { CLIENT_CONFIG } from './config.js';
 import { createSocketBoundary } from './socket.js';
-import { createRenderer } from './renderer.js?v=phase4-controls-2';
+import { createRenderer } from './renderer.js?v=phase4-controls-3';
 import { createUI } from './ui.js?v=phase3-turns-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
-import { initCombatControls } from './combat-controls.js?v=phase4-controls-2';
+import { initCombatControls } from './combat-controls.js?v=phase4-controls-3';
 
 const canvas = document.getElementById('gameCanvas');
 const ui = createUI();
@@ -18,6 +18,9 @@ let disconnectHandlerBound = false;
 let heldMoveDirection = 0;
 let moveTimer = null;
 let moveInFlight = false;
+let pendingAngleDelta = 0;
+let pendingPowerDelta = 0;
+let aimPumpPromise = null;
 const lastAuthoritativeSpawns = new Map();
 const MOVE_INTERVAL_MS = 135;
 const MOVE_VISUAL_MS = 150;
@@ -97,10 +100,18 @@ function stopHeldMove() {
   moveTimer = null;
 }
 
+function clearPendingAim() {
+  pendingAngleDelta = 0;
+  pendingPowerDelta = 0;
+}
+
 function renderRoom(room) {
   currentRoom = room;
   if (room?.status === 'started' && ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) document.activeElement.blur();
-  if (room?.match?.activePlayerId !== playerId || room?.match?.projectile) stopHeldMove();
+  if (room?.match?.activePlayerId !== playerId || room?.match?.projectile) {
+    stopHeldMove();
+    clearPendingAim();
+  }
   ui.renderRoom(room, playerId);
   renderer.drawArena(makeDisplayRoom(room), playerId);
   windGusts.update(room);
@@ -119,6 +130,7 @@ async function ensureConnection() {
       activeSocket.on('disconnect', () => {
         disconnectHandlerBound = false;
         stopHeldMove();
+        clearPendingAim();
         ui.setServerStatus('OFFLINE');
         ui.setMessage('Connection closed. Create or join again.');
       });
@@ -166,11 +178,15 @@ async function joinRoom() {
 }
 
 async function mutate(event, payload, message) {
-  if (!activeSocket) return;
+  if (!activeSocket) return null;
   const result = await request(event, payload);
-  if (!result.ok) return ui.setMessage(humanError(result.error));
+  if (!result.ok) {
+    ui.setMessage(humanError(result.error));
+    return result;
+  }
   renderRoom(result.room);
   if (message) ui.setMessage(message);
+  return result;
 }
 
 ui.createRoomButton.addEventListener('click', createRoom);
@@ -216,56 +232,83 @@ function startHeldMove(direction) {
   }
 }
 
+function queueAim(angleDelta = 0, powerDelta = 0) {
+  if (!isMyActionTurn()) return;
+  pendingAngleDelta += angleDelta;
+  pendingPowerDelta += powerDelta;
+  if (aimPumpPromise) return;
+
+  aimPumpPromise = (async () => {
+    while (isMyActionTurn() && (pendingAngleDelta || pendingPowerDelta)) {
+      const angleStep = pendingAngleDelta;
+      const powerStep = pendingPowerDelta;
+      pendingAngleDelta = 0;
+      pendingPowerDelta = 0;
+      const payload = {};
+      if (angleStep) payload.angle = (currentRoom.match?.aimAngle ?? 45) + angleStep;
+      if (powerStep) payload.power = (currentRoom.match?.aimPower ?? 55) + powerStep;
+      const result = await request('set_aim', payload);
+      if (!result.ok) {
+        clearPendingAim();
+        ui.setMessage(humanError(result.error));
+        break;
+      }
+      renderRoom(result.room);
+    }
+  })().finally(() => { aimPumpPromise = null; });
+}
+
+async function fireShot() {
+  stopHeldMove();
+  if (aimPumpPromise) await aimPumpPromise;
+  if (!isMyActionTurn()) return;
+  await mutate('fire_projectile', {}, 'Shot fired.');
+}
+
 window.addEventListener('keydown', event => {
   if (!isMyActionTurn()) return;
 
-  const key = event.key.toLowerCase();
-  if (['a', 'd', 'w', 's', 'x', 'q', 'e', 'f', ' ', 'arrowup', 'arrowdown'].includes(key)) event.preventDefault();
+  const code = event.code;
+  if (['KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyQ', 'KeyE', 'KeyF', 'Space'].includes(code)) event.preventDefault();
 
-  if (key === 'a' || key === 'd') {
-    if (!event.repeat) startHeldMove(key === 'a' ? -1 : 1);
+  if (code === 'KeyA' || code === 'KeyD') {
+    if (!event.repeat) startHeldMove(code === 'KeyA' ? -1 : 1);
     return;
   }
 
-  if (key === ' ' && !event.repeat) {
+  if (code === 'Space' && !event.repeat) {
     stopHeldMove();
     const me = currentRoom.players.find(player => player.id === playerId);
     mutate('jump_player', { direction: me?.spawn?.facing || 1 });
     return;
   }
 
-  if (key === 'w' || key === 's' || key === 'x' || key === 'arrowup' || key === 'arrowdown') {
+  if (code === 'KeyW' || code === 'KeyS') {
     stopHeldMove();
-    const current = currentRoom.match?.aimAngle ?? 45;
-    const increase = key === 'w' || key === 'arrowup';
-    mutate('set_aim', { angle: current + (increase ? 3 : -3) });
+    queueAim(code === 'KeyW' ? 3 : -3, 0);
     return;
   }
 
-  if (key === 'q' || key === 'e') {
+  if (code === 'KeyQ' || code === 'KeyE') {
     stopHeldMove();
-    const current = currentRoom.match?.aimPower ?? 55;
-    mutate('set_aim', { power: current + (key === 'e' ? 5 : -5) });
+    queueAim(0, code === 'KeyE' ? 5 : -5);
     return;
   }
 
-  if (key === 'f' && !event.repeat) {
-    stopHeldMove();
-    mutate('fire_projectile', {}, 'Shot fired.');
-  }
+  if (code === 'KeyF' && !event.repeat) fireShot();
 });
 
 window.addEventListener('keyup', event => {
-  const key = event.key.toLowerCase();
-  if ((key === 'a' && heldMoveDirection < 0) || (key === 'd' && heldMoveDirection > 0)) stopHeldMove();
+  if ((event.code === 'KeyA' && heldMoveDirection < 0) || (event.code === 'KeyD' && heldMoveDirection > 0)) stopHeldMove();
 });
 
 window.addEventListener('blur', stopHeldMove);
 window.addEventListener('pagehide', () => {
   stopHeldMove();
+  clearPendingAim();
   combatControls.destroy();
   windGusts.destroy();
   socketBoundary.disconnect();
 });
 
-console.info('Orbital Artillery Phase 4 smooth movement and visible combat controls ready.');
+console.info('Orbital Artillery Phase 4 hardened keyboard combat controls ready.');
