@@ -1,6 +1,6 @@
 import { CLIENT_CONFIG } from './config.js';
 import { createSocketBoundary } from './socket.js';
-import { createRenderer } from './renderer.js?v=phase5b-combat-1';
+import { createRenderer } from './renderer.js?v=phase5b-fix-1';
 import { createUI } from './ui.js?v=phase5b-combat-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
 import { initCombatControls } from './combat-controls.js?v=phase4-controls-3';
