@@ -21,7 +21,6 @@ export function initCombatControls(gameCanvas) {
     const me = room.players?.find(player => player.id === playerId);
     const active = room.players?.find(player => player.id === room.match?.activePlayerId);
     const projectile = room.match?.projectile;
-    const specialAction = room.match?.specialAction;
     const myTurn = room.status === 'started' && room.match?.activePlayerId === playerId && me?.alive !== false;
     const remaining = room.status === 'started' ? Math.max(0, ((room.match?.turnEndsAt ?? Date.now()) - Date.now()) / 1000) : 0;
     const wind = room.match?.wind;
@@ -30,8 +29,7 @@ export function initCombatControls(gameCanvas) {
     const inv1 = me?.inventory?.[0] ?? null;
     const inv2 = me?.inventory?.[1] ?? null;
     const alive = room.players?.filter(player => player.alive !== false).length ?? 0;
-    const locked = Boolean(projectile || specialAction);
-    const stateText = room.status === 'finished' ? 'MATCH ENDED' : projectile ? 'SHOT IN FLIGHT' : specialAction ? specialAction.label ?? 'ITEM ACTIVE' : myTurn ? 'YOUR TURN' : 'SPECTATING';
+    const stateText = room.status === 'finished' ? 'MATCH ENDED' : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
 
     panel.innerHTML = `
       <section class="info-block">
@@ -59,7 +57,7 @@ export function initCombatControls(gameCanvas) {
           <div class="control-line"><span>${key('SPACE')} jump</span><strong>${esc(room.match?.jumpsRemaining ?? 0)} left</strong></div>
           <div class="control-line"><span>${key('W')} ${key('S')} angle</span><strong>${Math.round(room.match?.aimAngle ?? 45)}°</strong></div>
           <div class="control-line"><span>${key('Q')} ${key('E')} power</span><strong>${Math.round(room.match?.aimPower ?? 55)}%</strong></div>
-          <div class="control-line"><span>${key('F')} use / fire</span><strong>${locked?'LOCKED':myTurn?'READY':'WAIT'}</strong></div>
+          <div class="control-line"><span>${key('F')} use / fire</span><strong>${projectile?'LOCKED':myTurn?'READY':'WAIT'}</strong></div>
         </div>
       </section>
       <section class="info-block">
@@ -69,7 +67,7 @@ export function initCombatControls(gameCanvas) {
           ${weaponButton(2,inv1?.label ?? 'EMPTY',inv1 ? 'special item' : 'inventory slot 1',selected===2,!inv1,true)}
           ${weaponButton(3,inv2?.label ?? 'EMPTY',inv2 ? 'special item' : 'inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Current box pool: Heavy Bomb, Triple Shot, Cluster Bomb and Shield. Boxes can be collected by touch or explosion. Press 1, 2 or 3 — or click once — then F to use the selected weapon/item.</p>
+        <p class="pickup-note">Shield activates instantly and does not end your turn. If a shot successfully collects a box, the same player keeps the turn with the time they had before firing; a miss still ends the turn. Everyone can see the active aiming trajectory.</p>
       </section>`;
   }
 
