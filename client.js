@@ -1,19 +1,26 @@
 import { CLIENT_CONFIG } from './config.js';
 import { createSocketBoundary } from './socket.js';
-import { createRenderer } from './renderer.js?v=phase4-combat-1';
+import { createRenderer } from './renderer.js?v=phase4-controls-2';
 import { createUI } from './ui.js?v=phase3-turns-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
+import { initCombatControls } from './combat-controls.js?v=phase4-controls-2';
 
 const canvas = document.getElementById('gameCanvas');
 const ui = createUI();
 const renderer = createRenderer(canvas, CLIENT_CONFIG);
 const windGusts = initWindGusts(canvas);
+const combatControls = initCombatControls(canvas);
 const socketBoundary = createSocketBoundary();
 let activeSocket = null;
 let playerId = null;
 let currentRoom = null;
 let disconnectHandlerBound = false;
-let lastMoveSentAt = 0;
+let heldMoveDirection = 0;
+let moveTimer = null;
+let moveInFlight = false;
+const lastAuthoritativeSpawns = new Map();
+const MOVE_INTERVAL_MS = 135;
+const MOVE_VISUAL_MS = 150;
 
 renderer.drawScaffold();
 ui.setClientStatus('READY');
@@ -48,11 +55,56 @@ const humanError = code => ({
   no_jumps_remaining: 'No jumps remaining this turn.'
 }[code] || `Server rejected the request: ${code || 'unknown_error'}`);
 
+function makeDisplayRoom(room) {
+  const now = Date.now();
+  const displayRoom = {
+    ...room,
+    match: room.match ? { ...room.match, movementOriginX: null } : null,
+    camera: room.camera ? { ...room.camera } : null,
+    arena: room.arena ? { ...room.arena } : null,
+    players: room.players.map(player => {
+      const next = {
+        ...player,
+        spawn: player.spawn ? { ...player.spawn } : null,
+        motion: player.motion ? { ...player.motion } : null
+      };
+      const previous = lastAuthoritativeSpawns.get(player.id);
+      if (next.spawn && previous && !next.motion) {
+        const moved = Math.abs(next.spawn.x - previous.x) > 0.01 || Math.abs(next.spawn.y - previous.y) > 0.01;
+        if (moved) {
+          next.motion = {
+            type: 'jump',
+            startedAt: now,
+            endsAt: now + MOVE_VISUAL_MS,
+            fromX: previous.x,
+            fromY: previous.y,
+            toX: next.spawn.x,
+            toY: next.spawn.y,
+            apex: 0
+          };
+        }
+      }
+      if (next.spawn) lastAuthoritativeSpawns.set(player.id, { ...next.spawn });
+      return next;
+    })
+  };
+  return displayRoom;
+}
+
+function stopHeldMove() {
+  heldMoveDirection = 0;
+  if (moveTimer) clearInterval(moveTimer);
+  moveTimer = null;
+}
+
 function renderRoom(room) {
   currentRoom = room;
+  if (room?.status === 'started' && ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) document.activeElement.blur();
+  if (room?.match?.activePlayerId !== playerId || room?.match?.projectile) stopHeldMove();
   ui.renderRoom(room, playerId);
-  renderer.drawArena(room, playerId);
+  renderer.drawArena(makeDisplayRoom(room), playerId);
   windGusts.update(room);
+  combatControls.update(room, playerId);
 }
 
 async function ensureConnection() {
@@ -66,6 +118,7 @@ async function ensureConnection() {
     if (!disconnectHandlerBound) {
       activeSocket.on('disconnect', () => {
         disconnectHandlerBound = false;
+        stopHeldMove();
         ui.setServerStatus('OFFLINE');
         ui.setMessage('Connection closed. Create or join again.');
       });
@@ -139,46 +192,80 @@ function isMyActionTurn() {
     && !currentRoom.match?.projectile;
 }
 
+async function sendMoveStep() {
+  if (!heldMoveDirection || !isMyActionTurn() || moveInFlight || !activeSocket) return;
+  moveInFlight = true;
+  try {
+    const result = await request('move_player', { direction: heldMoveDirection });
+    if (!result.ok) {
+      if (result.error === 'movement_limit' || result.error === 'not_your_turn' || result.error === 'shot_in_flight') stopHeldMove();
+      if (result.error !== 'movement_limit') ui.setMessage(humanError(result.error));
+      return;
+    }
+    renderRoom(result.room);
+  } finally {
+    moveInFlight = false;
+  }
+}
+
+function startHeldMove(direction) {
+  heldMoveDirection = direction;
+  if (!moveTimer) {
+    sendMoveStep();
+    moveTimer = setInterval(sendMoveStep, MOVE_INTERVAL_MS);
+  }
+}
+
 window.addEventListener('keydown', event => {
   if (!isMyActionTurn()) return;
-  const tag = document.activeElement?.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
   const key = event.key.toLowerCase();
-  if (['a', 'd', 'w', 's', 'q', 'e', 'f', ' '].includes(key)) event.preventDefault();
+  if (['a', 'd', 'w', 's', 'x', 'q', 'e', 'f', ' ', 'arrowup', 'arrowdown'].includes(key)) event.preventDefault();
 
   if (key === 'a' || key === 'd') {
-    const now = performance.now();
-    if (now - lastMoveSentAt < 90) return;
-    lastMoveSentAt = now;
-    mutate('move_player', { direction: key === 'a' ? -1 : 1 });
+    if (!event.repeat) startHeldMove(key === 'a' ? -1 : 1);
     return;
   }
 
-  if (key === ' ') {
+  if (key === ' ' && !event.repeat) {
+    stopHeldMove();
     const me = currentRoom.players.find(player => player.id === playerId);
     mutate('jump_player', { direction: me?.spawn?.facing || 1 });
     return;
   }
 
-  if (key === 'w' || key === 's') {
+  if (key === 'w' || key === 's' || key === 'x' || key === 'arrowup' || key === 'arrowdown') {
+    stopHeldMove();
     const current = currentRoom.match?.aimAngle ?? 45;
-    mutate('set_aim', { angle: current + (key === 'w' ? 3 : -3) });
+    const increase = key === 'w' || key === 'arrowup';
+    mutate('set_aim', { angle: current + (increase ? 3 : -3) });
     return;
   }
 
   if (key === 'q' || key === 'e') {
+    stopHeldMove();
     const current = currentRoom.match?.aimPower ?? 55;
     mutate('set_aim', { power: current + (key === 'e' ? 5 : -5) });
     return;
   }
 
-  if (key === 'f' && !event.repeat) mutate('fire_projectile', {}, 'Shot fired.');
+  if (key === 'f' && !event.repeat) {
+    stopHeldMove();
+    mutate('fire_projectile', {}, 'Shot fired.');
+  }
 });
 
+window.addEventListener('keyup', event => {
+  const key = event.key.toLowerCase();
+  if ((key === 'a' && heldMoveDirection < 0) || (key === 'd' && heldMoveDirection > 0)) stopHeldMove();
+});
+
+window.addEventListener('blur', stopHeldMove);
 window.addEventListener('pagehide', () => {
+  stopHeldMove();
+  combatControls.destroy();
   windGusts.destroy();
   socketBoundary.disconnect();
 });
 
-console.info('Orbital Artillery Phase 4 movement and projectile client ready.');
+console.info('Orbital Artillery Phase 4 smooth movement and visible combat controls ready.');
