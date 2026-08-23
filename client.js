@@ -1,6 +1,6 @@
 import { CLIENT_CONFIG } from './config.js';
 import { createSocketBoundary } from './socket.js';
-import { createRenderer } from './renderer.js?v=phase4-controls-3';
+import { createRenderer } from './renderer.js?v=phase4-preview-1';
 import { createUI } from './ui.js?v=phase3-turns-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
 import { initCombatControls } from './combat-controls.js?v=phase4-controls-3';
@@ -22,8 +22,8 @@ let pendingAngleDelta = 0;
 let pendingPowerDelta = 0;
 let aimPumpPromise = null;
 const lastAuthoritativeSpawns = new Map();
-const MOVE_INTERVAL_MS = 135;
-const MOVE_VISUAL_MS = 150;
+const MOVE_INTERVAL_MS = 70;
+const MOVE_VISUAL_MS = 110;
 
 renderer.drawScaffold();
 ui.setClientStatus('READY');
@@ -311,4 +311,4 @@ window.addEventListener('pagehide', () => {
   socketBoundary.disconnect();
 });
 
-console.info('Orbital Artillery Phase 4 hardened keyboard combat controls ready.');
+console.info('Orbital Artillery Phase 4 smooth movement and live aim preview ready.');
