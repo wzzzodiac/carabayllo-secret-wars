@@ -1,6 +1,6 @@
 import { CLIENT_CONFIG } from './config.js';
 import { createSocketBoundary } from './socket.js';
-import { createRenderer } from './renderer.js?v=phase5b-polish-1';
+import { createRenderer } from './renderer.js?v=phase5b-knockback-1';
 import { createUI } from './ui.js?v=phase5b-combat-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
 import { initCombatControls } from './combat-controls.js?v=phase4-controls-3';
@@ -38,10 +38,13 @@ function normalizeServerMotion(playerId, motion, now) {
   if (!motion) return motion;
   const goesIntoVoid = Number(motion.toY) > 5000;
   const visualType = motion.type === 'jump' && goesIntoVoid ? 'voidJump' : motion.type;
-  if (!['jump','voidJump','fall'].includes(visualType)) return motion;
+  if (!['jump','voidJump','fall','knockback','knockbackVoid'].includes(visualType)) return motion;
   const serverDuration = Number(motion.endsAt) - Number(motion.startedAt);
-  const duration = visualType === 'voidJump' ? Math.max(1450, serverDuration || 620) : visualType === 'fall' && goesIntoVoid ? Math.max(980, serverDuration || 760) : Math.max(280, serverDuration || 620);
-  const signature = `${visualType}:${motion.startedAt}:${motion.fromX}:${motion.fromY}:${motion.toX}:${motion.toY}`;
+  const duration = visualType === 'voidJump' ? Math.max(1450, serverDuration || 620)
+    : visualType === 'fall' && goesIntoVoid ? Math.max(980, serverDuration || 760)
+      : ['knockback','knockbackVoid'].includes(visualType) ? Math.max(260, serverDuration || 520)
+        : Math.max(280, serverDuration || 620);
+  const signature = `${visualType}:${motion.startedAt}:${motion.fromX}:${motion.fromY}:${motion.toX}:${motion.toY}:${motion.vx ?? 0}:${motion.vy ?? 0}`;
   let visual = visualMotionClock.get(playerId);
   if (!visual || visual.signature !== signature) {
     visual = { signature, startedAt: now, endsAt: now + duration };
