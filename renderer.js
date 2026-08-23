@@ -22,6 +22,10 @@ export function createRenderer(canvas, config) {
   const TURN_DIVE_MS = 900;
   const VEHICLE_WORLD_WIDTH = 28;
   const VEHICLE_WORLD_HEIGHT = 15;
+  const PROJECTILE_GRAVITY = 480;
+  const PREVIEW_SIM_DT = 0.02;
+  const PREVIEW_MAX_SECONDS = 8;
+  const PREVIEW_DOT_INTERVAL = 0.12;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
   const lerp = (a, b, t) => a + (b - a) * t;
   const smoothstep = t => t * t * (3 - 2 * t);
@@ -323,6 +327,75 @@ export function createRenderer(canvas, config) {
     }
   }
 
+  function drawAimPreview(room, view) {
+    if (room.status !== 'started' || room.match?.projectile || room.match?.activePlayerId !== localPlayerId) return;
+    const player = room.players.find(entry => entry.id === localPlayerId);
+    if (!player?.spawn) return;
+
+    const position = visualPlayerPosition(player);
+    const facing = position.facing || 1;
+    const angle = room.match?.aimAngle ?? 45;
+    const power = room.match?.aimPower ?? 55;
+    const radians = angle * Math.PI / 180;
+    const speed = 320 + power * 9;
+    const startX = position.x + facing * 24;
+    const startY = position.y - 24;
+    const vx = Math.cos(radians) * speed * facing;
+    const vy = -Math.sin(radians) * speed;
+    const windAccel = (room.match?.wind?.signed ?? 0) * 1.5;
+    const dots = [];
+    let nextDotAt = 0;
+    let impact = null;
+
+    for (let t = PREVIEW_SIM_DT; t <= PREVIEW_MAX_SECONDS; t += PREVIEW_SIM_DT) {
+      const x = startX + vx * t + 0.5 * windAccel * t * t;
+      const y = startY + vy * t + 0.5 * PROJECTILE_GRAVITY * t * t;
+      if (t >= nextDotAt) {
+        dots.push({ x, y });
+        nextDotAt += PREVIEW_DOT_INTERVAL;
+      }
+      if (x < 0 || x > room.arena.worldWidth || y > room.arena.worldHeight) {
+        impact = { x: clamp(x, 0, room.arena.worldWidth), y };
+        break;
+      }
+      if (t > 0.08 && y >= terrainY(clamp(x, 0, room.arena.worldWidth))) {
+        impact = { x: clamp(x, 0, room.arena.worldWidth), y: terrainY(clamp(x, 0, room.arena.worldWidth)) };
+        break;
+      }
+    }
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,232,154,.66)';
+    for (let index = 0; index < dots.length; index += 1) {
+      const point = worldToScreen(dots[index].x, dots[index].y, view);
+      if (point.x < -12 || point.x > canvas.width + 12 || point.y < -12 || point.y > canvas.height + 12) continue;
+      const radius = index % 4 === 0 ? 3.1 : 2.2;
+      ctx.globalAlpha = 0.34 + Math.min(index / Math.max(dots.length, 1), 1) * 0.34;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (impact) {
+      const marker = worldToScreen(impact.x, impact.y, view);
+      if (marker.x >= -30 && marker.x <= canvas.width + 30 && marker.y >= -30 && marker.y <= canvas.height + 30) {
+        ctx.globalAlpha = .82;
+        ctx.strokeStyle = '#ffe89a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(marker.x, marker.y, 9, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(marker.x - 13, marker.y);
+        ctx.lineTo(marker.x + 13, marker.y);
+        ctx.moveTo(marker.x, marker.y - 13);
+        ctx.lineTo(marker.x, marker.y + 13);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   function drawProjectile(room, view) {
     const projectile = room.match?.projectile;
     if (!projectile) return;
@@ -478,6 +551,7 @@ export function createRenderer(canvas, config) {
     ctx.fill();
 
     drawMovementRadius(room, view);
+    drawAimPreview(room, view);
     for (const player of room.players) {
       if (!player.spawn) continue;
       drawVehicle(room, player, visualPlayerPosition(player), view, player.id === localPlayerId, player.id === room.match?.activePlayerId);
