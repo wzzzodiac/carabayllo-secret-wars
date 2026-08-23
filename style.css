@@ -12,11 +12,11 @@
 html, body { margin: 0; min-height: 100%; }
 body { min-height: 100vh; background: radial-gradient(circle at 50% -20%, #17223f 0, var(--bg) 45%); color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 button, input, select { font: inherit; }
-.shell { width: min(1200px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 28px; }
+.shell { width: min(1500px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 28px; }
 .hero { border-bottom: 1px solid var(--line); padding-bottom: 22px; }
 .eyebrow, .section-label { color: var(--accent); letter-spacing: .14em; font-size: 12px; font-weight: 700; }
 h1 { margin: 8px 0 0; font: 700 clamp(34px, 6vw, 68px)/.98 system-ui, sans-serif; letter-spacing: -.045em; }
-.subtitle { max-width: 780px; color: var(--muted); line-height: 1.65; }
+.subtitle { max-width: 900px; color: var(--muted); line-height: 1.65; }
 .panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 18px 0; background: var(--line); border: 1px solid var(--line); }
 .status-row { background: var(--panel); padding: 14px; min-height: 76px; display: flex; flex-direction: column; justify-content: space-between; }
 .status-row span { color: var(--muted); font-size: 11px; letter-spacing: .08em; }
@@ -55,11 +55,36 @@ button.active { border-color: var(--accent); background: #1b2a4d; color: #fff; }
 .ready-button.active { border-color: rgba(155,231,176,.65); color: var(--good); }
 .start-button { border-color: rgba(140,180,255,.75); font-weight: 800; letter-spacing: .08em; }
 .lobby-hint { margin: 2px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
-.game-frame { position: relative; border: 1px solid var(--line); background: #03050a; overflow: hidden; }
+.battle-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; }
+.game-frame { position: relative; border: 1px solid var(--line); background: #03050a; overflow: hidden; min-width: 0; }
 #gameCanvas { display: block; width: 100%; height: auto; aspect-ratio: 16/9; }
 .overlay { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
 .overlay p { margin: 0; color: var(--text); letter-spacing: .16em; font-weight: 800; }
 .overlay span { margin-top: 8px; color: var(--muted); font-size: 12px; }
+.game-info-panel { border: 1px solid var(--line); background: rgba(9,14,27,.94); min-height: 100%; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.game-info-empty { display: grid; gap: 10px; color: var(--muted); }
+.game-info-empty strong { color: var(--text); }
+.game-info-empty p { margin: 0; font-size: 11px; line-height: 1.55; }
+.info-block { border: 1px solid rgba(155,184,255,.14); background: rgba(4,8,16,.40); padding: 12px; }
+.info-block-title { color: var(--accent); font-size: 10px; letter-spacing: .12em; font-weight: 800; margin-bottom: 10px; }
+.turn-state { font: 800 18px system-ui, sans-serif; color: var(--good); margin-bottom: 8px; }
+.turn-state.spectating { color: #ffe89a; }
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; font-size: 11px; }
+.info-grid span { color: var(--muted); }
+.info-grid strong { display: block; color: var(--text); margin-top: 2px; font-size: 12px; }
+.control-list { display: grid; gap: 8px; font-size: 11px; color: var(--muted); }
+.control-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+kbd { display: inline-block; min-width: 24px; padding: 2px 6px; border: 1px solid rgba(140,180,255,.42); border-radius: 4px; background: rgba(140,180,255,.10); color: #dce7ff; font: 800 11px ui-monospace, monospace; text-align: center; }
+.weapon-list { display: grid; gap: 8px; }
+.weapon-button { width: 100%; text-align: left; padding: 10px; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; border-color: rgba(155,184,255,.20); }
+.weapon-button .weapon-key { color: var(--accent); font-weight: 900; }
+.weapon-button .weapon-name { font-weight: 800; }
+.weapon-button .weapon-meta { color: var(--muted); font-size: 10px; }
+.weapon-button.selected { border-color: #ffe89a; background: rgba(255,232,154,.10); }
+.weapon-button.special.selected { border-color: #ffb35c; background: rgba(255,179,92,.11); }
+.weapon-button:disabled { opacity: .35; }
+.pickup-note { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; color: var(--muted); font-size: 11px; }
-@media (max-width: 850px) { .player-row { grid-template-columns: 28px minmax(0, 1fr) auto; } .player-ready, .player-host { grid-column: 3; } }
-@media (max-width: 700px) { .shell { width: min(100% - 18px, 1200px); padding-top: 24px; } .panel, .lobby-grid { grid-template-columns: 1fr; } footer { flex-direction: column; } }
+@media (max-width: 1180px) { .battle-layout { grid-template-columns: 1fr; } .game-info-panel { min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 850px) { .player-row { grid-template-columns: 28px minmax(0, 1fr) auto; } .player-ready, .player-host { grid-column: 3; } .game-info-panel { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .shell { width: min(100% - 18px, 1500px); padding-top: 24px; } .panel, .lobby-grid { grid-template-columns: 1fr; } footer { flex-direction: column; } }
