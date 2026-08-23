@@ -1,6 +1,6 @@
 import { CLIENT_CONFIG } from './config.js';
 import { createSocketBoundary } from './socket.js';
-import { createRenderer } from './renderer.js?v=phase5b-fix-1';
+import { createRenderer } from './renderer.js?v=phase5b-polish-1';
 import { createUI } from './ui.js?v=phase5b-combat-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
 import { initCombatControls } from './combat-controls.js?v=phase4-controls-3';
@@ -35,15 +35,19 @@ const humanError = code => ({
 }[code] || `Server rejected the request: ${code || 'unknown_error'}`);
 
 function normalizeServerMotion(playerId, motion, now) {
-  if (!motion || motion.type !== 'jump') return motion;
-  const duration = Math.max(280, Number(motion.endsAt) - Number(motion.startedAt) || 620);
-  const signature = `${motion.type}:${motion.startedAt}:${motion.fromX}:${motion.fromY}:${motion.toX}:${motion.toY}`;
+  if (!motion) return motion;
+  const goesIntoVoid = Number(motion.toY) > 5000;
+  const visualType = motion.type === 'jump' && goesIntoVoid ? 'voidJump' : motion.type;
+  if (!['jump','voidJump','fall'].includes(visualType)) return motion;
+  const serverDuration = Number(motion.endsAt) - Number(motion.startedAt);
+  const duration = visualType === 'voidJump' ? Math.max(1450, serverDuration || 620) : visualType === 'fall' && goesIntoVoid ? Math.max(980, serverDuration || 760) : Math.max(280, serverDuration || 620);
+  const signature = `${visualType}:${motion.startedAt}:${motion.fromX}:${motion.fromY}:${motion.toX}:${motion.toY}`;
   let visual = visualMotionClock.get(playerId);
   if (!visual || visual.signature !== signature) {
     visual = { signature, startedAt: now, endsAt: now + duration };
     visualMotionClock.set(playerId, visual);
   }
-  return { ...motion, startedAt: visual.startedAt, endsAt: visual.endsAt };
+  return { ...motion, type: visualType, startedAt: visual.startedAt, endsAt: visual.endsAt };
 }
 
 function makeDisplayRoom(room) {
