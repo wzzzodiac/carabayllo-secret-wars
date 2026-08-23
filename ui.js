@@ -24,15 +24,12 @@ export function createUI() {
   const arenaTitle = q('arenaTitle');
   const arenaOverlay = arenaTitle.closest('.overlay');
 
-  function setBusy(busy) {
-    createRoomButton.disabled = busy;
-    joinRoomButton.disabled = busy;
-  }
+  function setBusy(busy) { createRoomButton.disabled = busy; joinRoomButton.disabled = busy; }
 
   function renderRoom(room, playerId) {
     activeRoomCode.textContent = room?.code ?? '----';
     roomCount.textContent = `${room?.players?.length ?? 0} / ${room?.maxPlayers ?? 8}`;
-    roomStatus.textContent = room?.status === 'countdown' ? 'COUNTDOWN' : room?.status === 'started' ? 'TURN ACTIVE' : 'LOBBY';
+    roomStatus.textContent = room?.status === 'countdown' ? 'COUNTDOWN' : room?.status === 'started' ? 'TURN ACTIVE' : room?.status === 'finished' ? 'MATCH COMPLETE' : 'LOBBY';
 
     if (!room?.players?.length) {
       playerList.innerHTML = '<div class="empty-room">No room joined yet.</div>';
@@ -42,12 +39,13 @@ export function createUI() {
     }
 
     arenaOverlay.hidden = true;
+    const combatStarted = ['countdown', 'started', 'finished'].includes(room.status);
     playerList.innerHTML = room.players.map((player, index) => `
       <div class="player-row${player.id === playerId ? ' current-player' : ''}">
         <span class="player-index">${String(index + 1).padStart(2, '0')}</span>
         <strong>${esc(player.name)}</strong>
         <span class="player-team">${room.mode === 'survival' ? 'SURVIVAL' : `TEAM ${esc(player.team)}`}</span>
-        <span class="player-ready ${player.ready ? 'is-ready' : ''}">${player.ready ? 'READY' : 'NOT READY'}</span>
+        <span class="player-ready ${!combatStarted && player.ready ? 'is-ready' : ''}">${combatStarted ? (player.alive === false ? 'OUT' : `HP ${Math.max(0, player.hp ?? 100)}`) : (player.ready ? 'READY' : 'NOT READY')}</span>
         <span class="player-host">${player.isHost ? 'HOST' : ''}</span>
       </div>`).join('');
 
@@ -73,42 +71,22 @@ export function createUI() {
     startGameButton.disabled = locked;
 
     if (room.status === 'countdown') {
-      lobbyHint.textContent = 'Full-map countdown active. Turn 1 begins automatically.';
+      lobbyHint.textContent = 'Full-map countdown active. Every vehicle starts with 100 HP.';
     } else if (room.status === 'started') {
       const active = room.players.find(player => player.id === room.match?.activePlayerId);
-      lobbyHint.textContent = `Turn ${room.match?.turnNumber ?? 1}: ${active?.name ?? 'player'} is active.`;
+      lobbyHint.textContent = `Turn ${room.match?.turnNumber ?? 1}: ${active?.name ?? 'player'} is active. Explosions damage by distance.`;
+    } else if (room.status === 'finished') {
+      const result = room.match?.result;
+      lobbyHint.textContent = result?.draw ? 'Match complete: draw.' : result?.type === 'team' ? `Match complete: Team ${result.winnerTeam} wins.` : `Match complete: ${result?.winnerName ?? 'player'} wins.`;
     } else {
       const terrainName = room.terrainPresets?.find(entry => entry.id === room.terrainPreset)?.name ?? room.terrainPreset;
-      lobbyHint.textContent = me.isHost
-        ? `Host: choose mode and terrain. The arena below previews ${terrainName} live before START.`
-        : `Terrain preview: ${terrainName}. Mark yourself READY when the setup looks good.`;
+      lobbyHint.textContent = me.isHost ? `Host: choose mode and terrain. The arena below previews ${terrainName} live before START.` : `Terrain preview: ${terrainName}. Mark yourself READY when the setup looks good.`;
     }
   }
 
-  return Object.freeze({
-    playerName,
-    roomCode,
-    createRoomButton,
-    joinRoomButton,
-    readyButton,
-    teamAButton,
-    teamBButton,
-    teamModeButton,
-    survivalModeButton,
-    startGameButton,
-    setClientStatus: value => { clientStatus.textContent = value; },
-    setServerStatus: value => { serverStatus.textContent = value; },
-    setMessage: value => { actionMessage.textContent = value; },
-    setBusy,
-    renderRoom
-  });
+  return Object.freeze({ playerName, roomCode, createRoomButton, joinRoomButton, readyButton, teamAButton, teamBButton, teamModeButton, survivalModeButton, startGameButton, setClientStatus: value => { clientStatus.textContent = value; }, setServerStatus: value => { serverStatus.textContent = value; }, setMessage: value => { actionMessage.textContent = value; }, setBusy, renderRoom });
 }
 
 function esc(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+  return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
