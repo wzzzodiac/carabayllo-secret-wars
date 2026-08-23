@@ -3,7 +3,7 @@ import { createSocketBoundary } from './socket.js';
 import { createRenderer } from './renderer.js?v=phase6a-sidehud-1';
 import { createUI } from './ui.js?v=phase5b-combat-1';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
-import { initCombatControls } from './combat-controls.js?v=phase6a-sidehud-1';
+import { initCombatControls } from './combat-controls.js?v=phase6a-pickupshot-1';
 
 const canvas = document.getElementById('gameCanvas');
 const ui = createUI();
