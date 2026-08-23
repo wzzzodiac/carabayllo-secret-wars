@@ -1,669 +1,76 @@
 export function createRenderer(canvas, config) {
   if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError('A valid game canvas is required.');
-
-  canvas.width = config.internalWidth;
-  canvas.height = config.internalHeight;
+  canvas.width = config.internalWidth; canvas.height = config.internalHeight;
   const ctx = canvas.getContext('2d');
+  let animationFrame = null, activeRoom = null, localPlayerId = null, cameraInitialized = false, lastRoomStatus = null, lastTargetPlayerId = null, lastProjectileId = null, dragging = false, dragStart = null;
+  const MIN_VIEW_UNITS = 1, MAX_VIEW_UNITS = 5, WORLD_UNITS = 5, OPENING_DIVE_MS = 1800, TURN_DIVE_MS = 900, VEHICLE_WORLD_WIDTH = 28, VEHICLE_WORLD_HEIGHT = 15, PROJECTILE_GRAVITY = 480, PREVIEW_SIM_DT = 0.02, PREVIEW_MAX_SECONDS = 8, PREVIEW_DOT_INTERVAL = 0.12;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v)); const lerp = (a, b, t) => a + (b - a) * t; const smoothstep = t => t * t * (3 - 2 * t);
+  const PRESET_HOLES = { brokenridge: [[2360,2580]], islands: [[2250,2460],[2920,3100],[4550,4740]], canyon: [[2410,2590]] };
 
-  let animationFrame = null;
-  let activeRoom = null;
-  let localPlayerId = null;
-  let cameraInitialized = false;
-  let lastRoomStatus = null;
-  let lastTargetPlayerId = null;
-  let lastProjectileId = null;
-  let dragging = false;
-  let dragStart = null;
+  function baseTerrainY(preset, x) {
+    switch (preset) {
+      case 'terraces': { const raw = 3260 + Math.sin(x / 520) * 360 + Math.sin(x / 155) * 55; return Math.round(raw / 130) * 130; }
+      case 'twinpeaks': return 3550 - 720 * Math.exp(-((x - 1450) ** 2) / 420000) - 780 * Math.exp(-((x - 3550) ** 2) / 460000) + Math.sin(x / 330) * 75;
+      case 'basin': return 2980 + 520 * Math.exp(-((x - 2500) ** 2) / 900000) + Math.sin(x / 410) * 95;
+      case 'brokenridge': return 3350 + Math.sin(x / 240) * 250 + Math.sin(x / 720 + 1.1) * 170;
+      case 'islands': return 3250 + Math.sin(x / 300) * 220 + Math.sin(x / 890) * 125;
+      case 'canyon': return 3160 + Math.abs(x - 2500) * 0.18 + Math.sin(x / 360) * 110;
+      default: return 3370 + Math.sin(x / 430) * 180 + Math.sin(x / 970 + 0.7) * 130;
+    }
+  }
+  function terrainY(x, room = activeRoom) {
+    const arena = room?.arena; const worldWidth = arena?.worldWidth ?? 5000; const worldHeight = arena?.worldHeight ?? 5000; const px = clamp(x, 0, worldWidth); const preset = room?.terrainPreset || arena?.terrainPreset || 'rolling';
+    if ((PRESET_HOLES[preset] ?? []).some(([l,r]) => px >= l && px <= r)) return worldHeight;
+    let y = baseTerrainY(preset, px);
+    for (const crater of arena?.craters ?? []) { const dx = Math.abs(px - crater.x); if (dx < crater.radius) y += crater.depth * Math.sqrt(Math.max(0, 1 - (dx / crater.radius) ** 2)); }
+    return clamp(y, 120, worldHeight);
+  }
 
-  const MIN_VIEW_UNITS = 1;
-  const MAX_VIEW_UNITS = 5;
-  const WORLD_UNITS = 5;
-  const OPENING_DIVE_MS = 1800;
-  const TURN_DIVE_MS = 900;
-  const VEHICLE_WORLD_WIDTH = 28;
-  const VEHICLE_WORLD_HEIGHT = 15;
-  const PROJECTILE_GRAVITY = 480;
-  const PREVIEW_SIM_DT = 0.02;
-  const PREVIEW_MAX_SECONDS = 8;
-  const PREVIEW_DOT_INTERVAL = 0.12;
-  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const smoothstep = t => t * t * (3 - 2 * t);
-  const terrainY = x => 3370 + Math.sin(x / 430) * 180 + Math.sin(x / 970 + 0.7) * 130;
-
-  const camera = {
-    centerX: 2500, centerY: 2500, viewUnits: MAX_VIEW_UNITS,
-    targetCenterX: 2500, targetCenterY: 2500, targetViewUnits: MAX_VIEW_UNITS,
-    manual: false, transition: null, projectileFollow: false
-  };
+  const camera = { centerX:2500, centerY:2500, viewUnits:MAX_VIEW_UNITS, targetCenterX:2500, targetCenterY:2500, targetViewUnits:MAX_VIEW_UNITS, manual:false, transition:null, projectileFollow:false };
 
   function drawBackground() {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#071224');
-    gradient.addColorStop(.62, '#0a1221');
-    gradient.addColorStop(1, '#02040a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.globalAlpha = .55;
-    for (let i = 0; i < 90; i += 1) {
-      const x = (i * 233 + 91) % canvas.width;
-      const y = (i * 137 + 47) % Math.max(430, canvas.height * .62);
-      const size = i % 9 === 0 ? 2 : 1;
-      ctx.fillStyle = '#8cb4ff';
-      ctx.fillRect(x, y, size, size);
-    }
-    ctx.restore();
+    const g = ctx.createLinearGradient(0,0,0,canvas.height); g.addColorStop(0,'#071224'); g.addColorStop(.62,'#0a1221'); g.addColorStop(1,'#02040a'); ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.save(); ctx.globalAlpha=.55; for(let i=0;i<90;i++){const x=(i*233+91)%canvas.width,y=(i*137+47)%Math.max(430,canvas.height*.62),s=i%9===0?2:1;ctx.fillStyle='#8cb4ff';ctx.fillRect(x,y,s,s);} ctx.restore();
   }
+  function cancelLoop(){if(animationFrame)cancelAnimationFrame(animationFrame);animationFrame=null;}
+  function drawScaffold(){cancelLoop();activeRoom=null;cameraInitialized=false;lastRoomStatus=null;lastTargetPlayerId=null;lastProjectileId=null;camera.transition=null;camera.projectileFollow=false;ctx.clearRect(0,0,canvas.width,canvas.height);drawBackground();ctx.fillStyle='#18243d';ctx.beginPath();ctx.moveTo(0,canvas.height*.72);ctx.quadraticCurveTo(canvas.width*.2,canvas.height*.58,canvas.width*.38,canvas.height*.70);ctx.quadraticCurveTo(canvas.width*.58,canvas.height*.84,canvas.width*.72,canvas.height*.63);ctx.quadraticCurveTo(canvas.width*.86,canvas.height*.50,canvas.width,canvas.height*.68);ctx.lineTo(canvas.width,canvas.height);ctx.lineTo(0,canvas.height);ctx.fill();}
+  function cameraTarget(room){const id=room.camera?.targetPlayerId||room.match?.activePlayerId||localPlayerId;return room.players.find(p=>p.id===id)||room.players.find(p=>p.id===localPlayerId)||room.players.find(p=>p.alive!==false)||room.players[0]||null;}
+  function viewSize(arena,units=camera.viewUnits){const f=clamp(units,MIN_VIEW_UNITS,MAX_VIEW_UNITS)/WORLD_UNITS;return{width:arena.worldWidth*f,height:arena.worldHeight*f};}
+  function clampCenter(arena,x,y,units=camera.viewUnits){const s=viewSize(arena,units),hw=s.width/2,hh=s.height/2;return{x:clamp(x,hw,arena.worldWidth-hw),y:clamp(y,hh,arena.worldHeight-hh)};}
+  function clampCamera(arena){let c=clampCenter(arena,camera.centerX,camera.centerY,camera.viewUnits);camera.centerX=c.x;camera.centerY=c.y;c=clampCenter(arena,camera.targetCenterX,camera.targetCenterY,camera.targetViewUnits);camera.targetCenterX=c.x;camera.targetCenterY=c.y;}
+  function setFollowTarget(room,immediate=false){const t=cameraTarget(room);if(!t?.spawn||!room.arena)return;camera.targetCenterX=t.spawn.x;camera.targetCenterY=t.spawn.y;if(immediate){camera.centerX=t.spawn.x;camera.centerY=t.spawn.y;}clampCamera(room.arena);}
+  function beginCountdownOverview(room){camera.manual=false;camera.projectileFollow=false;camera.transition=null;camera.viewUnits=MAX_VIEW_UNITS;camera.targetViewUnits=MAX_VIEW_UNITS;camera.centerX=room.arena.worldWidth/2;camera.centerY=room.arena.worldHeight/2;camera.targetCenterX=camera.centerX;camera.targetCenterY=camera.centerY;cameraInitialized=true;clampCamera(room.arena);}
+  function beginTargetTransition(room,durationMs,now=performance.now()){const t=cameraTarget(room);if(!t?.spawn)return;const dest=clampCenter(room.arena,t.spawn.x,t.spawn.y,MIN_VIEW_UNITS);camera.manual=false;camera.projectileFollow=false;camera.transition={startedAt:now,endsAt:now+durationMs,fromCenterX:camera.centerX,fromCenterY:camera.centerY,fromViewUnits:camera.viewUnits,toCenterX:dest.x,toCenterY:dest.y,toViewUnits:MIN_VIEW_UNITS};camera.targetCenterX=dest.x;camera.targetCenterY=dest.y;camera.targetViewUnits=MIN_VIEW_UNITS;}
+  function projectilePosition(p,now=Date.now()){if(!p)return null;const ms=clamp(now-p.startedAt,0,p.durationMs),t=ms/1000;return{x:p.startX+p.vx*t+.5*p.windAccel*t*t,y:p.startY+p.vy*t+.5*p.gravity*t*t,impact:now>=p.impactAt};}
+  function controlsLocked(now=performance.now()){return activeRoom?.status==='countdown'||Boolean(camera.transition&&now<camera.transition.endsAt)||Boolean(activeRoom?.match?.projectile);}
+  function ensureCameraState(room){if(!room?.arena)return;const targetId=room.camera?.targetPlayerId||room.match?.activePlayerId||null, projectileId=room.match?.projectile?.id||null;if(!cameraInitialized){if(room.status==='countdown')beginCountdownOverview(room);else{camera.viewUnits=MIN_VIEW_UNITS;camera.targetViewUnits=MIN_VIEW_UNITS;setFollowTarget(room,true);cameraInitialized=true;}}if(lastRoomStatus==='countdown'&&room.status==='started')beginTargetTransition(room,OPENING_DIVE_MS);else if(room.status==='started'&&lastTargetPlayerId&&targetId&&targetId!==lastTargetPlayerId&&!projectileId)beginTargetTransition(room,TURN_DIVE_MS);if(projectileId&&projectileId!==lastProjectileId){camera.manual=false;camera.transition=null;camera.projectileFollow=true;camera.targetViewUnits=MIN_VIEW_UNITS;}if(!projectileId&&lastProjectileId)camera.projectileFollow=false;if(room.status==='countdown'&&lastRoomStatus!=='countdown')beginCountdownOverview(room);lastRoomStatus=room.status;if(targetId)lastTargetPlayerId=targetId;lastProjectileId=projectileId;}
+  function currentView(arena){const s=viewSize(arena);return{x:camera.centerX-s.width/2,y:camera.centerY-s.height/2,width:s.width,height:s.height};}
+  function worldToScreen(x,y,v){return{x:(x-v.x)/v.width*canvas.width,y:(y-v.y)/v.height*canvas.height};}
+  function screenToWorld(x,y,arena){const v=currentView(arena);return{x:v.x+x/canvas.width*v.width,y:v.y+y/canvas.height*v.height};}
+  function updateCamera(room,now){if(!room?.arena)return;const p=room.match?.projectile;if(p&&camera.projectileFollow){const pos=projectilePosition(p);if(pos){const c=clampCenter(room.arena,pos.x,pos.y,MIN_VIEW_UNITS);camera.targetCenterX=c.x;camera.targetCenterY=c.y;camera.targetViewUnits=MIN_VIEW_UNITS;camera.centerX=lerp(camera.centerX,c.x,.22);camera.centerY=lerp(camera.centerY,c.y,.22);camera.viewUnits=lerp(camera.viewUnits,MIN_VIEW_UNITS,.18);clampCamera(room.arena);return;}}if(camera.transition){const tr=camera.transition,raw=clamp((now-tr.startedAt)/(tr.endsAt-tr.startedAt),0,1),t=smoothstep(raw);camera.centerX=lerp(tr.fromCenterX,tr.toCenterX,t);camera.centerY=lerp(tr.fromCenterY,tr.toCenterY,t);camera.viewUnits=lerp(tr.fromViewUnits,tr.toViewUnits,t);if(raw>=1){camera.centerX=tr.toCenterX;camera.centerY=tr.toCenterY;camera.viewUnits=tr.toViewUnits;camera.targetCenterX=tr.toCenterX;camera.targetCenterY=tr.toCenterY;camera.targetViewUnits=tr.toViewUnits;camera.transition=null;}clampCamera(room.arena);return;}if(!camera.manual&&room.status==='started')setFollowTarget(room,false);camera.centerX=lerp(camera.centerX,camera.targetCenterX,.16);camera.centerY=lerp(camera.centerY,camera.targetCenterY,.16);camera.viewUnits=lerp(camera.viewUnits,camera.targetViewUnits,.14);if(Math.abs(camera.viewUnits-camera.targetViewUnits)<.002)camera.viewUnits=camera.targetViewUnits;if(Math.abs(camera.centerX-camera.targetCenterX)<.2)camera.centerX=camera.targetCenterX;if(Math.abs(camera.centerY-camera.targetCenterY)<.2)camera.centerY=camera.targetCenterY;clampCamera(room.arena);}
 
-  function cancelLoop() { if (animationFrame) cancelAnimationFrame(animationFrame); animationFrame = null; }
+  function visualPlayerPosition(player,now=Date.now()){const m=player.motion;if(!m||now>=m.endsAt)return player.spawn;const raw=clamp((now-m.startedAt)/(m.endsAt-m.startedAt),0,1),x=lerp(m.fromX,m.toX,raw),baseY=lerp(m.fromY,m.toY,raw),arc=m.type==='jump'?Math.sin(Math.PI*raw)*(m.apex||0):0;return{...player.spawn,x,y:baseY-arc};}
+  function drawVehicle(room,player,pos,view,local,active){if(!pos)return;const s=worldToScreen(pos.x,pos.y,view);if(s.x<-90||s.x>canvas.width+90||s.y<-90||s.y>canvas.height+90)return;const pxX=canvas.width/view.width,pxY=canvas.height/view.height,w=clamp(VEHICLE_WORLD_WIDTH*pxX,8,52),h=clamp(VEHICLE_WORLD_HEIGHT*pxY,5,30),wr=clamp(h*.28,2,7),cl=clamp(w*.48,6,22),ct=clamp(h*.16,2,5),angle=active?(room.match?.aimAngle??45):15;ctx.save();ctx.translate(s.x,s.y);ctx.scale(pos.facing||1,1);ctx.globalAlpha=player.alive===false?.55:1;ctx.fillStyle=room.mode==='survival'?'#d6b4ff':player.team==='A'?'#8cb4ff':'#ff9aa8';ctx.strokeStyle=active?'#ffe89a':local?'#ffffff':'rgba(231,237,255,.55)';ctx.lineWidth=active?3:local?2.5:1.5;ctx.beginPath();ctx.roundRect(-w/2,-h*.62,w,h,Math.max(2,h*.25));ctx.fill();ctx.stroke();ctx.fillStyle='#08101d';ctx.beginPath();ctx.arc(-w*.27,h*.24,wr,0,Math.PI*2);ctx.arc(w*.27,h*.24,wr,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(w*.08,-h*.72);ctx.rotate(-angle*Math.PI/180);ctx.fillRect(0,-ct/2,cl,ct);ctx.restore();ctx.restore();if(camera.viewUnits<=3.25||active||local){const off=Math.max(22,h*1.65);ctx.textAlign='center';ctx.fillStyle='#e7edff';ctx.font='700 15px ui-monospace,monospace';ctx.fillText(player.name,s.x,s.y-off);ctx.font='700 10px ui-monospace,monospace';ctx.fillStyle=player.alive===false?'#ff9aa8':active?'#ffe89a':'#8cb4ff';const role=player.alive===false?'OUT':room.mode==='survival'?'SURVIVAL':`TEAM ${player.team}`,flags=`${local?' // YOU':''}${active?' // ACTIVE':''}`;ctx.fillText(`${role}${flags}`,s.x,s.y-off+15);}}
 
-  function drawScaffold() {
-    cancelLoop();
-    activeRoom = null;
-    cameraInitialized = false;
-    lastRoomStatus = null;
-    lastTargetPlayerId = null;
-    lastProjectileId = null;
-    camera.transition = null;
-    camera.projectileFollow = false;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBackground();
-    ctx.fillStyle = '#18243d';
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height * .72);
-    ctx.quadraticCurveTo(canvas.width * .2, canvas.height * .58, canvas.width * .38, canvas.height * .70);
-    ctx.quadraticCurveTo(canvas.width * .58, canvas.height * .84, canvas.width * .72, canvas.height * .63);
-    ctx.quadraticCurveTo(canvas.width * .86, canvas.height * .50, canvas.width, canvas.height * .68);
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
-    ctx.fill();
-  }
+  function drawAimPreview(room,view){if(room.status!=='started'||room.match?.projectile||room.match?.activePlayerId!==localPlayerId)return;const player=room.players.find(p=>p.id===localPlayerId);if(!player?.spawn||player.alive===false)return;const pos=visualPlayerPosition(player),facing=pos.facing||1,angle=room.match?.aimAngle??45,power=room.match?.aimPower??55,rad=angle*Math.PI/180,speed=320+power*9,startX=pos.x+facing*24,startY=pos.y-24,vx=Math.cos(rad)*speed*facing,vy=-Math.sin(rad)*speed,wind=(room.match?.wind?.signed??0)*1.5,dots=[];let nextDot=0,impact=null;for(let t=PREVIEW_SIM_DT;t<=PREVIEW_MAX_SECONDS;t+=PREVIEW_SIM_DT){const x=startX+vx*t+.5*wind*t*t,y=startY+vy*t+.5*PROJECTILE_GRAVITY*t*t;if(t>=nextDot){dots.push({x,y});nextDot+=PREVIEW_DOT_INTERVAL;}if(x<0||x>room.arena.worldWidth||y>room.arena.worldHeight){impact={x:clamp(x,0,room.arena.worldWidth),y};break;}const surface=terrainY(x,room);if(surface<room.arena.worldHeight&&t>.08&&y>=surface){impact={x:clamp(x,0,room.arena.worldWidth),y:surface};break;}}ctx.save();ctx.fillStyle='rgba(255,232,154,.66)';for(let i=0;i<dots.length;i++){const p=worldToScreen(dots[i].x,dots[i].y,view);if(p.x<-12||p.x>canvas.width+12||p.y<-12||p.y>canvas.height+12)continue;ctx.globalAlpha=.34+Math.min(i/Math.max(dots.length,1),1)*.34;ctx.beginPath();ctx.arc(p.x,p.y,i%4===0?3.1:2.2,0,Math.PI*2);ctx.fill();}if(impact){const m=worldToScreen(impact.x,impact.y,view);if(m.x>=-30&&m.x<=canvas.width+30&&m.y>=-30&&m.y<=canvas.height+30){ctx.globalAlpha=.82;ctx.strokeStyle='#ffe89a';ctx.lineWidth=2;ctx.beginPath();ctx.arc(m.x,m.y,9,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(m.x-13,m.y);ctx.lineTo(m.x+13,m.y);ctx.moveTo(m.x,m.y-13);ctx.lineTo(m.x,m.y+13);ctx.stroke();}}ctx.restore();}
 
-  function cameraTarget(room) {
-    const targetId = room.camera?.targetPlayerId || room.match?.activePlayerId || localPlayerId;
-    return room.players.find(player => player.id === targetId)
-      || room.players.find(player => player.id === localPlayerId)
-      || room.players[0]
-      || null;
-  }
+  function drawProjectile(room,view){const p=room.match?.projectile;if(!p)return;const now=Date.now(),pos=projectilePosition(p,now);if(!pos)return;ctx.save();ctx.strokeStyle='rgba(255,232,154,.38)';ctx.lineWidth=2;ctx.beginPath();const start=Math.max(p.startedAt,now-420);for(let sample=start;sample<=Math.min(now,p.impactAt);sample+=35){const q=projectilePosition(p,sample),s=worldToScreen(q.x,q.y,view);if(sample===start)ctx.moveTo(s.x,s.y);else ctx.lineTo(s.x,s.y);}ctx.stroke();const s=worldToScreen(pos.x,pos.y,view);ctx.fillStyle='#ffe89a';ctx.beginPath();ctx.arc(s.x,s.y,7,0,Math.PI*2);ctx.fill();ctx.shadowBlur=18;ctx.shadowColor='#ffe89a';ctx.beginPath();ctx.arc(s.x,s.y,3,0,Math.PI*2);ctx.fill();if(now>=p.impactAt){const imp=worldToScreen(p.impactX,p.impactY,view),age=clamp((now-p.impactAt)/650,0,1),r=14+age*45;ctx.globalAlpha=1-age;ctx.strokeStyle='#fff0a8';ctx.lineWidth=4;ctx.beginPath();ctx.arc(imp.x,imp.y,r,0,Math.PI*2);ctx.stroke();}ctx.restore();}
+  function visiblePlayerCount(room,view){return room.players.filter(p=>p.alive!==false&&p.spawn&&p.spawn.x>=view.x&&p.spawn.x<=view.x+view.width&&p.spawn.y>=view.y&&p.spawn.y<=view.y+view.height).length;}
+  function nextPlayer(room){const order=room.match?.turnOrder??[];if(!order.length||room.match?.turnIndex==null)return null;for(let step=1;step<=order.length;step++){const id=order[(room.match.turnIndex+step)%order.length],p=room.players.find(v=>v.id===id);if(p?.alive!==false)return p;}return null;}
 
-  function viewSize(arena, units = camera.viewUnits) {
-    const fraction = clamp(units, MIN_VIEW_UNITS, MAX_VIEW_UNITS) / WORLD_UNITS;
-    return { width: arena.worldWidth * fraction, height: arena.worldHeight * fraction };
-  }
+  function drawCameraHud(room,target,view){const local=room.players.find(p=>p.id===localPlayerId),zoom=camera.viewUnits.toFixed(camera.viewUnits%1<.03?0:1),mode=room.mode==='survival'?'SURVIVAL':'TEAM',locked=controlsLocked(),viewMode=room.match?.projectile?'PROJECTILE CAM':locked?'CAMERA LOCKED':camera.manual?'FREE CAMERA':'FOLLOW CAMERA',terrain=room.arena?.terrainName||room.terrainPreset||'terrain';ctx.textAlign='left';ctx.fillStyle='rgba(7,10,18,.84)';ctx.fillRect(24,24,650,126);ctx.strokeStyle='rgba(155,184,255,.25)';ctx.strokeRect(24,24,650,126);ctx.fillStyle='#8cb4ff';ctx.font='700 13px ui-monospace,monospace';ctx.fillText(`PHASE 5A // ${mode} // ${viewMode}`,42,50);ctx.fillStyle='#e7edff';ctx.font='700 14px ui-monospace,monospace';ctx.fillText(`OBSERVING: ${target?.name??'—'}${target?.id===localPlayerId?' (YOU)':''} // ${terrain}`,42,76);ctx.fillStyle='#8995b8';ctx.font='12px ui-monospace,monospace';ctx.fillText(`view ${zoom}x${zoom} of world 5x5 // craters ${room.arena?.craters?.length??0} // center ${Math.round(camera.centerX)}, ${Math.round(camera.centerY)}`,42,100);ctx.fillText(locked?'camera controls temporarily locked':'drag = pan // wheel = zoom 1x1..5x5 // double click = follow active',42,122);ctx.fillText(`you: ${local?.name??'—'}${local?.alive===false?' (OUT)':''} // alive: ${room.players.filter(p=>p.alive!==false).length}/${room.players.length}`,42,142);}
+  function drawTurnHud(room){if(room.status!=='started'||!room.match?.activePlayerId)return;const active=room.players.find(p=>p.id===room.match.activePlayerId),next=nextPlayer(room),proj=room.match.projectile,remaining=(Math.max(0,(room.match.turnEndsAt??Date.now())-Date.now())/1000).toFixed(1),wind=room.match.wind,arrow=wind?.direction==='left'?'←':wind?.direction==='right'?'→':'·',localTurn=room.match.activePlayerId===localPlayerId,x=canvas.width-444;ctx.textAlign='left';ctx.fillStyle=localTurn?'rgba(30,42,22,.90)':'rgba(7,10,18,.88)';ctx.fillRect(x,24,420,188);ctx.strokeStyle=localTurn?'rgba(166,255,135,.55)':'rgba(255,232,154,.35)';ctx.strokeRect(x,24,420,188);ctx.fillStyle=localTurn?'#a6ff87':'#ffe89a';ctx.font='800 16px ui-monospace,monospace';ctx.fillText(proj?'SHOT IN FLIGHT':localTurn?'YOUR TURN':'SPECTATING',x+18,50);ctx.fillStyle='#e7edff';ctx.font='700 14px ui-monospace,monospace';ctx.fillText(`TURN ${room.match.turnNumber??1} // ACTIVE: ${active?.name??'—'}`,x+18,78);ctx.fillStyle='#8cb4ff';ctx.font='800 22px ui-monospace,monospace';ctx.fillText(proj?`IMPACT ${remaining}s`:`TIME ${remaining}s`,x+18,108);ctx.fillStyle='#e7edff';ctx.font='700 14px ui-monospace,monospace';ctx.fillText(`WIND ${arrow} ${wind?.strength??0}`,x+220,108);ctx.fillStyle='#8995b8';ctx.font='12px ui-monospace,monospace';ctx.fillText(`MOVE ±${room.match.movementRadius??0} // JUMPS ${room.match.jumpsRemaining??0}/2`,x+18,136);ctx.fillText(`ANGLE ${Math.round(room.match.aimAngle??45)}° // POWER ${Math.round(room.match.aimPower??55)}%`,x+220,136);ctx.fillText(`NEXT: ${next?.name??'—'} // terrain destructible`,x+18,160);ctx.fillText(localTurn&&!proj?'A/D move // SPACE jump // W/S angle // Q/E power // F fire':proj?'Impact carves terrain; unsupported vehicles fall.':'Wait for your turn; camera remains available.',x+18,186);}
 
-  function clampCenter(arena, centerX, centerY, units = camera.viewUnits) {
-    const size = viewSize(arena, units);
-    const halfW = size.width / 2;
-    const halfH = size.height / 2;
-    return { x: clamp(centerX, halfW, arena.worldWidth - halfW), y: clamp(centerY, halfH, arena.worldHeight - halfH) };
-  }
-
-  function clampCamera(arena) {
-    const current = clampCenter(arena, camera.centerX, camera.centerY, camera.viewUnits);
-    camera.centerX = current.x;
-    camera.centerY = current.y;
-    const target = clampCenter(arena, camera.targetCenterX, camera.targetCenterY, camera.targetViewUnits);
-    camera.targetCenterX = target.x;
-    camera.targetCenterY = target.y;
-  }
-
-  function setFollowTarget(room, immediate = false) {
-    const target = cameraTarget(room);
-    if (!target?.spawn || !room.arena) return;
-    camera.targetCenterX = target.spawn.x;
-    camera.targetCenterY = target.spawn.y;
-    if (immediate) {
-      camera.centerX = camera.targetCenterX;
-      camera.centerY = camera.targetCenterY;
-    }
-    clampCamera(room.arena);
-  }
-
-  function beginCountdownOverview(room) {
-    camera.manual = false;
-    camera.projectileFollow = false;
-    camera.transition = null;
-    camera.viewUnits = MAX_VIEW_UNITS;
-    camera.targetViewUnits = MAX_VIEW_UNITS;
-    camera.centerX = room.arena.worldWidth / 2;
-    camera.centerY = room.arena.worldHeight / 2;
-    camera.targetCenterX = camera.centerX;
-    camera.targetCenterY = camera.centerY;
-    cameraInitialized = true;
-    clampCamera(room.arena);
-  }
-
-  function beginTargetTransition(room, durationMs, now = performance.now()) {
-    const target = cameraTarget(room);
-    if (!target?.spawn) return;
-    const clampedTarget = clampCenter(room.arena, target.spawn.x, target.spawn.y, MIN_VIEW_UNITS);
-    camera.manual = false;
-    camera.projectileFollow = false;
-    camera.transition = {
-      startedAt: now,
-      endsAt: now + durationMs,
-      fromCenterX: camera.centerX,
-      fromCenterY: camera.centerY,
-      fromViewUnits: camera.viewUnits,
-      toCenterX: clampedTarget.x,
-      toCenterY: clampedTarget.y,
-      toViewUnits: MIN_VIEW_UNITS
-    };
-    camera.targetCenterX = clampedTarget.x;
-    camera.targetCenterY = clampedTarget.y;
-    camera.targetViewUnits = MIN_VIEW_UNITS;
-  }
-
-  function projectilePosition(projectile, now = Date.now()) {
-    if (!projectile) return null;
-    const elapsedMs = clamp(now - projectile.startedAt, 0, projectile.durationMs);
-    const t = elapsedMs / 1000;
-    return {
-      x: projectile.startX + projectile.vx * t + 0.5 * projectile.windAccel * t * t,
-      y: projectile.startY + projectile.vy * t + 0.5 * projectile.gravity * t * t,
-      impact: now >= projectile.impactAt
-    };
-  }
-
-  function controlsLocked(now = performance.now()) {
-    return activeRoom?.status === 'countdown'
-      || Boolean(camera.transition && now < camera.transition.endsAt)
-      || Boolean(activeRoom?.match?.projectile);
-  }
-
-  function ensureCameraState(room) {
-    if (!room?.arena) return;
-    const targetId = room.camera?.targetPlayerId || room.match?.activePlayerId || null;
-    const projectileId = room.match?.projectile?.id || null;
-
-    if (!cameraInitialized) {
-      if (room.status === 'countdown') beginCountdownOverview(room);
-      else {
-        camera.viewUnits = MIN_VIEW_UNITS;
-        camera.targetViewUnits = MIN_VIEW_UNITS;
-        setFollowTarget(room, true);
-        cameraInitialized = true;
-      }
-    }
-
-    if (lastRoomStatus === 'countdown' && room.status === 'started') beginTargetTransition(room, OPENING_DIVE_MS);
-    else if (room.status === 'started' && lastTargetPlayerId && targetId && targetId !== lastTargetPlayerId && !projectileId) beginTargetTransition(room, TURN_DIVE_MS);
-
-    if (projectileId && projectileId !== lastProjectileId) {
-      camera.manual = false;
-      camera.transition = null;
-      camera.projectileFollow = true;
-      camera.targetViewUnits = MIN_VIEW_UNITS;
-    }
-    if (!projectileId && lastProjectileId) camera.projectileFollow = false;
-    if (room.status === 'countdown' && lastRoomStatus !== 'countdown') beginCountdownOverview(room);
-
-    lastRoomStatus = room.status;
-    if (targetId) lastTargetPlayerId = targetId;
-    lastProjectileId = projectileId;
-  }
-
-  function currentView(arena) {
-    const size = viewSize(arena);
-    return { x: camera.centerX - size.width / 2, y: camera.centerY - size.height / 2, width: size.width, height: size.height };
-  }
-
-  function worldToScreen(x, y, view) {
-    return { x: (x - view.x) / view.width * canvas.width, y: (y - view.y) / view.height * canvas.height };
-  }
-
-  function screenToWorld(x, y, arena) {
-    const view = currentView(arena);
-    return { x: view.x + x / canvas.width * view.width, y: view.y + y / canvas.height * view.height };
-  }
-
-  function updateCamera(room, now) {
-    if (!room?.arena) return;
-
-    const projectile = room.match?.projectile;
-    if (projectile && camera.projectileFollow) {
-      const pos = projectilePosition(projectile);
-      if (pos) {
-        const clamped = clampCenter(room.arena, pos.x, pos.y, MIN_VIEW_UNITS);
-        camera.targetCenterX = clamped.x;
-        camera.targetCenterY = clamped.y;
-        camera.targetViewUnits = MIN_VIEW_UNITS;
-        camera.centerX = lerp(camera.centerX, camera.targetCenterX, .22);
-        camera.centerY = lerp(camera.centerY, camera.targetCenterY, .22);
-        camera.viewUnits = lerp(camera.viewUnits, camera.targetViewUnits, .18);
-        clampCamera(room.arena);
-        return;
-      }
-    }
-
-    if (camera.transition) {
-      const transition = camera.transition;
-      const rawT = clamp((now - transition.startedAt) / (transition.endsAt - transition.startedAt), 0, 1);
-      const t = smoothstep(rawT);
-      camera.centerX = lerp(transition.fromCenterX, transition.toCenterX, t);
-      camera.centerY = lerp(transition.fromCenterY, transition.toCenterY, t);
-      camera.viewUnits = lerp(transition.fromViewUnits, transition.toViewUnits, t);
-      if (rawT >= 1) {
-        camera.centerX = transition.toCenterX;
-        camera.centerY = transition.toCenterY;
-        camera.viewUnits = transition.toViewUnits;
-        camera.targetCenterX = transition.toCenterX;
-        camera.targetCenterY = transition.toCenterY;
-        camera.targetViewUnits = transition.toViewUnits;
-        camera.transition = null;
-      }
-      clampCamera(room.arena);
-      return;
-    }
-
-    if (!camera.manual && room.status === 'started') setFollowTarget(room, false);
-    camera.centerX = lerp(camera.centerX, camera.targetCenterX, .16);
-    camera.centerY = lerp(camera.centerY, camera.targetCenterY, .16);
-    camera.viewUnits = lerp(camera.viewUnits, camera.targetViewUnits, .14);
-    if (Math.abs(camera.viewUnits - camera.targetViewUnits) < .002) camera.viewUnits = camera.targetViewUnits;
-    if (Math.abs(camera.centerX - camera.targetCenterX) < .2) camera.centerX = camera.targetCenterX;
-    if (Math.abs(camera.centerY - camera.targetCenterY) < .2) camera.centerY = camera.targetCenterY;
-    clampCamera(room.arena);
-  }
-
-  function visualPlayerPosition(player, now = Date.now()) {
-    const motion = player.motion;
-    if (!motion || motion.type !== 'jump' || now >= motion.endsAt) return player.spawn;
-    const raw = clamp((now - motion.startedAt) / (motion.endsAt - motion.startedAt), 0, 1);
-    const x = lerp(motion.fromX, motion.toX, raw);
-    const baseY = lerp(motion.fromY, motion.toY, raw);
-    const arc = Math.sin(Math.PI * raw) * motion.apex;
-    return { ...player.spawn, x, y: baseY - arc };
-  }
-
-  function drawVehicle(room, player, position, view, local, active) {
-    const screen = worldToScreen(position.x, position.y, view);
-    if (screen.x < -90 || screen.x > canvas.width + 90 || screen.y < -90 || screen.y > canvas.height + 90) return;
-    const pxPerWorldX = canvas.width / view.width;
-    const pxPerWorldY = canvas.height / view.height;
-    const vehicleW = clamp(VEHICLE_WORLD_WIDTH * pxPerWorldX, 8, 52);
-    const vehicleH = clamp(VEHICLE_WORLD_HEIGHT * pxPerWorldY, 5, 30);
-    const wheelR = clamp(vehicleH * .28, 2, 7);
-    const cannonLength = clamp(vehicleW * .48, 6, 22);
-    const cannonThickness = clamp(vehicleH * .16, 2, 5);
-    const aimAngle = active ? (room.match?.aimAngle ?? 45) : 15;
-
-    ctx.save();
-    ctx.translate(screen.x, screen.y);
-    ctx.scale(position.facing || 1, 1);
-    ctx.fillStyle = room.mode === 'survival' ? '#d6b4ff' : player.team === 'A' ? '#8cb4ff' : '#ff9aa8';
-    ctx.strokeStyle = active ? '#ffe89a' : local ? '#ffffff' : 'rgba(231,237,255,.55)';
-    ctx.lineWidth = active ? 3 : local ? 2.5 : 1.5;
-    ctx.beginPath();
-    ctx.roundRect(-vehicleW / 2, -vehicleH * .62, vehicleW, vehicleH, Math.max(2, vehicleH * .25));
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = '#08101d';
-    ctx.beginPath();
-    ctx.arc(-vehicleW * .27, vehicleH * .24, wheelR, 0, Math.PI * 2);
-    ctx.arc(vehicleW * .27, vehicleH * .24, wheelR, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.save();
-    ctx.translate(vehicleW * .08, -vehicleH * .72);
-    ctx.rotate(-aimAngle * Math.PI / 180);
-    ctx.fillRect(0, -cannonThickness / 2, cannonLength, cannonThickness);
-    ctx.restore();
-    ctx.restore();
-
-    if (camera.viewUnits <= 3.25 || active || local) {
-      const labelOffset = Math.max(22, vehicleH * 1.65);
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#e7edff';
-      ctx.font = '700 15px ui-monospace,monospace';
-      ctx.fillText(player.name, screen.x, screen.y - labelOffset);
-      ctx.font = '700 10px ui-monospace,monospace';
-      ctx.fillStyle = active ? '#ffe89a' : '#8cb4ff';
-      const role = room.mode === 'survival' ? 'SURVIVAL' : `TEAM ${player.team}`;
-      const flags = `${local ? ' // YOU' : ''}${active ? ' // ACTIVE' : ''}`;
-      ctx.fillText(`${role}${flags}`, screen.x, screen.y - labelOffset + 15);
-    }
-  }
-
-  function drawAimPreview(room, view) {
-    if (room.status !== 'started' || room.match?.projectile || room.match?.activePlayerId !== localPlayerId) return;
-    const player = room.players.find(entry => entry.id === localPlayerId);
-    if (!player?.spawn) return;
-
-    const position = visualPlayerPosition(player);
-    const facing = position.facing || 1;
-    const angle = room.match?.aimAngle ?? 45;
-    const power = room.match?.aimPower ?? 55;
-    const radians = angle * Math.PI / 180;
-    const speed = 320 + power * 9;
-    const startX = position.x + facing * 24;
-    const startY = position.y - 24;
-    const vx = Math.cos(radians) * speed * facing;
-    const vy = -Math.sin(radians) * speed;
-    const windAccel = (room.match?.wind?.signed ?? 0) * 1.5;
-    const dots = [];
-    let nextDotAt = 0;
-    let impact = null;
-
-    for (let t = PREVIEW_SIM_DT; t <= PREVIEW_MAX_SECONDS; t += PREVIEW_SIM_DT) {
-      const x = startX + vx * t + 0.5 * windAccel * t * t;
-      const y = startY + vy * t + 0.5 * PROJECTILE_GRAVITY * t * t;
-      if (t >= nextDotAt) {
-        dots.push({ x, y });
-        nextDotAt += PREVIEW_DOT_INTERVAL;
-      }
-      if (x < 0 || x > room.arena.worldWidth || y > room.arena.worldHeight) {
-        impact = { x: clamp(x, 0, room.arena.worldWidth), y };
-        break;
-      }
-      if (t > 0.08 && y >= terrainY(clamp(x, 0, room.arena.worldWidth))) {
-        impact = { x: clamp(x, 0, room.arena.worldWidth), y: terrainY(clamp(x, 0, room.arena.worldWidth)) };
-        break;
-      }
-    }
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(255,232,154,.66)';
-    for (let index = 0; index < dots.length; index += 1) {
-      const point = worldToScreen(dots[index].x, dots[index].y, view);
-      if (point.x < -12 || point.x > canvas.width + 12 || point.y < -12 || point.y > canvas.height + 12) continue;
-      const radius = index % 4 === 0 ? 3.1 : 2.2;
-      ctx.globalAlpha = 0.34 + Math.min(index / Math.max(dots.length, 1), 1) * 0.34;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    if (impact) {
-      const marker = worldToScreen(impact.x, impact.y, view);
-      if (marker.x >= -30 && marker.x <= canvas.width + 30 && marker.y >= -30 && marker.y <= canvas.height + 30) {
-        ctx.globalAlpha = .82;
-        ctx.strokeStyle = '#ffe89a';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(marker.x, marker.y, 9, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(marker.x - 13, marker.y);
-        ctx.lineTo(marker.x + 13, marker.y);
-        ctx.moveTo(marker.x, marker.y - 13);
-        ctx.lineTo(marker.x, marker.y + 13);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-  }
-
-  function drawProjectile(room, view) {
-    const projectile = room.match?.projectile;
-    if (!projectile) return;
-    const now = Date.now();
-    const pos = projectilePosition(projectile, now);
-    if (!pos) return;
-
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,232,154,.38)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const trailStart = Math.max(projectile.startedAt, now - 420);
-    for (let sample = trailStart; sample <= Math.min(now, projectile.impactAt); sample += 35) {
-      const p = projectilePosition(projectile, sample);
-      const s = worldToScreen(p.x, p.y, view);
-      if (sample === trailStart) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
-    }
-    ctx.stroke();
-
-    const s = worldToScreen(pos.x, pos.y, view);
-    ctx.fillStyle = '#ffe89a';
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 18;
-    ctx.shadowColor = '#ffe89a';
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (now >= projectile.impactAt) {
-      const impact = worldToScreen(projectile.impactX, projectile.impactY, view);
-      const age = clamp((now - projectile.impactAt) / 650, 0, 1);
-      const radius = 14 + age * 45;
-      ctx.globalAlpha = 1 - age;
-      ctx.strokeStyle = '#fff0a8';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(impact.x, impact.y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function visiblePlayerCount(room, view) {
-    return room.players.filter(player => player.spawn
-      && player.spawn.x >= view.x && player.spawn.x <= view.x + view.width
-      && player.spawn.y >= view.y && player.spawn.y <= view.y + view.height).length;
-  }
-
-  function nextPlayer(room) {
-    const order = room.match?.turnOrder ?? [];
-    if (!order.length || room.match?.turnIndex == null) return null;
-    const nextId = order[(room.match.turnIndex + 1) % order.length];
-    return room.players.find(player => player.id === nextId) ?? null;
-  }
-
-  function drawMovementRadius(room, view) {
-    if (room.status !== 'started' || !room.match?.activePlayerId || room.match?.projectile) return;
-    const active = room.players.find(player => player.id === room.match.activePlayerId);
-    if (!active?.spawn || room.match.movementOriginX == null) return;
-    const y = terrainY(room.match.movementOriginX) - 4;
-    const left = worldToScreen(room.match.movementOriginX - room.match.movementRadius, y, view);
-    const right = worldToScreen(room.match.movementOriginX + room.match.movementRadius, y, view);
-    ctx.save();
-    ctx.strokeStyle = 'rgba(166,255,135,.20)';
-    ctx.setLineDash([8, 8]);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(left.x, left.y);
-    ctx.lineTo(right.x, right.y);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawCameraHud(room, target, view) {
-    const local = room.players.find(player => player.id === localPlayerId);
-    const zoomLabel = camera.viewUnits.toFixed(camera.viewUnits % 1 < .03 ? 0 : 1);
-    const modeLabel = room.mode === 'survival' ? 'SURVIVAL' : 'TEAM';
-    const locked = controlsLocked();
-    const viewMode = room.match?.projectile ? 'PROJECTILE CAM' : locked ? 'CAMERA LOCKED' : camera.manual ? 'FREE CAMERA' : 'FOLLOW CAMERA';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(7,10,18,.84)';
-    ctx.fillRect(24, 24, 610, 126);
-    ctx.strokeStyle = 'rgba(155,184,255,.25)';
-    ctx.strokeRect(24, 24, 610, 126);
-    ctx.fillStyle = '#8cb4ff';
-    ctx.font = '700 13px ui-monospace,monospace';
-    ctx.fillText(`PHASE 4 // ${modeLabel} // ${viewMode}`, 42, 50);
-    ctx.fillStyle = '#e7edff';
-    ctx.font = '700 14px ui-monospace,monospace';
-    ctx.fillText(`OBSERVING: ${target?.name ?? '—'}${target?.id === localPlayerId ? ' (YOU)' : ''}`, 42, 76);
-    ctx.fillStyle = '#8995b8';
-    ctx.font = '12px ui-monospace,monospace';
-    ctx.fillText(`view ${zoomLabel}x${zoomLabel} of world 5x5 // center ${Math.round(camera.centerX)}, ${Math.round(camera.centerY)}`, 42, 100);
-    ctx.fillText(locked ? 'camera controls temporarily locked' : 'drag = pan // wheel = zoom 1x1..5x5 // double click = follow active', 42, 122);
-    ctx.fillText(`you: ${local?.name ?? '—'} // visible players: ${visiblePlayerCount(room, view)}/${room.players.length}`, 42, 142);
-  }
-
-  function drawTurnHud(room) {
-    if (room.status !== 'started' || !room.match?.activePlayerId) return;
-    const active = room.players.find(player => player.id === room.match.activePlayerId);
-    const next = nextPlayer(room);
-    const projectile = room.match.projectile;
-    const remainingMs = Math.max(0, (room.match.turnEndsAt ?? Date.now()) - Date.now());
-    const remaining = (remainingMs / 1000).toFixed(1);
-    const wind = room.match.wind;
-    const arrow = wind?.direction === 'left' ? '←' : wind?.direction === 'right' ? '→' : '·';
-    const localTurn = room.match.activePlayerId === localPlayerId;
-    const x = canvas.width - 444;
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = localTurn ? 'rgba(30,42,22,.90)' : 'rgba(7,10,18,.88)';
-    ctx.fillRect(x, 24, 420, 188);
-    ctx.strokeStyle = localTurn ? 'rgba(166,255,135,.55)' : 'rgba(255,232,154,.35)';
-    ctx.strokeRect(x, 24, 420, 188);
-    ctx.fillStyle = localTurn ? '#a6ff87' : '#ffe89a';
-    ctx.font = '800 16px ui-monospace,monospace';
-    ctx.fillText(projectile ? 'SHOT IN FLIGHT' : localTurn ? 'YOUR TURN' : 'SPECTATING', x + 18, 50);
-    ctx.fillStyle = '#e7edff';
-    ctx.font = '700 14px ui-monospace,monospace';
-    ctx.fillText(`TURN ${room.match.turnNumber ?? 1} // ACTIVE: ${active?.name ?? '—'}`, x + 18, 78);
-    ctx.fillStyle = '#8cb4ff';
-    ctx.font = '800 22px ui-monospace,monospace';
-    ctx.fillText(projectile ? `IMPACT ${remaining}s` : `TIME ${remaining}s`, x + 18, 108);
-    ctx.fillStyle = '#e7edff';
-    ctx.font = '700 14px ui-monospace,monospace';
-    ctx.fillText(`WIND ${arrow} ${wind?.strength ?? 0}`, x + 220, 108);
-    ctx.fillStyle = '#8995b8';
-    ctx.font = '12px ui-monospace,monospace';
-    ctx.fillText(`MOVE ±${room.match.movementRadius ?? 0} // JUMPS ${room.match.jumpsRemaining ?? 0}/2`, x + 18, 136);
-    ctx.fillText(`ANGLE ${Math.round(room.match.aimAngle ?? 45)}° // POWER ${Math.round(room.match.aimPower ?? 55)}%`, x + 220, 136);
-    ctx.fillText(`NEXT: ${next?.name ?? '—'}`, x + 18, 160);
-    ctx.fillText(localTurn && !projectile ? 'A/D move // SPACE jump // W/S angle // Q/E power // F fire' : projectile ? 'Camera follows the projectile until impact.' : 'Wait for your turn; camera remains available.', x + 18, 186);
-  }
-
-  function drawWorld(room) {
-    const arena = room.arena;
-    const view = currentView(arena);
-    const target = cameraTarget(room);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBackground();
-
-    ctx.fillStyle = '#18243d';
-    ctx.beginPath();
-    for (let sx = 0; sx <= canvas.width; sx += 12) {
-      const wx = view.x + (sx / canvas.width) * view.width;
-      const sy = worldToScreen(wx, terrainY(wx), view).y;
-      if (sx === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
-    }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
-    ctx.fill();
-
-    drawMovementRadius(room, view);
-    drawAimPreview(room, view);
-    for (const player of room.players) {
-      if (!player.spawn) continue;
-      drawVehicle(room, player, visualPlayerPosition(player), view, player.id === localPlayerId, player.id === room.match?.activePlayerId);
-    }
-    drawProjectile(room, view);
-    drawCameraHud(room, target, view);
-    drawTurnHud(room);
-  }
-
-  function countdownLabel(room) {
-    const elapsed = Date.now() - (room.match?.countdownStartedAt ?? Date.now());
-    if (elapsed < 1000) return 'GET READY';
-    const n = 6 - Math.floor(elapsed / 1000);
-    return n > 0 ? String(n) : 'START';
-  }
-
-  function drawCountdownOverlay(room) {
-    ctx.fillStyle = 'rgba(2,4,10,.44)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#e7edff';
-    ctx.font = '800 76px system-ui,sans-serif';
-    ctx.fillText(countdownLabel(room), canvas.width / 2, canvas.height / 2);
-    ctx.font = '700 18px ui-monospace,monospace';
-    ctx.fillStyle = '#8cb4ff';
-    ctx.fillText(room.mode === 'survival' ? 'SURVIVAL MODE // FULL MAP OVERVIEW' : 'TEAM MODE // FULL MAP OVERVIEW', canvas.width / 2, canvas.height / 2 + 54);
-    ctx.font = '12px ui-monospace,monospace';
-    ctx.fillStyle = '#8995b8';
-    ctx.fillText('Turn 1 starts with movement, two jumps, aiming and one shot', canvas.width / 2, canvas.height / 2 + 82);
-  }
-
-  function frame(now) {
-    if (!activeRoom?.arena) return;
-    ensureCameraState(activeRoom);
-    updateCamera(activeRoom, now);
-    drawWorld(activeRoom);
-    if (activeRoom.status === 'countdown') drawCountdownOverlay(activeRoom);
-    animationFrame = requestAnimationFrame(frame);
-  }
-
-  function drawArena(room, nextLocalPlayerId = null) {
-    localPlayerId = nextLocalPlayerId;
-    activeRoom = room;
-    if (!room?.arena || !['countdown', 'started'].includes(room.status)) {
-      drawScaffold();
-      return;
-    }
-    ensureCameraState(room);
-    if (!animationFrame) animationFrame = requestAnimationFrame(frame);
-  }
-
-  function pointerPosition(event) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: (event.clientX - rect.left) / rect.width * canvas.width, y: (event.clientY - rect.top) / rect.height * canvas.height };
-  }
-
-  canvas.addEventListener('pointerdown', event => {
-    if (!activeRoom?.arena || controlsLocked()) return;
-    dragging = true;
-    canvas.setPointerCapture?.(event.pointerId);
-    const p = pointerPosition(event);
-    dragStart = { ...p, centerX: camera.centerX, centerY: camera.centerY };
-    camera.manual = true;
-  });
-
-  canvas.addEventListener('pointermove', event => {
-    if (!dragging || !dragStart || !activeRoom?.arena || controlsLocked()) return;
-    const p = pointerPosition(event);
-    const size = viewSize(activeRoom.arena);
-    camera.targetCenterX = dragStart.centerX - (p.x - dragStart.x) / canvas.width * size.width;
-    camera.targetCenterY = dragStart.centerY - (p.y - dragStart.y) / canvas.height * size.height;
-    camera.centerX = camera.targetCenterX;
-    camera.centerY = camera.targetCenterY;
-    clampCamera(activeRoom.arena);
-  });
-
-  function stopDragging(event) {
-    dragging = false;
-    dragStart = null;
-    if (event?.pointerId != null) canvas.releasePointerCapture?.(event.pointerId);
-  }
-
-  canvas.addEventListener('pointerup', stopDragging);
-  canvas.addEventListener('pointercancel', stopDragging);
-  canvas.addEventListener('pointerleave', event => { if (dragging && event.buttons === 0) stopDragging(event); });
-
-  canvas.addEventListener('wheel', event => {
-    if (!activeRoom?.arena || controlsLocked()) return;
-    event.preventDefault();
-    const arena = activeRoom.arena;
-    const p = pointerPosition(event);
-    const before = screenToWorld(p.x, p.y, arena);
-    const direction = event.deltaY > 0 ? 1 : -1;
-    const nextUnits = clamp(camera.viewUnits + direction * .35, MIN_VIEW_UNITS, MAX_VIEW_UNITS);
-    if (Math.abs(nextUnits - camera.viewUnits) < .001) return;
-    camera.manual = true;
-    camera.viewUnits = nextUnits;
-    camera.targetViewUnits = nextUnits;
-    const newSize = viewSize(arena, nextUnits);
-    camera.centerX = before.x - (p.x / canvas.width - .5) * newSize.width;
-    camera.centerY = before.y - (p.y / canvas.height - .5) * newSize.height;
-    camera.targetCenterX = camera.centerX;
-    camera.targetCenterY = camera.centerY;
-    clampCamera(arena);
-  }, { passive: false });
-
-  canvas.addEventListener('dblclick', () => {
-    if (!activeRoom?.arena || controlsLocked()) return;
-    camera.manual = false;
-    camera.targetViewUnits = MIN_VIEW_UNITS;
-    setFollowTarget(activeRoom, false);
-  });
-
-  return Object.freeze({ drawScaffold, drawArena });
+  function drawWorld(room){const arena=room.arena,view=currentView(arena),target=cameraTarget(room);ctx.clearRect(0,0,canvas.width,canvas.height);drawBackground();ctx.fillStyle='#18243d';ctx.beginPath();for(let sx=0;sx<=canvas.width;sx+=8){const wx=view.x+(sx/canvas.width)*view.width,sy=worldToScreen(wx,terrainY(wx,room),view).y;if(sx===0)ctx.moveTo(sx,sy);else ctx.lineTo(sx,sy);}ctx.lineTo(canvas.width,canvas.height);ctx.lineTo(0,canvas.height);ctx.fill();drawAimPreview(room,view);for(const p of room.players){if(!p.spawn)continue;drawVehicle(room,p,visualPlayerPosition(p),view,p.id===localPlayerId,p.id===room.match?.activePlayerId);}drawProjectile(room,view);drawCameraHud(room,target,view);drawTurnHud(room);}
+  function countdownLabel(room){const e=Date.now()-(room.match?.countdownStartedAt??Date.now());if(e<1000)return'GET READY';const n=6-Math.floor(e/1000);return n>0?String(n):'START';}
+  function drawCountdownOverlay(room){ctx.fillStyle='rgba(2,4,10,.44)';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.textAlign='center';ctx.fillStyle='#e7edff';ctx.font='800 76px system-ui,sans-serif';ctx.fillText(countdownLabel(room),canvas.width/2,canvas.height/2);ctx.font='700 18px ui-monospace,monospace';ctx.fillStyle='#8cb4ff';ctx.fillText(`${room.mode==='survival'?'SURVIVAL':'TEAM'} // ${room.arena?.terrainName??'TERRAIN'} // FULL MAP`,canvas.width/2,canvas.height/2+54);ctx.font='12px ui-monospace,monospace';ctx.fillStyle='#8995b8';ctx.fillText('Terrain can be cratered; preset gaps and destroyed ground are fall hazards',canvas.width/2,canvas.height/2+82);}
+  function frame(now){if(!activeRoom?.arena)return;ensureCameraState(activeRoom);updateCamera(activeRoom,now);drawWorld(activeRoom);if(activeRoom.status==='countdown')drawCountdownOverlay(activeRoom);animationFrame=requestAnimationFrame(frame);}
+  function drawArena(room,nextLocalPlayerId=null){localPlayerId=nextLocalPlayerId;activeRoom=room;if(!room?.arena||!['countdown','started'].includes(room.status)){drawScaffold();return;}ensureCameraState(room);if(!animationFrame)animationFrame=requestAnimationFrame(frame);}
+  function pointerPosition(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*canvas.width,y:(e.clientY-r.top)/r.height*canvas.height};}
+  canvas.addEventListener('pointerdown',e=>{if(!activeRoom?.arena||controlsLocked())return;dragging=true;canvas.setPointerCapture?.(e.pointerId);const p=pointerPosition(e);dragStart={...p,centerX:camera.centerX,centerY:camera.centerY};camera.manual=true;});
+  canvas.addEventListener('pointermove',e=>{if(!dragging||!dragStart||!activeRoom?.arena||controlsLocked())return;const p=pointerPosition(e),s=viewSize(activeRoom.arena);camera.targetCenterX=dragStart.centerX-(p.x-dragStart.x)/canvas.width*s.width;camera.targetCenterY=dragStart.centerY-(p.y-dragStart.y)/canvas.height*s.height;camera.centerX=camera.targetCenterX;camera.centerY=camera.targetCenterY;clampCamera(activeRoom.arena);});
+  function stopDragging(e){dragging=false;dragStart=null;if(e?.pointerId!=null)canvas.releasePointerCapture?.(e.pointerId);}canvas.addEventListener('pointerup',stopDragging);canvas.addEventListener('pointercancel',stopDragging);canvas.addEventListener('pointerleave',e=>{if(dragging&&e.buttons===0)stopDragging(e);});
+  canvas.addEventListener('wheel',e=>{if(!activeRoom?.arena||controlsLocked())return;e.preventDefault();const arena=activeRoom.arena,p=pointerPosition(e),before=screenToWorld(p.x,p.y,arena),dir=e.deltaY>0?1:-1,next=clamp(camera.viewUnits+dir*.35,MIN_VIEW_UNITS,MAX_VIEW_UNITS);if(Math.abs(next-camera.viewUnits)<.001)return;camera.manual=true;camera.viewUnits=next;camera.targetViewUnits=next;const ns=viewSize(arena,next);camera.centerX=before.x-(p.x/canvas.width-.5)*ns.width;camera.centerY=before.y-(p.y/canvas.height-.5)*ns.height;camera.targetCenterX=camera.centerX;camera.targetCenterY=camera.centerY;clampCamera(arena);},{passive:false});
+  canvas.addEventListener('dblclick',()=>{if(!activeRoom?.arena||controlsLocked())return;camera.manual=false;camera.targetViewUnits=MIN_VIEW_UNITS;setFollowTarget(activeRoom,false);});
+  return Object.freeze({drawScaffold,drawArena});
 }
