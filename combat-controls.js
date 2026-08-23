@@ -54,7 +54,7 @@ export function initCombatControls(gameCanvas) {
     const jumps = room.match?.jumpsRemaining ?? 0;
     panel.innerHTML = `
       <div style="margin-bottom:6px;color:#a6ff87;font-weight:800;letter-spacing:.08em">YOUR CONTROLS</div>
-      <div>${key('A')} ${key('D')} MOVE &nbsp;&nbsp; ${key('SPACE')} JUMP <strong>${jumps}/2</strong> &nbsp;&nbsp; ${key('W')} ${key('S')} / ${key('X')} ANGLE <strong>${angle}°</strong> &nbsp;&nbsp; ${key('Q')} ${key('E')} POWER <strong>${power}%</strong> &nbsp;&nbsp; ${key('F')} <strong style="color:#ffe89a">FIRE</strong></div>`;
+      <div>${key('A')} ${key('D')} MOVE &nbsp;&nbsp; ${key('SPACE')} JUMP <strong>${jumps}/2</strong> &nbsp;&nbsp; ${key('W')} ${key('S')} ANGLE <strong>${angle}°</strong> &nbsp;&nbsp; ${key('Q')} ${key('E')} POWER <strong>${power}%</strong> &nbsp;&nbsp; ${key('F')} <strong style="color:#ffe89a">FIRE</strong></div>`;
   }
 
   return Object.freeze({
