@@ -20,8 +20,9 @@ export function initCombatControls(gameCanvas) {
 
     const me = room.players?.find(player => player.id === playerId);
     const active = room.players?.find(player => player.id === room.match?.activePlayerId);
-    const myTurn = room.status === 'started' && room.match?.activePlayerId === playerId && me?.alive !== false;
     const projectile = room.match?.projectile;
+    const specialAction = room.match?.specialAction;
+    const myTurn = room.status === 'started' && room.match?.activePlayerId === playerId && me?.alive !== false;
     const remaining = room.status === 'started' ? Math.max(0, ((room.match?.turnEndsAt ?? Date.now()) - Date.now()) / 1000) : 0;
     const wind = room.match?.wind;
     const arrow = wind?.direction === 'left' ? '←' : wind?.direction === 'right' ? '→' : '·';
@@ -29,7 +30,8 @@ export function initCombatControls(gameCanvas) {
     const inv1 = me?.inventory?.[0] ?? null;
     const inv2 = me?.inventory?.[1] ?? null;
     const alive = room.players?.filter(player => player.alive !== false).length ?? 0;
-    const stateText = room.status === 'finished' ? 'MATCH ENDED' : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
+    const locked = Boolean(projectile || specialAction);
+    const stateText = room.status === 'finished' ? 'MATCH ENDED' : projectile ? 'SHOT IN FLIGHT' : specialAction ? specialAction.label ?? 'ITEM ACTIVE' : myTurn ? 'YOUR TURN' : 'SPECTATING';
 
     panel.innerHTML = `
       <section class="info-block">
@@ -46,6 +48,8 @@ export function initCombatControls(gameCanvas) {
           <div><span>ALIVE</span><strong>${alive} / ${room.players?.length ?? 0}</strong></div>
           <div><span>BOXES</span><strong>${room.pickups?.length ?? 0}</strong></div>
           <div><span>HP</span><strong>${esc(me?.hp ?? 0)}</strong></div>
+          <div><span>SHIELD</span><strong>${me?.shield ? 'ACTIVE 50%' : 'OFF'}</strong></div>
+          <div><span>PHASE</span><strong>${esc(room.phase ?? '6B')}</strong></div>
         </div>
       </section>
       <section class="info-block">
@@ -55,17 +59,17 @@ export function initCombatControls(gameCanvas) {
           <div class="control-line"><span>${key('SPACE')} jump</span><strong>${esc(room.match?.jumpsRemaining ?? 0)} left</strong></div>
           <div class="control-line"><span>${key('W')} ${key('S')} angle</span><strong>${Math.round(room.match?.aimAngle ?? 45)}°</strong></div>
           <div class="control-line"><span>${key('Q')} ${key('E')} power</span><strong>${Math.round(room.match?.aimPower ?? 55)}%</strong></div>
-          <div class="control-line"><span>${key('F')} fire</span><strong>${projectile?'LOCKED':myTurn?'READY':'WAIT'}</strong></div>
+          <div class="control-line"><span>${key('F')} use / fire</span><strong>${locked?'LOCKED':myTurn?'READY':'WAIT'}</strong></div>
         </div>
       </section>
       <section class="info-block">
         <div class="info-block-title">WEAPONS // MAX 3</div>
         <div class="weapon-list">
           ${weaponButton(1,'BASIC','always available',selected===1,false,false)}
-          ${weaponButton(2,inv1?.label ?? 'EMPTY','inventory slot 1',selected===2,!inv1,true)}
-          ${weaponButton(3,inv2?.label ?? 'EMPTY','inventory slot 2',selected===3,!inv2,true)}
+          ${weaponButton(2,inv1?.label ?? 'EMPTY',inv1 ? 'special item' : 'inventory slot 1',selected===2,!inv1,true)}
+          ${weaponButton(3,inv2?.label ?? 'EMPTY',inv2 ? 'special item' : 'inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Boxes can be collected by touching them OR by catching them inside your explosion radius. They may spawn in hard-to-reach places and expire after ${room.pickupRules?.lifetimeTurns ?? 4} turns. Press 1, 2 or 3 — or click a weapon — to choose what you fire.</p>
+        <p class="pickup-note">Current box pool: Heavy Bomb, Triple Shot, Cluster Bomb and Shield. Boxes can be collected by touch or explosion. Press 1, 2 or 3 — or click once — then F to use the selected weapon/item.</p>
       </section>`;
   }
 
