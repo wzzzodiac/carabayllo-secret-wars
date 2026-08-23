@@ -65,7 +65,7 @@ export function initCombatControls(gameCanvas) {
           ${weaponButton(2,inv1?.label ?? 'EMPTY','inventory slot 1',selected===2,!inv1,true)}
           ${weaponButton(3,inv2?.label ?? 'EMPTY','inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Press 1, 2 or 3 — or click a weapon. Picking up a box does not auto-select it. Special weapons stay stored until you choose and fire them.</p>
+        <p class="pickup-note">Boxes can be collected by touching them OR by catching them inside your explosion radius. They may spawn in hard-to-reach places and expire after ${room.pickupRules?.lifetimeTurns ?? 4} turns. Press 1, 2 or 3 — or click a weapon — to choose what you fire.</p>
       </section>`;
   }
 
