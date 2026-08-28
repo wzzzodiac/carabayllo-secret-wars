@@ -68,14 +68,29 @@ export function createRenderer(canvas, config) {
     }
     ctx.fillStyle=voteWindow?'#ffcf7d':color;ctx.globalAlpha=pulse;ctx.beginPath();ctx.arc(x+w-21,y+21,5,0,Math.PI*2);ctx.fill();ctx.restore();
   }
+  function drawEnhancedVehicles(activeRoom,view){
+    if(!activeRoom?.players?.length)return;
+    const pxX=overlay.width/view.width,pxY=overlay.height/view.height;
+    for(const player of activeRoom.players){
+      const pos=visualPlayerPosition(player);if(!pos)continue;
+      const s=worldToScreen(pos.x,pos.y,view);if(s.x<-120||s.x>overlay.width+120||s.y<-140||s.y>overlay.height+140)continue;
+      const active=activeRoom.match?.activePlayerId===player.id,local=player.id===localPlayerId;
+      const w=clamp(56*pxX,16,104),h=clamp(30*pxY,10,60),wr=clamp(h*.28,3,13),cl=clamp(w*.48,12,44),ct=clamp(h*.16,3,10),angle=active?(activeRoom.match?.aimAngle??45):15;
+      if(player.shield&&player.alive!==false){ctx.save();ctx.strokeStyle='rgba(166,255,135,.88)';ctx.fillStyle='rgba(166,255,135,.09)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(s.x,s.y-h*.25,Math.max(24,w*.78),0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();}
+      ctx.save();ctx.translate(s.x,s.y);ctx.scale(pos.facing||1,1);ctx.globalAlpha=player.alive===false?.48:1;ctx.fillStyle=activeRoom.mode==='survival'?'#d6b4ff':player.team==='A'?'#8cb4ff':'#ff9aa8';ctx.strokeStyle=active?'#ffe89a':local?'#fff':'rgba(231,237,255,.72)';ctx.lineWidth=active?4:local?3.5:2.5;ctx.beginPath();ctx.roundRect(-w/2,-h*.62,w,h,Math.max(3,h*.25));ctx.fill();ctx.stroke();ctx.fillStyle='#08101d';ctx.beginPath();ctx.arc(-w*.27,h*.24,wr,0,Math.PI*2);ctx.arc(w*.27,h*.24,wr,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(w*.08,-h*.72);ctx.rotate(-angle*Math.PI/180);ctx.fillRect(0,-ct/2,cl,ct);ctx.restore();ctx.restore();
+      const hp=clamp(player.hp??100,0,player.maxHp??100),maxHp=player.maxHp??100,label=local?`YOU // HP ${hp}`:`${player.name} // HP ${hp}`,barW=clamp(w*2.6,72,180),barH=clamp(h*.24,9,14),labelY=s.y-Math.max(54,h*1.55);
+      const boxW=Math.max(150,Math.min(260,ctx.measureText(label).width+34));
+      ctx.save();ctx.fillStyle='rgba(3,7,15,.92)';ctx.beginPath();ctx.roundRect(s.x-boxW/2,labelY-25,boxW,52,8);ctx.fill();ctx.textAlign='center';ctx.fillStyle=local?'#ffffff':active?'#ffe89a':'#e7edff';ctx.font='900 18px ui-monospace,monospace';ctx.fillText(label,s.x,labelY-5);ctx.fillStyle='rgba(4,8,16,.95)';ctx.fillRect(s.x-barW/2,labelY+5,barW,barH);ctx.fillStyle=hp>50?'#9be7b0':hp>25?'#ffe89a':'#ff9aa8';ctx.fillRect(s.x-barW/2,labelY+5,barW*(hp/maxHp),barH);ctx.strokeStyle='rgba(231,237,255,.72)';ctx.lineWidth=2;ctx.strokeRect(s.x-barW/2,labelY+5,barW,barH);ctx.restore();
+    }
+  }
   function drawWeaponBadge(activeRoom,view){
     if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;
     const id=activeRoom.match?.activePlayerId,player=activeRoom.players?.find(p=>p.id===id);if(!player?.spawn)return;
     const pos=visualPlayerPosition(player);if(!pos)return;
-    const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-100,view);
+    const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-145,view);
     if(p.x<-180||p.x>overlay.width+180||p.y<-90||p.y>overlay.height+90)return;
-    const label=weaponLabel(type),color=weaponColor(type),width=clamp(label.length*10+44,120,230);
-    ctx.save();roundedPanel(p.x-width/2,p.y-22,width,36,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 14px ui-monospace,monospace';ctx.fillText(label,p.x,p.y+1);ctx.restore();
+    const zoom=clamp(5000/Math.max(1,view.width),1,5),scale=clamp(.58+zoom*.19,.77,1.53),label=weaponLabel(type),color=weaponColor(type),width=clamp((label.length*10+44)*scale,88,260),height=36*scale;
+    ctx.save();roundedPanel(p.x-width/2,p.y-height*.62,width,height,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font=`900 ${Math.round(14*scale)}px ui-monospace,monospace`;ctx.fillText(label,p.x,p.y+Math.round(2*scale));ctx.restore();
   }
   function resolutionText(q,now){
     const type=q?.weaponType??'basic';
@@ -103,7 +118,7 @@ export function createRenderer(canvas, config) {
   }
   function loop(){
     ctx.clearRect(0,0,overlay.width,overlay.height);
-    if(room?.arena){const view=base.getViewSnapshot?.();if(view)drawWeaponBadge(room,view);drawLiveSpectator(room);drawResolutionRibbon(room);drawPhase6fCountdown(room);}
+    if(room?.arena){const view=base.getViewSnapshot?.();if(view){drawEnhancedVehicles(room,view);drawWeaponBadge(room,view);}drawLiveSpectator(room);drawResolutionRibbon(room);drawPhase6fCountdown(room);}
     frameId=requestAnimationFrame(loop);
   }
   frameId=requestAnimationFrame(loop);
