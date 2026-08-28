@@ -1,0 +1,165 @@
+ORBITAL ARTILLERY — PROJECT PROGRESS — VERSION 11
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V10.txt
+
+CURRENT PROJECT PHASE
+Phase 7A — Full Multiplayer QA: IN PROGRESS.
+
+NEW CORE SUBPHASES IMPLEMENTED
+Phase 7A.1 — Match Stats & Event Tracking: IMPLEMENTED IN CODE.
+Phase 7A.2 — Rematch & Match Loop: IMPLEMENTED IN CODE.
+
+IMPORTANT DISTINCTION
+- The planned v1 core mechanics/features are now effectively feature-complete from the current code scope.
+- Phase 7A overall is NOT complete because browser/two-client/full-match/manual QA is still pending.
+- Release readiness still requires manual Phase 7A, Phase 7B bugfix/regression hardening, and later release-candidate polish.
+
+PREVIOUS GATE
+COBY_DEBUG_V12: PASS before entering Phase 7A.
+Phase 7A automated multiplayer contracts also passed before the new stats/rematch work.
+
+PHASE 7A.1 — MATCH STATS & EVENT TRACKING
+New backend layer: phase7a1.js over the hardened Phase 6E gameplay stack.
+
+Authoritative per-player stats:
+- damage dealt
+- damage received
+- kills
+- assists
+- deaths
+- self-KOs
+- void deaths
+- pickups collected
+- biggest hit
+- successful weapon/utility uses
+- per-weapon usage counts
+
+Rules:
+- self-damage counts as damage received, not damage dealt.
+- environmental void HP removal does not become fake damage.
+- if a real impact deals damage and the same resolution also causes a void death, only the real lastDamage amount is credited.
+- kill attribution supports player, self-KO, void and shooter-caused terrain collapse.
+- assists: every other previous non-self contributor to the victim in the current match receives one assist when another player gets the kill.
+
+Authoritative event feed:
+- fire
+- damage
+- self-damage
+- death / cause
+- pickup
+- Shield/Heal/other utility usage
+- rematch
+- retained server-side up to 36 recent events.
+
+End-of-match summary:
+- winner/result
+- duration
+- number of turns
+- top damage player
+- top kills player
+- most-used weapon.
+
+Frontend:
+- match-stats7a1.js provides a live DOM scoreboard below the battle layout.
+- columns: damage, kills, assists, damage taken, pickups, uses, biggest hit.
+- recent match event feed.
+- final match summary.
+- frontend panel does not alter Canvas/camera/game authority.
+
+PHASE 7A.2 — REMATCH & MATCH LOOP
+Implemented:
+- host-only REMATCH // SAME MAP.
+- host-only REMATCH // RANDOM MAP.
+- same private room code retained.
+- same connected players retained.
+- same game mode and teams retained.
+- HP/alive/inventory/selected item/Shield/pickups/arena/telemetry reset.
+- one fresh countdown begins immediately.
+- random rematch chooses a different concrete map.
+- lobby terrain selector now includes RANDOM MAP; it resolves to a concrete map and resets READY states.
+
+SERVER WIRING
+server.js now routes public state and turn/gameplay actions through Phase 7A.1 wrappers.
+Source /health phase: 7A.1.
+Do not infer that Cloud Run is on the latest commit without checking the deployed service separately.
+
+AUTOMATED COVERAGE
+Existing Phase 7A contract tests remain:
+- 8-player Survival full timeout cycle.
+- Team 2v2 alternating cycle.
+- spectatorAim parity.
+- free movement beyond historical 520 radius.
+- more than two jumps.
+- projectile movement lock.
+
+New Phase 7A.1 regressions cover:
+- zeroed public telemetry state.
+- successful weapon/utility usage tracking.
+- self-damage not inflating damage dealt/biggest hit.
+- real impact damage retained when same resolution also causes void death.
+- same-map rematch reset.
+- random-map rematch and room retention.
+- RANDOM lobby terrain and READY reset.
+- non-host rematch rejection.
+
+COBY DEBUG V13
+Post-feature Coby Debug found two confirmed anomalies and fixed both:
+1. stale match-stats frontend cache after the module changed.
+2. legitimate projectile damage could be discarded if the same resolution also ended in a void death.
+
+After fixes:
+- Server CI: SUCCESS.
+- Frontend CI: SUCCESS.
+- corrected frontend GitHub Pages deployment: SUCCESS.
+- code-only gate: PASS.
+
+CURRENT IMPLEMENTATION STACK
+Authoritative gameplay:
+rooms -> Phase 6A -> Phase 6C -> Phase 6D -> Phase 6E -> Phase 7A.1 telemetry/match-loop wrapper.
+
+Frontend:
+- Phase 6F renderer/spectator presentation remains active.
+- Phase 7A match-stats/rematch DOM layer added above the same gameplay presentation.
+
+CURRENT CORE BASELINE
+- 2–8 players
+- Team / Survival
+- private room codes
+- server authoritative
+- 40 s turns
+- free movement
+- unlimited jumps with cooldown
+- wind/aim/power/projectiles
+- destructible terrain / seven maps
+- Basic / Heavy / Triple / Cluster / Shield / Heal / Air Strike / Nuke
+- pickups / inventory
+- AFK vote
+- live spectator aim
+- Phase 6F spectator presentation
+- Phase 6E pool 25/20/20/12/12/8/3
+- live match scoreboard/event feed
+- kill/assist/death attribution
+- end summary
+- RANDOM terrain
+- same/random rematch.
+
+PHASE STATUS
+Phase 6F visual implementation: DONE IN CODE; manual visual QA pending.
+Phase 7A automated multiplayer contracts: PASS.
+Phase 7A.1 Stats/Event Tracking: DONE IN CODE; manual validation pending.
+Phase 7A.2 Rematch/Match Loop: DONE IN CODE; manual validation pending.
+Phase 7A overall: IN PROGRESS — NOT COMPLETE.
+Coby Debug V13 code gate: PASS.
+
+NEXT WORK
+1. Execute ORBITAL_ARTILLERY_TODOLIST_V12.txt on PC/two clients.
+2. Reproduce and record actual issues rather than speculative ones.
+3. Phase 7B fixes/hardening for anything found, with regressions where practical.
+4. Later visual/map/vehicle redesign/polish can proceed as a separate presentation block without reopening core mechanics unnecessarily.
+5. Phase 8 Release Candidate only after the manual gate and 7B.
+
+VERSIONING
+Do not overwrite V11.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V12.txt
+
+END PROGRESS V11
