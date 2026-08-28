@@ -21,6 +21,7 @@ jobs:
       - run: node --check combat-controls.js
       - run: node --check combat-controls6d.js
       - run: node --check combat-controls6f.js
+      - run: node --check match-stats7a1.js
       - run: node --check ui.js
       - run: node --check socket.js
       - run: node --check music.js
