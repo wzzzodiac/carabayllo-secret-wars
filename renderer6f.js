@@ -11,6 +11,8 @@ export function createRenderer(canvas, config) {
   const ctx=overlay.getContext('2d');
   let room=null,localPlayerId=null,frameId=null;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const smoothstep=t=>t*t*(3-2*t);
   const weaponLabel=type=>({basic:'BASIC',heavy:'HEAVY BOMB',triple:'TRIPLE SHOT',cluster:'CLUSTER BOMB',shield:'SHIELD',heal:'HEAL +30',airstrike:'AIR STRIKE',nuke:'NUKE LASER'}[type]??String(type??'BASIC').toUpperCase());
   const weaponColor=type=>({basic:'#ffe89a',heavy:'#ffb35c',triple:'#b5f2ff',cluster:'#ffb5d8',shield:'#a6ff87',heal:'#9be7b0',airstrike:'#ffcf7d',nuke:'#f3b0ff'}[type]??'#e7edff');
   function selectedType(activeRoom){
@@ -18,6 +20,22 @@ export function createRenderer(canvas, config) {
     const player=activeRoom?.players?.find(p=>p.id===id);
     const slot=player?.selectedItemSlot??1;
     return slot>1?(player?.inventory?.[slot-2]?.type??'basic'):'basic';
+  }
+  function visualPlayerPosition(player,now=Date.now()){
+    const m=player?.motion;
+    if(!player?.spawn||!m||now>=m.endsAt)return player?.spawn??null;
+    const span=Math.max(1,m.endsAt-m.startedAt),raw=clamp((now-m.startedAt)/span,0,1);
+    if(m.type==='voidJump'){
+      const lift=.28;
+      if(raw<lift){const t=raw/lift;return{...player.spawn,x:lerp(m.fromX,m.toX,smoothstep(t)),y:lerp(m.fromY,m.fromY-30,t)-Math.sin(Math.PI*t)*(m.apex||150)};}
+      const t=(raw-lift)/(1-lift);return{...player.spawn,x:m.toX,y:lerp(m.fromY-30,m.toY,t*t)};
+    }
+    if(m.type==='knockback'||m.type==='knockbackVoid'){
+      const secs=Math.max(.001,span/1000),t=raw*secs,x=lerp(m.fromX,m.toX,raw),ballistic=m.fromY+(m.vy??0)*t+.5*(m.gravity??520)*t*t,y=raw>.965?lerp(ballistic,m.toY,(raw-.965)/.035):ballistic;
+      return{...player.spawn,x,y};
+    }
+    const x=lerp(m.fromX,m.toX,raw),baseY=lerp(m.fromY,m.toY,raw),arc=m.type==='jump'?Math.sin(Math.PI*raw)*(m.apex||0):0;
+    return{...player.spawn,x,y:baseY-arc};
   }
   function worldToScreen(x,y,view){return{x:(x-view.x)/view.width*overlay.width,y:(y-view.y)/view.height*overlay.height};}
   function roundedPanel(x,y,w,h,stroke='rgba(140,180,255,.36)'){
@@ -41,7 +59,8 @@ export function createRenderer(canvas, config) {
   function drawWeaponBadge(activeRoom,view){
     if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;
     const id=activeRoom.match?.activePlayerId,player=activeRoom.players?.find(p=>p.id===id);if(!player?.spawn)return;
-    const type=selectedType(activeRoom),p=worldToScreen(player.spawn.x,player.spawn.y-92,view);
+    const pos=visualPlayerPosition(player);if(!pos)return;
+    const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-92,view);
     if(p.x<-160||p.x>overlay.width+160||p.y<-80||p.y>overlay.height+80)return;
     const label=weaponLabel(type),color=weaponColor(type),width=clamp(label.length*8.2+34,96,190);
     ctx.save();roundedPanel(p.x-width/2,p.y-18,width,28,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 11px ui-monospace,monospace';ctx.fillText(label,p.x,p.y);ctx.restore();
