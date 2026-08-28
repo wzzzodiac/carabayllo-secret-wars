@@ -12,10 +12,17 @@ Backend:
 
 ## Current status
 
-**Current development phase: Phase 6E — Balance & Gameplay Tuning baseline implemented in code.**
+**Current development phase: Phase 6F — Visual & Spectator Polish implemented in frontend code.**
 
-Phase 6E keeps the existing Phase 6D gameplay mechanics—Nuke Laser, free active-turn movement and live spectator aim—but replaces the old pre-final pickup rarity model with an exact 100-point baseline distribution:
+Phase 6F does not change authoritative gameplay or the Phase 6E balance baseline. It adds a dedicated frontend presentation layer so waiting players can follow every turn more clearly:
 
+- LIVE spectator feed with active player, selected weapon, angle, power and wind
+- active-weapon badge anchored to the current player using the exact inherited camera view
+- weapon-specific resolution ribbon for Basic, Heavy, Triple, Cluster, Air Strike and Nuke states
+- side-HUD WEAPON and AIM SYNC telemetry
+- Phase 6F countdown/landing identity without changing the backend phase contract
+
+The current authoritative pickup distribution remains:
 - Heavy Bomb: 25
 - Triple Shot: 20
 - Cluster Bomb: 20
@@ -24,11 +31,7 @@ Phase 6E keeps the existing Phase 6D gameplay mechanics—Nuke Laser, free activ
 - Air Strike: 8
 - Nuke Laser: 3
 
-A second independent **pre-Phase 6F Coby Debug V9** code pass was completed after Phase 6E. One state-contract inconsistency was found and fixed: internal pickup normalization flags (`phase6cPoolRolled`, `phase6dPoolRolled`, `phase6ePoolRolled`) are now stripped from public pickup state while remaining authoritative server-only bookkeeping. A regression test covers this and latest Server CI passed. No further confirmed code blocker was found in that pass.
-
-Phase 6E intentionally does **not** change current weapon damage/radii or the 40-second turn yet. Those values remain the baseline until real multiplayer play gives evidence to tune them.
-
-Next planned phase: **Phase 6F — Visual & Spectator Polish**.
+The final pre-6F gate is **COBY_DEBUG_V10.txt**, which passed with no known confirmed code blocker. Phase 6F itself still requires manual browser/visual QA before its presentation is considered validated.
 
 Mobile/touch gameplay is not part of the current roadmap.
 
@@ -38,9 +41,9 @@ For canonical recovery, use the highest-numbered versions of:
 - `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
 
 Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V8.txt`
-- `COBY_DEBUG_V9.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V8.txt`
+- `ORBITAL_ARTILLERY_PROGRESS_V9.txt`
+- `COBY_DEBUG_V10.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V9.txt`
 
 ## Architecture
 
@@ -71,6 +74,8 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Unlimited per-turn jumping with short normal-jump cadence
 - Long natural fall/death timing for jumps into void
 - Live spectator aim: active angle, power and trajectory visible to all clients
+- Phase 6F live spectator telemetry and active-weapon identity
+- Weapon-specific attack-resolution status presentation
 - Projectile trajectory preview and simulation
 - Seven terrain presets
 - Destructible terrain and craters
@@ -91,9 +96,17 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 
 ## Phase 6E balance baseline
 
-The authoritative server now routes through `phase6e.js`, which wraps Phase 6D and changes only the rarity selection of newly spawned pickups. Each new box is normalized once against the 100-point Phase 6E pool, so existing combat/turn/movement logic remains inherited from the already-hardened Phase 6D path.
+The authoritative server routes through `phase6e.js`, which wraps Phase 6D and changes only the rarity selection of newly spawned pickups. Each new box is normalized once against the 100-point Phase 6E pool, so combat/turn/movement logic remains inherited from the hardened Phase 6D path.
 
-The server public state exposes `phase: "6E"`, the exact `itemPool`, and `balanceRules` metadata. Server-only roll bookkeeping is intentionally hidden from public pickup objects. The Phase 6E test suite verifies the total pool, exact weights, deterministic 0–99 roll boundaries, public pacing metadata, one-time normalization and public-state cleanup.
+The server public state exposes `phase: "6E"`, the exact `itemPool`, and `balanceRules` metadata. Server-only roll bookkeeping is hidden from public pickup objects. Tests verify the total pool, exact weights, deterministic 0–99 roll boundaries, public pacing metadata, one-time normalization and public-state cleanup.
+
+## Phase 6F presentation layer
+
+`renderer6f.js` wraps the Phase 6D renderer stack and adds presentation only. It receives the exact camera snapshot through the Phase 6D wrapper rather than calculating a second camera.
+
+During another player's turn, spectators see a LIVE feed with active player, weapon, angle, power and wind. The active vehicle carries a weapon badge using weapon-specific colors. While a shot resolves, that feed gives way to a weapon-specific resolution ribbon; Air Strike and Nuke retain their existing richer world-space effects underneath.
+
+`combat-controls6f.js` wraps the current battle HUD. It adds active-weapon and aim-sync information and makes spectator state explicit without changing input authority or server state.
 
 ## Key current constants
 
@@ -137,7 +150,9 @@ The turn clock is intentionally the main cost of repositioning. Phase 6E keeps 4
 
 ## Spectator aim
 
-All clients receive the authoritative active-player aim state. Spectators can see the current angle, power and trajectory preview while the active player prepares a shot. Triple, Air Strike and Nuke use their weapon-specific presentation where available; the Nuke uses the normal artillery trajectory as its visible designator.
+All clients receive the authoritative active-player aim state. Spectators can see angle, power and trajectory while the active player prepares a shot. Phase 6F surfaces that same authoritative information in a LIVE spectator feed and battle HUD rather than introducing any client-only aim authority.
+
+Triple, Air Strike and Nuke retain weapon-specific world presentation where available; the Nuke uses the normal artillery trajectory as its visible designator.
 
 ## Nuke Laser behavior
 
@@ -183,8 +198,8 @@ All clients receive the authoritative active-player aim state. Spectators can se
 - Phase 6C.1 — Heal ✅
 - Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
 - Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; code debug passed; manual PC QA pending
-- Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; pre-6F code debug passed; manual balance QA pending
-- Phase 6F — Visual & Spectator Polish ⏳
+- Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; code debug passed; manual balance QA pending
+- Phase 6F — Visual & Spectator Polish ✅ implementation; manual visual QA pending
 - Phase 7A — Full Multiplayer QA ⏳
 - Phase 7B — Bugfix & Regression Hardening ⏳
 - Phase 8 — Release Candidate / Final Polish ⏳
@@ -192,12 +207,9 @@ All clients receive the authoritative active-player aim state. Spectators can se
 
 ## Automated baseline
 
-Pre-Phase 6F checkpoint:
-- Server CI passed after Phase 6E public-state cleanup and its regression test (commit `3ff74feb7003c421ec0a93d7acb9836b5d89e074`).
-- Frontend CI and GitHub Pages had already passed the Phase 6E identity/cache checkpoint.
-- No gameplay/frontend source was changed by Coby Debug V9 beyond backend public-state sanitization.
+Phase 6F frontend CI now explicitly syntax-checks `renderer6f.js` and `combat-controls6f.js` in addition to the previous renderer/HUD stack. GitHub Pages deployment should be checked on the latest Phase 6F head; automated checks still do not replace browser/visual QA.
 
-Automated checks do not replace manual browser/gameplay QA. Live Cloud Run deployment/source parity must also be verified rather than assumed solely from GitHub source.
+The authoritative backend was not changed by Phase 6F. The latest reviewed Server CI remains green after Phase 6E public-state cleanup and its regression test.
 
 ## Development rules
 
