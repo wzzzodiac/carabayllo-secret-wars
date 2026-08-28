@@ -1,0 +1,95 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 11
+Date: 2026-08-28
+Purpose: post-Phase 6F code gate before Full Multiplayer QA.
+
+RECOVERY PRIORITY
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI / Pages
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+AUDIT SCOPE
+- latest frontend and backend commits
+- renderer6f.js composition over renderer6d.js/base renderer
+- combat-controls6f.js composition over Phase 6D HUD wrappers
+- exact camera-view inheritance
+- active weapon badge anchoring
+- live spectator telemetry
+- resolution ribbons
+- Phase 6F countdown identity
+- import-map/cache chain
+- latest frontend CI and GitHub Pages
+- authoritative backend parity unchanged from Phase 6E source
+
+CONFIRMED FINDING FIXED
+A1 — PHASE 6F ACTIVE-WEAPON BADGE DID NOT FOLLOW THE VEHICLE'S VISUAL MOTION
+Root cause:
+- renderer6f.js positioned the badge from player.spawn.
+- the base renderer positions an animated vehicle from its motion interpolation while jumping/falling/knockback motion is active.
+- therefore the vehicle could visually travel through an animation while the badge snapped immediately to the authoritative destination spawn.
+
+Impact:
+- presentation-only desynchronization introduced by Phase 6F.
+- gameplay/server authority was not affected.
+
+Fix:
+- renderer6f now calculates the same visual motion interpolation used by the base renderer for normal jump, void jump, generic fall and knockback/knockbackVoid motion.
+- the active-weapon badge anchors to that interpolated visual position rather than raw spawn.
+- frontend renderer cache advanced to phase6f-spectator-polish-2.
+
+Verification:
+- Frontend CI on head fe3e18723cf74718f71d2a36abeffa263d69ed38: SUCCESS.
+- CI explicitly syntax-checks renderer6f.js and combat-controls6f.js plus the inherited renderer/HUD stack.
+- GitHub Pages deployment on the same head: SUCCESS.
+
+RE-REVIEW RESULT
+After the fix, no additional confirmed mechanical/code inconsistency was found in this post-6F pass.
+
+Verified from source/architecture:
+- Phase 6F remains frontend presentation only.
+- authoritative backend remains Phase 6E and was not modified by Phase 6F.
+- spectator telemetry reads authoritative/public aim, selected weapon and wind state.
+- weapon badge uses the inherited exact camera view.
+- badge now follows animated player motion instead of raw destination position.
+- resolution ribbons do not alter projectile/special resolution.
+- Nuke/Air Strike visual stacks remain inherited underneath 6F.
+- countdown replacement avoids simultaneous stale Phase 6E/6F identity.
+- import map now requests renderer6f.js?v=phase6f-spectator-polish-2.
+
+CLASSIFICATION
+A — confirmed bug fixed:
+- active weapon badge / animated vehicle position mismatch.
+
+B — manual checks still required:
+- actual readability/overlap/flicker in browser
+- two-client spectator sync and latency feel
+- badge alignment during real jump/void/camera transitions
+- Air Strike/Nuke visual composition
+- all accumulated gameplay QA.
+
+C — intentional design:
+- server public phase remains 6E while frontend development identity is 6F.
+- Phase 6F does not rebalance or alter gameplay authority.
+
+D — non-blocking tech debt:
+- renderer6f duplicates the base renderer motion interpolation to stay visually aligned; consider exposing a shared visual-position API when renderer layers are consolidated after manual QA.
+- layered renderer/HUD wrappers remain intentionally preserved until gameplay/visual validation is complete.
+
+CODE-ONLY GATE
+PASS — no currently known confirmed code blocker remains after A1 fix.
+
+MANUAL QA GATE
+PENDING — do not mark Phase 6F visuals or Full Multiplayer QA complete without actual desktop testing.
+
+PHASE GATE
+APROBADO PARA AVANZAR from code-only perspective.
+Manual QA remains required before release-quality approval.
+
+VERSIONING
+Do not overwrite V11.
+Next Coby Debug snapshot: COBY_DEBUG_V12.txt
+
+END COBY DEBUG V11
