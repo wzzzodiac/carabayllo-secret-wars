@@ -24,11 +24,11 @@ Phase 6E keeps the existing Phase 6D gameplay mechanics—Nuke Laser, free activ
 - Air Strike: 8
 - Nuke Laser: 3
 
-A post-6E **Coby Debug V8** code pass was completed. The new balance wrapper, server wiring, deterministic roll boundaries, frontend identity/cache chain, CI and Pages deployment were reviewed. No remaining confirmed gameplay/code blocker was found from this pass. Manual browser/gameplay/balance QA is still pending.
+A second independent **pre-Phase 6F Coby Debug V9** code pass was completed after Phase 6E. One state-contract inconsistency was found and fixed: internal pickup normalization flags (`phase6cPoolRolled`, `phase6dPoolRolled`, `phase6ePoolRolled`) are now stripped from public pickup state while remaining authoritative server-only bookkeeping. A regression test covers this and latest Server CI passed. No further confirmed code blocker was found in that pass.
 
 Phase 6E intentionally does **not** change current weapon damage/radii or the 40-second turn yet. Those values remain the baseline until real multiplayer play gives evidence to tune them.
 
-Next planned phase after manual findings are incorporated: **Phase 6F — Visual & Spectator Polish**.
+Next planned phase: **Phase 6F — Visual & Spectator Polish**.
 
 Mobile/touch gameplay is not part of the current roadmap.
 
@@ -39,7 +39,7 @@ For canonical recovery, use the highest-numbered versions of:
 
 Current canonical snapshots:
 - `ORBITAL_ARTILLERY_PROGRESS_V8.txt`
-- `COBY_DEBUG_V8.txt`
+- `COBY_DEBUG_V9.txt`
 - `ORBITAL_ARTILLERY_TODOLIST_V8.txt`
 
 ## Architecture
@@ -93,7 +93,7 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 
 The authoritative server now routes through `phase6e.js`, which wraps Phase 6D and changes only the rarity selection of newly spawned pickups. Each new box is normalized once against the 100-point Phase 6E pool, so existing combat/turn/movement logic remains inherited from the already-hardened Phase 6D path.
 
-The server public state exposes `phase: "6E"`, the exact `itemPool`, and `balanceRules` metadata. The Phase 6E test suite verifies the total pool, exact weights, deterministic 0–99 roll boundaries, public pacing metadata and one-time normalization of newly spawned pickups.
+The server public state exposes `phase: "6E"`, the exact `itemPool`, and `balanceRules` metadata. Server-only roll bookkeeping is intentionally hidden from public pickup objects. The Phase 6E test suite verifies the total pool, exact weights, deterministic 0–99 roll boundaries, public pacing metadata, one-time normalization and public-state cleanup.
 
 ## Key current constants
 
@@ -183,7 +183,7 @@ All clients receive the authoritative active-player aim state. Spectators can se
 - Phase 6C.1 — Heal ✅
 - Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
 - Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; code debug passed; manual PC QA pending
-- Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; post-6E code debug passed; manual balance QA pending
+- Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; pre-6F code debug passed; manual balance QA pending
 - Phase 6F — Visual & Spectator Polish ⏳
 - Phase 7A — Full Multiplayer QA ⏳
 - Phase 7B — Bugfix & Regression Hardening ⏳
@@ -192,10 +192,10 @@ All clients receive the authoritative active-player aim state. Spectators can se
 
 ## Automated baseline
 
-Post-Phase 6E checkpoint:
-- Server CI passed with Phase 6E balance regressions plus the existing combat/movement/Nuke suite.
-- Frontend CI passed with the Phase 6E identity/cache chain.
-- GitHub Pages deployed the Phase 6E frontend commit successfully.
+Pre-Phase 6F checkpoint:
+- Server CI passed after Phase 6E public-state cleanup and its regression test (commit `3ff74feb7003c421ec0a93d7acb9836b5d89e074`).
+- Frontend CI and GitHub Pages had already passed the Phase 6E identity/cache checkpoint.
+- No gameplay/frontend source was changed by Coby Debug V9 beyond backend public-state sanitization.
 
 Automated checks do not replace manual browser/gameplay QA. Live Cloud Run deployment/source parity must also be verified rather than assumed solely from GitHub source.
 
