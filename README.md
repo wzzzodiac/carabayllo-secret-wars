@@ -14,7 +14,9 @@ Backend:
 
 **Current development phase: Phase 6D — Nuke Laser implemented in code.**
 
-Air Strike and Nuke Laser now have server-authoritative mechanics plus frontend presentation code. Manual deployed-browser QA is still pending for visual alignment, camera behavior, game feel and multiplayer synchronization.
+Air Strike and Nuke Laser now have server-authoritative mechanics plus frontend presentation code. Phase 6D also changes traversal: the active player can move freely across reachable terrain and jump without a per-turn quota; the 40-second turn timer is now the main movement economy. Spectators receive and render the active player's live aim state.
+
+Manual deployed-browser QA is still pending for visual alignment, camera behavior, game feel and multiplayer synchronization.
 
 After manual QA/debug, the next planned work is final pickup/weapon balancing followed by broad desktop QA and polish.
 
@@ -26,9 +28,9 @@ For the canonical resume state, use the highest-numbered versions of:
 - `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
 
 Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V5.txt`
-- `COBY_DEBUG_V5.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V5.txt`
+- `ORBITAL_ARTILLERY_PROGRESS_V6.txt`
+- `COBY_DEBUG_V6.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V6.txt`
 
 ## Architecture
 
@@ -55,7 +57,9 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - 40-second turns and per-turn wind
 - Weighted first-player selection that intentionally favors non-hosts
 - Randomized physical spawn positions
-- Movement, jumping, aim and power
+- Free active-turn movement across reachable terrain
+- Unlimited per-turn jumping with short animation/cooldown
+- Live spectator aim: active angle, power and trajectory are visible to all clients
 - Projectile trajectory preview and simulation
 - Seven terrain presets
 - Destructible terrain and craters
@@ -77,10 +81,12 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 
 - HP: 100
 - Turn: 40 s
-- Movement radius: ±520
 - Move step: 15
+- Movement radius: none during active turn
 - Max walk surface delta: 42
-- Jump: 180, max 2/turn
+- Jump distance: 180
+- Jump quota: none during active turn
+- Effective jump animation/cooldown: about 0.5 s
 - Aim: 5–85°, default 45°
 - Power: 10–100, default 55
 - Basic: 45 max damage, radius 260, crater 135/165
@@ -90,17 +96,37 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Shield: next applicable damage ×0.5
 - Heal: +30, cap 100
 - Air Strike: 7 shells, 1200 ms warning, 120 ms stagger, 105 spacing, 16 max damage/shell, radius 165, crater 72/62
-- Nuke Laser: weight 3, 20 direct damage, 850 ms post-designator warning, diagonal terrain cut, no conventional knockback
+- Nuke Laser: weight 3, 20 direct damage, 3000 ms post-designator warning, 3000 ms sustained beam, large diagonal terrain cut, no conventional knockback
 - Pickups: every 3 turns, lifetime 4 turns, max 2, contact radius 64
 - AFK vote: opens at 20 s remaining, strict majority of other living players
+
+## Movement philosophy
+
+The old Phase 4 limits of ±520 movement and two jumps per turn are no longer gameplay limits in Phase 6D.
+
+During the active player's 40-second turn:
+- movement is allowed across any normally reachable terrain
+- walking still respects terrain steepness/collision rules
+- jumping is not limited by a per-turn counter
+- jump spam is constrained by the short jump animation/cooldown
+- firing locks movement while the projectile/special action resolves
+- Shield and Heal remain instant utility actions under their existing turn rules
+
+The turn clock is intentionally the main cost of repositioning.
+
+## Spectator aim
+
+All clients receive the authoritative active-player aim state. Spectators can see the current angle, power and trajectory preview while the active player prepares a shot. Special previews continue to use their weapon-specific presentation where available; the Nuke uses the normal artillery trajectory as its visible designator.
 
 ## Nuke Laser behavior
 
 - Very rare pickup, current weight 3
 - Uses the normal artillery projectile as a server-authoritative target designator
 - Designator impact locks the target
-- 850 ms warning after target lock
-- Diagonal disintegration beam
+- 3-second warning after target lock
+- Sustained 3-second diagonal disintegration beam
+- Catastrophic frontend presentation: darkening warning phase, animated lock line, multi-layer beam glow/core, particles/pulses and afterglow
+- Large terrain cut, approximately 1800 world units wide before edge clamping
 - 20 HP direct damage with full self/friendly fire
 - Shield halves the applicable direct hit and is consumed
 - No conventional knockback
@@ -125,7 +151,7 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Phase 2 — synchronized arena ✅
 - Phase 2.5 — world / camera ✅
 - Phase 3 — turns / wind ✅
-- Phase 4 — movement / aim / fire ✅
+- Phase 4 — movement / aim / fire ✅; movement rules later expanded in Phase 6D
 - Phase 5A — destructible terrain ✅
 - Phase 5B — HP / damage / death / victory ✅
 - Phase 6A — pickups / inventory / Heavy Bomb ✅
@@ -133,15 +159,12 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Phase 6B.1 — AFK Skip Vote ✅
 - Phase 6C.1 — Heal ✅
 - Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
-- Phase 6D — Nuke Laser ✅ implementation; manual PC QA pending
+- Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; manual PC QA pending
 - Final balance + broad desktop QA ⏳
 
 ## Automated baseline
 
-At the Phase 6D gameplay implementation checkpoint:
-- Server CI passed after the Nuke regression test was corrected to distinguish terrain-caused falling from knockback.
-- Frontend CI passed with the Phase 6D renderer/HUD wrappers.
-- GitHub Pages deployment passed for the Phase 6D renderer overlay commit.
+The Phase 6D server suite includes regression coverage for the Nuke, free movement beyond the old 520 radius, jumping despite the old quota, cinematic Nuke timings and public spectator-aim state.
 
 Automated checks do not replace manual browser/gameplay QA.
 
