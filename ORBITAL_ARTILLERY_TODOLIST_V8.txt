@@ -1,0 +1,362 @@
+ORBITAL ARTILLERY — MANUAL PC QA / TODO — VERSION 8
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_TODOLIST_V7.txt
+
+RULES
+- Manual/visual/temporal/browser behavior is checked here.
+- Do not mark complete without actual PC/browser testing.
+- A visual suspicion is not a confirmed bug until reproduced or proven from source.
+- Desktop/web is the target. Mobile/touch gameplay is out of scope.
+- Post-Phase 6E Coby Debug code-only gate passed; this file is the remaining MANUAL/BALANCE gate.
+
+==================================================
+A. PHASE 6E — BALANCE & GAMEPLAY TUNING
+==================================================
+CURRENT 100-POINT POOL
+Heavy 25
+Triple 20
+Cluster 20
+Shield 12
+Heal 12
+Air Strike 8
+Nuke 3
+TOTAL 100
+
+IDENTITY / DEPLOY
+[ ] Live page title/header show Phase 6E.
+[ ] Live footer shows 25/20/20/12/12/8/3 pool.
+[ ] Countdown shows Phase 6E identity rather than stale Phase 6D.
+[ ] HUD explanatory text reflects current free movement + Phase 6E pool.
+[ ] Normal refresh loads phase6e-balance-1 cache chain.
+[ ] Hard refresh loads phase6e-balance-1 cache chain.
+[ ] /health reports Phase 6E after latest backend deployment.
+[ ] Verify Cloud Build/Cloud Run source parity before assuming backend 6E is live.
+
+PICKUP FREQUENCY FEEL
+[ ] Over many natural spawns, Heavy feels common but not overwhelming.
+[ ] Triple appears frequently enough to be a core offensive special.
+[ ] Cluster appears frequently enough to be a core offensive special.
+[ ] Shield at 12% feels useful but not constant.
+[ ] Heal at 12% feels useful but not constant.
+[ ] Air Strike at 8% feels clearly rarer than standard specials.
+[ ] Nuke at 3% feels exceptional/ultimate.
+[ ] No item appears obviously impossible to obtain naturally.
+[ ] No item appears suspiciously far more often than its intended class.
+[ ] If enough samples are played, record rough spawn counts before changing weights.
+
+PACING
+[ ] Pickup every 3 turns feels active enough with free movement.
+[ ] Pickup every 3 turns does not flood the map.
+[ ] Lifetime 4 turns gives realistic opportunity to reach a box.
+[ ] Lifetime 4 turns is not so long that old pickups stagnate.
+[ ] Max 2 pickups on map feels sufficient.
+[ ] Two special inventory slots remain enough with free movement.
+[ ] Full inventory decisions feel meaningful rather than annoying.
+[ ] 40 s turn remains enough to move, aim and make a decision.
+[ ] 40 s turn does not encourage excessive wandering/stalling.
+[ ] Decide after actual play: KEEP / SHORTER / LONGER turn.
+[ ] Decide after actual play: KEEP / FASTER / SLOWER pickup cadence.
+[ ] Decide after actual play: KEEP / CHANGE lifetime 4.
+[ ] Decide after actual play: KEEP / CHANGE max 2 pickups.
+
+WEAPON ROLE BALANCE
+[ ] Basic remains useful and not just a fallback nobody wants.
+[ ] Heavy feels like reliable high-impact single shot.
+[ ] Triple feels distinct from Heavy and rewards trajectory use.
+[ ] Cluster feels distinct from Triple and useful for terrain/area disruption.
+[ ] Shield feels valuable at current 50% mitigation.
+[ ] Heal +30 feels relevant but not stronger than offensive pickups overall.
+[ ] Air Strike feels stronger/more flexible enough to justify 8% rarity.
+[ ] Nuke feels dramatically more consequential than other specials despite only 20 direct HP.
+[ ] No special clearly dominates every situation.
+[ ] No special feels pointless.
+
+DO NOT CHANGE FROM ONE ANECDOTE
+[ ] Use multiple rounds before changing weights.
+[ ] Separate bad luck from actual frequency imbalance.
+[ ] Separate visual weakness from mechanical weakness.
+[ ] Record any proposed tuning before changing code.
+
+==================================================
+B. NUKE LASER — CRITICAL MANUAL QA
+==================================================
+PICKUP / SELECTION
+[ ] Nuke can appear naturally as a rare pickup under 6E.
+[ ] Native Nuke box style + ULT overlay read as one identity.
+[ ] Inventory label/slot selection correct.
+[ ] Active player sees FIRE NUKE DESIGNATOR.
+[ ] Spectators see NUKE DESIGNATOR / live aim clearly.
+
+DESIGNATOR / SPECTATOR AIM
+[ ] Normal artillery trajectory acts as designator.
+[ ] Nuke designator is magenta and distinct from BASIC.
+[ ] Angle visibly changes trajectory on ALL clients.
+[ ] Power visibly changes trajectory on ALL clients.
+[ ] Wind affects designator consistently.
+[ ] Spectator sees exactly where active player is aiming before F.
+[ ] Nuke target locks where designator actually impacts.
+[ ] Designator impact creates NO fake Basic explosion/damage/crater/knockback.
+
+WORLD-ENDER WARNING
+[ ] Warning starts only after designator impact.
+[ ] Warning lasts about 3.0 s.
+[ ] Scene darkening dramatic but readable.
+[ ] Warning line predicts beam cut clearly.
+[ ] Countdown/target rings readable.
+[ ] Two clients show matching warning timing.
+
+SUSTAINED LASER
+[ ] Laser visibly active about 3.0 s.
+[ ] Diagonal geometry reads as huge terrain-cutting laser.
+[ ] White core + purple/magenta glow reads as one catastrophic beam.
+[ ] Beam looks substantially more powerful than Air Strike/Heavy.
+[ ] Particles/pulses/jitter intentional, not broken/flickery.
+[ ] Full-screen tint does not hide essential state completely.
+[ ] Beam/warning/afterglow stay aligned with terrain during camera movement.
+[ ] Zoom before Nuke and verify overlay/base camera alignment.
+[ ] No overlay/base-canvas desync.
+[ ] No offset/flicker at map edges.
+[ ] Afterglow/terrain-collapse phase reads correctly.
+[ ] Decide: MORE / LESS / GOOD visual intensity.
+[ ] Decide: MORE / LESS / GOOD beam duration.
+
+TERRAIN DESTRUCTION
+[ ] Nuke removes a major section of terrain.
+[ ] Cut looks like disintegration, not ordinary crater.
+[ ] Terrain removal follows the visible diagonal beam corridor.
+[ ] No surface clearly outside the beam is deleted.
+[ ] Multiple supported players can be dropped naturally.
+[ ] Existing holes/craters combine sensibly with Nuke cut.
+[ ] Edge-of-world cut does not create broken geometry.
+[ ] Decide: MORE / LESS / GOOD terrain destruction.
+
+DAMAGE / SHIELD / FALLS
+[ ] Direct beam hit = 20 HP.
+[ ] Self hit = 20 HP.
+[ ] Friendly hit = 20 HP.
+[ ] Shielded direct hit = 10 HP and consumes Shield.
+[ ] No conventional explosion knockback.
+[ ] Terrain loss can cause natural fall.
+[ ] Nuke-created fall animation does not snap/teleport.
+[ ] Multiple simultaneous falls resolve correctly.
+[ ] Match result waits for relevant fall/death presentation.
+
+PICKUPS / TURN
+[ ] Beam destroys intersected pickup.
+[ ] Destroyed pickup is not added to inventory.
+[ ] Pickup destruction does not retain Nuke turn.
+[ ] Nuke advances exactly one turn after full sequence.
+[ ] Nuke kill/void can finish match correctly.
+[ ] AFK state sane through designator/warning/beam/afterglow.
+
+==================================================
+C. FREE MOVEMENT / JUMP — CRITICAL MANUAL QA
+==================================================
+[ ] No ±520 movement stop during own turn.
+[ ] Can traverse beyond old radius if terrain allows.
+[ ] Walking blocks genuinely too-steep transitions.
+[ ] Walking into real gap/void behaves correctly.
+[ ] Contact pickups collect while freely moving.
+[ ] HUD does not expose old 520/2-jump limits as current rules.
+[ ] HUD says FREE MAP.
+[ ] HUD says FREE jump.
+[ ] More than 2 jumps can be performed in one turn.
+[ ] Jump cadence around 0.5 s feels responsive, not spammy.
+[ ] Normal jump animation smooth at ~500 ms.
+[ ] Jump intentionally into gap/void and verify long natural fall, not 0.5 s teleport.
+[ ] Repeated jumps do not desync player position between clients.
+[ ] Non-active movement/jump rejected with no visible state side effect.
+[ ] Movement/jump while projectile/special resolves remains locked.
+[ ] Decide whether jump distance 180 remains appropriate.
+[ ] Decide whether move step 15 remains responsive enough.
+
+==================================================
+D. LIVE SPECTATOR AIM
+==================================================
+[ ] Second client sees active cannon angle update live.
+[ ] Second client sees trajectory dots update live.
+[ ] Second client sees power changes reflected live.
+[ ] Spectator HUD angle/power matches active client.
+[ ] Spectator status reads SPECTATING // LIVE AIM VISIBLE.
+[ ] Basic preview visible correctly.
+[ ] Heavy preview visible correctly.
+[ ] Triple preview visible correctly.
+[ ] Cluster preview visible correctly.
+[ ] Air Strike zone preview visible correctly.
+[ ] Nuke designator preview understandable.
+[ ] Aim updates smooth under normal network latency.
+[ ] No stale aim remains after turn changes.
+
+==================================================
+E. AIR STRIKE
+==================================================
+[ ] Warning marker clearly visible before first shell.
+[ ] HUD warning/countdown readable.
+[ ] Exactly 7 shell visuals.
+[ ] Shell stagger/order smooth.
+[ ] Camera frames strike correctly.
+[ ] Damage/craters align with visual shell positions.
+[ ] Self/friendly damage correct.
+[ ] Shield interaction correct.
+[ ] Explosion pickup collection works and preserves turn/time.
+[ ] No-pickup Air Strike advances exactly once.
+[ ] Ground-destruction falls look correct.
+[ ] Multi-shell falling-player edge case has no restart/snap/teleport.
+[ ] Two-client synchronization looks correct.
+
+==================================================
+F. EXISTING WEAPON / PICKUP REGRESSION
+==================================================
+BASIC
+[ ] Direct hit.
+[ ] Terrain crater.
+[ ] Miss/out-of-bounds.
+[ ] Self splash.
+[ ] Knockback.
+
+HEAVY
+[ ] No double crater.
+[ ] Correct larger blast/crater.
+[ ] Shield interaction.
+[ ] Pickup via explosion.
+
+TRIPLE
+[ ] 3 visible trajectories.
+[ ] No hidden BASIC damage/knockback.
+[ ] No HP restoration during resolution.
+[ ] Out-of-bounds does not corrupt turn.
+
+CLUSTER
+[ ] 5 subimpacts.
+[ ] No hidden BASIC damage.
+[ ] No fake edge explosions on miss.
+[ ] Crater pattern matches impacts.
+
+SHIELD
+[ ] Use does not consume turn.
+[ ] Next applicable damage ×0.5.
+[ ] Shield disappears after absorption.
+[ ] Valid use clears AFK votes.
+
+HEAL
+[ ] +30 / cap 100.
+[ ] 88 -> 100 feedback reflects actual +12 where shown.
+[ ] Full HP use rejected without consuming item.
+[ ] Successful use does not consume turn.
+[ ] Two-client HP/inventory sync.
+
+PICKUPS GENERAL
+[ ] Spawn cadence every 3 turns.
+[ ] Lifetime 4 real turns.
+[ ] Max 2 simultaneously.
+[ ] Touch pickup.
+[ ] Explosion pickup.
+[ ] Full inventory prevents collection.
+[ ] Explosion pickup retains shooter turn/time.
+[ ] Newly spawned box does not visibly change type twice after appearing.
+
+==================================================
+G. TURN / AFK / MULTIPLAYER
+==================================================
+[ ] Weighted starter remains intentional.
+[ ] Randomized physical spawns.
+[ ] Team order alternates where possible.
+[ ] AFK opens at 20 s.
+[ ] F1 vote/unvote and browser Help suppression.
+[ ] Majority math for 2/3/4+ players.
+[ ] Valid active action clears votes.
+[ ] Invalid action does not clear votes.
+[ ] Majority advances exactly one turn.
+[ ] Disconnect-voter recalculation.
+[ ] Active action cancels pending skip.
+[ ] AFK sync across clients.
+[ ] AFK while projectile/special resolves remains locked/sane.
+[ ] 2-player Survival full match.
+[ ] 3-player disconnect flow.
+[ ] Team 2v2 full match.
+[ ] Active-player disconnect/wrap does not skip wrong player.
+[ ] Attempt to reproduce freeze/inactivity during own turn.
+
+==================================================
+H. CAMERA / MAPS / BROWSER
+==================================================
+CAMERA
+[ ] Countdown full-map overview.
+[ ] Opening dive.
+[ ] Turn-change transition.
+[ ] Projectile/designator follow.
+[ ] Manual drag.
+[ ] Wheel zoom.
+[ ] Double-click follow reset.
+[ ] Fall/void camera.
+[ ] Result overlay timing.
+[ ] Nuke overlay remains exact through camera transition/zoom.
+
+MAPS
+[ ] Rolling Expanse
+[ ] Terrace Line
+[ ] Twin Peaks
+[ ] Impact Basin
+[ ] Broken Ridge
+[ ] Drift Islands
+[ ] Canyon Run
+
+Across maps:
+[ ] preview/spawns
+[ ] free movement accessibility
+[ ] repeated jumping
+[ ] natural long fall into holes
+[ ] crater alignment
+[ ] settlement/falls
+[ ] knockback into gaps
+[ ] Air Strike terrain behavior
+[ ] Nuke diagonal terrain behavior
+
+BROWSER / DEPLOY
+[ ] Live page Phase 6E.
+[ ] phase6e-balance-1 loaded on normal refresh.
+[ ] phase6e-balance-1 loaded on hard refresh.
+[ ] Two tabs synchronized.
+[ ] Two desktop browsers synchronized.
+[ ] Chrome/Chromium pass.
+[ ] Firefox pass when convenient.
+[ ] Canvas/overlay sharp at normal DPR.
+[ ] Music/audio no duplicate behavior.
+[ ] Cloud Run wakes on CREATE/JOIN.
+[ ] Opening page alone does not intentionally wake backend.
+[ ] /health Phase 6E after deployment.
+
+==================================================
+I. NON-BLOCKING CLEANUP / TECH DEBT
+==================================================
+[ ] Centralize duplicated terrain formulas.
+[ ] Consider shared item/weapon constants after manual validation.
+[ ] Consider replacing layered 6A->6C->6D->6E pickup reroll architecture with one central pool generator after gameplay is stable.
+[ ] Consider moving free movement from Phase 6D wrapper into core rooms.js after gameplay validation.
+[ ] Convert reproduced manual issues into automated regressions where practical.
+[ ] Phase 6F: decide whether Nuke overlay wrapper should merge deeper into base renderer.
+[ ] Phase 6F: remove historical PHASE 6D fallback text from base renderer instead of overlaying 6E identity.
+[ ] Clean obsolete client humanError wording for movement_limit/no_jumps_remaining.
+[ ] Watch for visible 100 ms HUD wrapper flicker; only treat as bug if reproduced.
+
+==================================================
+J. PHASE GATES / NEXT
+==================================================
+Phase 6E code implementation: DONE.
+Post-6E Coby Debug code gate: PASS.
+Manual 6E balance validation: PENDING.
+
+After manual findings are incorporated:
+[ ] Phase 6F — Visual & Spectator Polish.
+[ ] Phase 7A — Full Multiplayer QA.
+[ ] Phase 7B — Bugfix & Regression Hardening.
+[ ] Phase 8 — Release Candidate / Final Polish.
+[ ] Phase 9 — v1.0 Release.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V8.
+Next TODO snapshot: ORBITAL_ARTILLERY_TODOLIST_V9.txt
+
+END TODO V8
