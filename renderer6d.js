@@ -21,6 +21,7 @@ export function createRenderer(canvas, config) {
   let frameId = null;
 
   const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+  const lerp = (a,b,t) => a+(b-a)*t;
   function worldToScreen(x,y,view){return{x:(x-view.x)/view.width*overlayCanvas.width,y:(y-view.y)/view.height*overlayCanvas.height};}
 
   function approximateView(activeRoom) {
@@ -46,13 +47,18 @@ export function createRenderer(canvas, config) {
       const p = worldToScreen(box.x, box.y-8, view);
       ctx.save();
       ctx.translate(p.x,p.y);
+      const pulse=.84+.16*((Math.sin(Date.now()/120)+1)/2);
+      ctx.scale(pulse,pulse);
       ctx.rotate(Math.PI/4);
-      ctx.fillStyle='rgba(216,112,255,.32)';
-      ctx.strokeStyle='#f3b0ff';
+      ctx.shadowBlur=22;
+      ctx.shadowColor='#f3b0ff';
+      ctx.fillStyle='rgba(216,112,255,.38)';
+      ctx.strokeStyle='#f8c8ff';
       ctx.lineWidth=3;
-      ctx.fillRect(-14,-14,28,28);
-      ctx.strokeRect(-14,-14,28,28);
+      ctx.fillRect(-15,-15,30,30);
+      ctx.strokeRect(-15,-15,30,30);
       ctx.rotate(-Math.PI/4);
+      ctx.shadowBlur=0;
       ctx.fillStyle='#fff';
       ctx.font='900 13px ui-monospace,monospace';
       ctx.textAlign='center';
@@ -69,13 +75,125 @@ export function createRenderer(canvas, config) {
     const slot=player.selectedItemSlot??1;
     const item=slot>1?player.inventory?.[slot-2]:null;
     if (item?.type!=='nuke') return;
-    const p=worldToScreen(player.spawn.x,player.spawn.y-62,view);
+    const p=worldToScreen(player.spawn.x,player.spawn.y-66,view);
     ctx.save();
     ctx.textAlign='center';
     ctx.fillStyle='#f3b0ff';
+    ctx.shadowBlur=12;
+    ctx.shadowColor='#d86cff';
     ctx.font='900 13px ui-monospace,monospace';
-    ctx.fillText(id===localPlayerId?'F // FIRE NUKE LASER':'NUKE LASER SELECTED',p.x,p.y);
+    ctx.fillText(id===localPlayerId?'F // FIRE NUKE DESIGNATOR':'NUKE DESIGNATOR // SPECTATING AIM',p.x,p.y);
     ctx.restore();
+  }
+
+  function drawWarning(a,b,center,q,now) {
+    const total=Math.max(1,(q.beamAt??now)-(q.targetLockedAt??now));
+    const progress=clamp((now-(q.targetLockedAt??now))/total,0,1);
+    const pulse=.48+.5*((Math.sin(now/(120-progress*55))+1)/2);
+    ctx.fillStyle=`rgba(7,0,15,${.12+.34*progress})`;
+    ctx.fillRect(0,0,overlayCanvas.width,overlayCanvas.height);
+    ctx.save();
+    ctx.globalAlpha=.45+.45*progress;
+    ctx.strokeStyle='#f3b0ff';
+    ctx.shadowColor='#d86cff';
+    ctx.shadowBlur=10+22*progress;
+    ctx.lineWidth=2+3*progress;
+    ctx.setLineDash([18,10]);
+    ctx.lineDashOffset=-(now/22)%28;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.setLineDash([]);
+    const radius=34+progress*92+pulse*12;
+    ctx.beginPath();ctx.arc(center.x,center.y,radius,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(center.x,center.y,radius*.56,0,Math.PI*2);ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#f8c8ff';
+    ctx.textAlign='center';
+    ctx.font=`900 ${14+Math.round(progress*5)}px ui-monospace,monospace`;
+    ctx.fillText(`NUKE LASER CHARGING // ${Math.max(0,((q.beamAt??now)-now)/1000).toFixed(1)}s`,center.x,center.y-58-radius*.18);
+    ctx.font='800 11px ui-monospace,monospace';
+    ctx.fillStyle=`rgba(255,255,255,${.55+.4*pulse})`;
+    ctx.fillText('WORLD-ENDER TARGET LOCKED',center.x,center.y-38-radius*.18);
+    ctx.restore();
+  }
+
+  function drawActiveBeam(a,b,center,q,now) {
+    const duration=Math.max(1,(q.beamUntil??now)-(q.beamAt??now));
+    const t=clamp((now-(q.beamAt??now))/duration,0,1);
+    const eruption=clamp(t/.12,0,1);
+    const tail=clamp(((q.beamUntil??now)-now)/420,0,1);
+    const pulse=.72+.28*Math.sin(now/42);
+    ctx.fillStyle=`rgba(50,0,72,${.16+.12*pulse})`;
+    ctx.fillRect(0,0,overlayCanvas.width,overlayCanvas.height);
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    const jitterX=Math.sin(now/31)*3.5,jitterY=Math.cos(now/27)*3.5;
+    const ax=a.x+jitterX,ay=a.y+jitterY,bx=b.x-jitterX,by=b.y-jitterY;
+    ctx.shadowColor='#db63ff';
+    ctx.shadowBlur=45;
+    ctx.strokeStyle=`rgba(205,79,255,${.30+.28*pulse})`;
+    ctx.lineWidth=110*eruption;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+    ctx.shadowBlur=26;
+    ctx.strokeStyle=`rgba(243,176,255,${.64+.24*pulse})`;
+    ctx.lineWidth=56*eruption;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+    ctx.shadowBlur=18;
+    ctx.strokeStyle='#ffffff';
+    ctx.lineWidth=(10+6*pulse)*eruption;
+    ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+
+    for(let i=0;i<28;i+=1){
+      const p=(i/27+((now/2600)%1))%1;
+      const x=lerp(ax,bx,p),y=lerp(ay,by,p);
+      const offset=Math.sin(i*9.7+now/85)*(18+22*((i%5)/4));
+      const dx=bx-ax,dy=by-ay,len=Math.max(1,Math.hypot(dx,dy));
+      const px=-dy/len,py=dx/len;
+      const r=2+(i%4)*1.4;
+      ctx.fillStyle=i%3===0?'#ffffff':'#efa1ff';
+      ctx.globalAlpha=.42+.48*((Math.sin(now/55+i)+1)/2);
+      ctx.beginPath();ctx.arc(x+px*offset,y+py*offset,r,0,Math.PI*2);ctx.fill();
+    }
+
+    ctx.globalAlpha=.42+.4*tail;
+    ctx.strokeStyle='#ffffff';
+    ctx.lineWidth=3;
+    const ring=45+((now-(q.beamAt??now))/9)%180;
+    ctx.beginPath();ctx.arc(center.x,center.y,ring,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(center.x,center.y,ring*.62,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle='#fff';
+    ctx.textAlign='center';
+    ctx.shadowBlur=16;
+    ctx.shadowColor='#d86cff';
+    ctx.font='900 18px ui-monospace,monospace';
+    ctx.fillText('NUKE LASER // TERRAIN DISINTEGRATION',center.x,Math.max(42,center.y-104));
+    ctx.restore();
+  }
+
+  function drawAfterglow(a,b,center,q,now) {
+    const end=q.resolveAt??q.beamUntil??now;
+    const span=Math.max(1,end-(q.beamUntil??now));
+    const fade=clamp((end-now)/span,0,1);
+    if(fade<=0)return;
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    ctx.strokeStyle=`rgba(225,120,255,${.24*fade})`;
+    ctx.shadowBlur=30;
+    ctx.shadowColor='#d86cff';
+    ctx.lineWidth=38*fade;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,255,255,${.18*fade})`;
+    ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle=`rgba(235,125,255,${.055*fade})`;
+    ctx.fillRect(0,0,overlayCanvas.width,overlayCanvas.height);
+    ctx.fillStyle=`rgba(248,200,255,${.65*fade})`;
+    ctx.textAlign='center';
+    ctx.font='800 12px ui-monospace,monospace';
+    ctx.fillText('NUKE AFTERGLOW // TERRAIN COLLAPSE',center.x,Math.max(34,center.y-82));
   }
 
   function drawNukeBeam(activeRoom, view, now) {
@@ -85,34 +203,9 @@ export function createRenderer(canvas, config) {
     const a=worldToScreen(q.nukeBeam.ax,q.nukeBeam.ay,view);
     const b=worldToScreen(q.nukeBeam.bx,q.nukeBeam.by,view);
     const center=worldToScreen(q.targetX??q.impactX,q.targetY??q.impactY,view);
-    const warning=now<(q.beamAt??q.warningUntil??0);
-    ctx.save();
-    if (warning) {
-      const pulse=.5+.45*((Math.sin(now/85)+1)/2);
-      ctx.globalAlpha=pulse;
-      ctx.strokeStyle='#f3b0ff';
-      ctx.lineWidth=3;
-      ctx.setLineDash([14,10]);
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha=1;
-      ctx.fillStyle='#f3b0ff';
-      ctx.textAlign='center';
-      ctx.font='900 14px ui-monospace,monospace';
-      ctx.fillText(`NUKE LASER // ${Math.max(0,((q.beamAt??now)-now)/1000).toFixed(1)}s`,center.x,center.y-48);
-    } else if (now <= (q.beamUntil??0)) {
-      const fade=clamp(((q.beamUntil??now)-now)/420,0,1);
-      ctx.globalCompositeOperation='lighter';
-      ctx.strokeStyle=`rgba(243,176,255,${.28+.55*fade})`;
-      ctx.lineWidth=34;
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-      ctx.strokeStyle='#ffffff';
-      ctx.lineWidth=8;
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-      ctx.fillStyle=`rgba(235,125,255,${.08+.18*fade})`;
-      ctx.fillRect(0,0,overlayCanvas.width,overlayCanvas.height);
-    }
-    ctx.restore();
+    if(now<(q.beamAt??q.warningUntil??0))drawWarning(a,b,center,q,now);
+    else if(now<=(q.beamUntil??0))drawActiveBeam(a,b,center,q,now);
+    else drawAfterglow(a,b,center,q,now);
   }
 
   function overlayLoop() {
