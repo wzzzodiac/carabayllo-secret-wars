@@ -1,0 +1,76 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 9
+Date: 2026-08-28
+Purpose: independent pre-Phase 6F code gate after Phase 6E balance baseline.
+
+RECOVERY PRIORITY
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+CURRENT CANONICAL SNAPSHOTS
+- ORBITAL_ARTILLERY_PROGRESS_V8.txt
+- ORBITAL_ARTILLERY_TODOLIST_V8.txt
+- COBY_DEBUG_V9.txt
+
+AUDIT SCOPE
+- latest frontend + backend commits
+- Phase 6E wrapper and one-time pickup normalization
+- Phase 6E -> Phase 6D delegation path
+- public item pool / balance metadata
+- pickup spawn cadence/lifetime/max-count inheritance
+- turn / AFK / free movement / spectator aim inheritance
+- Nuke/Air Strike integration boundaries
+- frontend Phase 6E identity + cache mapping
+- latest CI / Pages status already established for Phase 6E
+
+CONFIRMED FINDING FIXED
+A1 — INTERNAL PICKUP ROLL BOOKKEEPING LEAKED INTO PUBLIC STATE
+Root cause:
+- Phase 6A/6C/6D/6E pickup objects carry server-only flags such as phase6cPoolRolled, phase6dPoolRolled and phase6ePoolRolled.
+- inherited public pickup mapping spreads pickup objects, so those implementation flags could be serialized to clients.
+Impact:
+- no gameplay authority bug, but server-private normalization bookkeeping was unnecessarily exposed and created an avoidable state-contract inconsistency.
+Fix:
+- Phase 6E public state now strips phase6cPoolRolled / phase6dPoolRolled / phase6ePoolRolled from public pickup objects.
+- internal room pickup objects keep the flags so one-time normalization behavior is unchanged.
+Regression:
+- balance.test.js now asserts that public pickup objects contain none of those flags while the authoritative room object retains phase6ePoolRolled=true.
+- latest Server CI after the regression: SUCCESS (commit 3ff74feb7003c421ec0a93d7acb9836b5d89e074).
+
+RE-REVIEW RESULT
+After the fix, no additional confirmed mechanical/code inconsistency was found in the pre-6F pass.
+
+Verified from source/architecture:
+- Phase 6E pool remains exactly 100: Heavy25 / Triple20 / Cluster20 / Shield12 / Heal12 / Air8 / Nuke3.
+- each newly spawned pickup is normalized once by Phase 6E.
+- Phase 6E delegates movement, jump, item selection, firing and turn advancement to the hardened Phase 6D path.
+- 40 s turn, pickup every 3 turns, lifetime 4 turns and max 2 remain unchanged baseline rules.
+- free movement / jump cooldown / live spectator aim remain inherited.
+- Nuke and Air Strike mechanics were not altered by this audit.
+- server public state phase remains 6E.
+
+CODE-ONLY GATE
+PASS — no currently known confirmed code blocker from this audit.
+
+MANUAL QA GATE
+PENDING — use ORBITAL_ARTILLERY_TODOLIST_V8.txt.
+Do not promote visual/game-feel/network-latency suspicions to confirmed bugs without reproduction.
+
+NON-BLOCKING DEBT
+- old phase wrappers remain layered rather than fully consolidated.
+- terrain formulas/constants are duplicated.
+- renderer/HUD contain historical wrapper structure.
+- manual deployed-browser validation is still required.
+
+NEXT RESUME POINT
+Phase 6F — Visual & Spectator Polish may proceed from a clean code-only gate.
+
+VERSIONING
+Do not overwrite V9.
+Next Coby Debug snapshot: COBY_DEBUG_V10.txt
+
+END COBY DEBUG V9
