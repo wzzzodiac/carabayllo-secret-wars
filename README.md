@@ -31,7 +31,7 @@ The current authoritative pickup distribution remains:
 - Air Strike: 8
 - Nuke Laser: 3
 
-The final pre-6F gate is **COBY_DEBUG_V10.txt**, which passed with no known confirmed code blocker. Phase 6F itself still requires manual browser/visual QA before its presentation is considered validated.
+**COBY_DEBUG_V11.txt** is the current post-6F code gate. It found and fixed one Phase 6F presentation bug: the active-weapon badge used raw authoritative `spawn` while the tank itself used animated `motion`, so the badge could snap to a jump destination before the vehicle arrived. The badge now follows matching visual motion interpolation. Frontend CI and Pages passed on the corrected cache chain. Manual browser/visual QA is still pending.
 
 Mobile/touch gameplay is not part of the current roadmap.
 
@@ -42,8 +42,8 @@ For canonical recovery, use the highest-numbered versions of:
 
 Current canonical snapshots:
 - `ORBITAL_ARTILLERY_PROGRESS_V9.txt`
-- `COBY_DEBUG_V10.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V9.txt`
+- `COBY_DEBUG_V11.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V10.txt`
 
 ## Architecture
 
@@ -104,9 +104,11 @@ The server public state exposes `phase: "6E"`, the exact `itemPool`, and `balanc
 
 `renderer6f.js` wraps the Phase 6D renderer stack and adds presentation only. It receives the exact camera snapshot through the Phase 6D wrapper rather than calculating a second camera.
 
-During another player's turn, spectators see a LIVE feed with active player, weapon, angle, power and wind. The active vehicle carries a weapon badge using weapon-specific colors. While a shot resolves, that feed gives way to a weapon-specific resolution ribbon; Air Strike and Nuke retain their existing richer world-space effects underneath.
+During another player's turn, spectators see a LIVE feed with active player, weapon, angle, power and wind. The active vehicle carries a weapon badge using weapon-specific colors. The badge now follows the same visual motion interpolation as the tank during jumps/falls instead of raw destination `spawn`. While a shot resolves, the spectator feed gives way to a weapon-specific resolution ribbon; Air Strike and Nuke retain their richer world-space effects underneath.
 
 `combat-controls6f.js` wraps the current battle HUD. It adds active-weapon and aim-sync information and makes spectator state explicit without changing input authority or server state.
+
+Current renderer cache key: `phase6f-spectator-polish-2`.
 
 ## Key current constants
 
@@ -199,7 +201,7 @@ Triple, Air Strike and Nuke retain weapon-specific world presentation where avai
 - Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
 - Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; code debug passed; manual PC QA pending
 - Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; code debug passed; manual balance QA pending
-- Phase 6F — Visual & Spectator Polish ✅ implementation; manual visual QA pending
+- Phase 6F — Visual & Spectator Polish ✅ implementation; post-6F code debug passed; manual visual QA pending
 - Phase 7A — Full Multiplayer QA ⏳
 - Phase 7B — Bugfix & Regression Hardening ⏳
 - Phase 8 — Release Candidate / Final Polish ⏳
@@ -207,9 +209,14 @@ Triple, Air Strike and Nuke retain weapon-specific world presentation where avai
 
 ## Automated baseline
 
-Phase 6F frontend CI now explicitly syntax-checks `renderer6f.js` and `combat-controls6f.js` in addition to the previous renderer/HUD stack. GitHub Pages deployment should be checked on the latest Phase 6F head; automated checks still do not replace browser/visual QA.
+Post-Phase 6F checkpoint:
+- active-weapon badge motion-anchor bug fixed in `renderer6f.js`
+- frontend renderer cache advanced to `phase6f-spectator-polish-2`
+- Frontend CI passed on corrected head `fe3e18723cf74718f71d2a36abeffa263d69ed38`
+- GitHub Pages deployment passed on the same corrected head
+- authoritative backend was not changed by Phase 6F; latest reviewed Server CI remains green after Phase 6E public-state cleanup and regression coverage
 
-The authoritative backend was not changed by Phase 6F. The latest reviewed Server CI remains green after Phase 6E public-state cleanup and its regression test.
+Automated checks do not replace browser/visual/multiplayer QA.
 
 ## Development rules
 
