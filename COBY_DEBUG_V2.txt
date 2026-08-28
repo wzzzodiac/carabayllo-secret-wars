@@ -1,0 +1,266 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 2
+Audit date: 2026-08-28
+Scope: Phase 0 through Phase 6C.2 code/architecture/mechanics/visual integration review.
+Previous version preserved: COBY_DEBUG.txt
+
+==================================================
+AUDIT RESULT
+==================================================
+Overall condition: HEALTHY / PLAYABLE CORE, with two concrete code issues and several manual verification items.
+
+Current phase remains:
+Phase 6C.2 — Heal + Air Strike complete.
+Next planned major feature remains:
+Phase 6D — Nuke Laser.
+
+Latest CI evidence reviewed:
+- Backend Server CI on commit d04c2f7b34239319541e15c5c9ea7fdf574a6ac8: SUCCESS.
+- Frontend CI on current documentation-era main: SUCCESS.
+- GitHub Pages deployment: SUCCESS.
+
+Important limitation:
+CI confirms syntax/tests currently encoded in the repository. It does NOT prove real-browser visuals, mobile usability, latency behavior or multi-device presentation.
+
+==================================================
+CONFIRMED GOOD / CONSISTENT AREAS
+==================================================
+1. Server-authoritative architecture is still intact.
+2. Room creation/join/ready/team/mode/terrain/start flow is present.
+3. Turn validation blocks non-active gameplay actions.
+4. Projectile state is server-owned.
+5. Health, death and victory remain server-owned.
+6. Pickup/inventory state remains server-owned.
+7. Heavy Bomb / Triple Shot / Cluster Bomb / Shield / Heal / Air Strike are integrated through current Phase 6 modules.
+8. Heal behavior is covered by regression tests.
+9. Air Strike behavior has dedicated regression tests.
+10. Core regression coverage exists for turns, AFK voting and special weapons.
+11. Latest server CI executes syntax checks plus node test/*.test.js.
+12. Air Strike public state exposes warning/rules/shell data to the client.
+13. Frontend has explicit cache-busting/import-map handling for Air Strike renderer/control modules.
+14. Empty rooms are deleted from roomStore on last-player disconnect.
+15. Active-player disconnect handling has explicit turn-order repair logic.
+16. AFK votes are server authoritative and active input cancels pending AFK voting.
+
+==================================================
+CONFIRMED ISSUE 1 — INITIAL PLAYER RANDOMIZATION BIAS
+==================================================
+Severity: LOW/MEDIUM gameplay fairness issue.
+File: orbital-artillery-server/rooms.js
+Function: chooseInitialPlayerId(room, order)
+
+Current algorithm calculates:
+- hostWeight = 0.4 / (order.length - 1)
+- otherWeight = (1 - hostWeight) / (order.length - 1)
+
+This is not a uniform random choice.
+Examples:
+- 2 players: host 40%, other 60%.
+- 3 players: host 20%, each other 40%.
+- 4 players: host ~13.3%, each other ~28.9%.
+
+Unless an intentional anti-host starting handicap was explicitly designed, this contradicts the natural expectation of "randomize match starts".
+
+Recommended fix before/with next gameplay pass:
+Choose one ID uniformly from turnOrder, e.g. random index, unless a deliberate weighted starter rule is desired.
+
+Manual decision needed from Walter:
+- Should every player have exactly equal chance to start?
+Recommended answer: YES.
+
+==================================================
+CONFIRMED ISSUE 2 — AIR STRIKE VOID DEATH HAS NO FALL ANIMATION
+==================================================
+Severity: MEDIUM visual/gameplay presentation issue.
+File: orbital-artillery-server/phase6c.js
+Function: settleAfterAirStrike(room, now)
+
+Current void branch after Air Strike terrain deformation does approximately:
+- player.hp = 0
+- player.alive = false
+- player.motion = null
+
+Therefore if Air Strike removes terrain beneath a player deeply enough to produce void, the server can instantly kill the player without a fall motion.
+
+This differs from the normal projectile/void paths in rooms.js, which create fall/void motion and delay result resolution for presentation.
+
+Expected symptom:
+A tank may disappear/die instantly after an Air Strike crater instead of visibly falling into the void.
+
+Recommended fix:
+Reuse the normal void-fall semantics or create an Air Strike equivalent:
+- set target below world,
+- create fall motion,
+- delay match result until fall animation finishes,
+- keep camera following the falling player where appropriate.
+
+This should receive a regression test.
+
+==================================================
+RISK 1 — AIR STRIKE MULTI-SHELL FALL MOTION OVERWRITE
+==================================================
+Status: POTENTIAL / MANUAL + CODE REVIEW NEEDED.
+
+settleAfterAirStrike() is called after each applied shell.
+A player moved downward by an early shell may receive a new fall motion from a later shell before the first visual fall finishes.
+
+Possible symptom:
+- snapping,
+- fall animation restarting,
+- odd vertical interpolation during barrage.
+
+Not proven broken from static inspection.
+Add to manual test list.
+
+==================================================
+RISK 2 — TERRAIN IMPLEMENTATION DUPLICATION
+==================================================
+Status: TECHNICAL DEBT, not a confirmed current bug.
+
+Terrain surface/base shape logic is duplicated across:
+- server rooms.js
+- server phase6a.js
+- server phase6c.js
+- frontend renderer.js
+
+Currently the formulas inspected appear aligned, but this is fragile.
+A future terrain adjustment could change one copy and silently desynchronize:
+- server collision,
+- pickup placement,
+- Air Strike shell placement,
+- client rendering.
+
+Recommended future refactor:
+Centralize/share terrain definitions and surface evaluation where practical.
+Do not block Phase 6D solely for this unless terrain changes are planned.
+
+==================================================
+RISK 3 — MOBILE IS RESPONSIVE, NOT MOBILE-CONTROLLABLE
+==================================================
+Status: EXPECTED ROADMAP GAP, not regression.
+
+CSS contains responsive breakpoints, but combat inputs remain fundamentally keyboard-driven:
+A/D, Space, W/S, Q/E, F, F1 and numeric keys.
+
+Weapon buttons are clickable, but full movement/aim/fire controls are not touch-native yet.
+
+This belongs to post-6D/mobile UX unless mobile is promoted earlier.
+
+==================================================
+VISUAL / BROWSER ITEMS THAT CANNOT BE CERTIFIED FROM SOURCE
+==================================================
+These must be manually checked in the deployed page:
+
+1. Air Strike warning marker is clearly visible before shells land.
+2. Seven shell visuals arrive in correct stagger/order.
+3. Camera framing shows the entire useful Air Strike strike zone.
+4. Shell visuals match actual server damage locations.
+5. Craters appear at each shell impact without visual desync.
+6. Tank fall animation after terrain deformation is smooth.
+7. Multiple shell impacts do not restart/snap fall animations.
+8. Shield feedback is visually obvious when consumed by Air Strike.
+9. Heal feedback appears and HP updates immediately.
+10. Weapon slot selection remains highlighted correctly after using Heal/Shield/Air Strike.
+11. Spectators see the same aim trajectory and Air Strike event as the active player.
+12. F1 AFK status text updates correctly across two or more clients.
+13. A returning active player's action visibly cancels AFK votes for all clients.
+14. Active-player disconnect changes camera/turn cleanly.
+15. End-of-match result appears after visual death/fall, not before.
+16. GitHub Pages hard refresh and normal refresh both load current Air Strike renderer (no stale module).
+17. Layout at desktop widths does not clip HUD/canvas.
+18. Layout at narrow widths remains readable.
+19. Touch device can at least navigate lobby and weapon buttons without accidental canvas gestures.
+20. Browser zoom / device pixel ratio does not create obviously blurry/unusable targeting presentation.
+
+==================================================
+MECHANIC MANUAL MATRIX
+==================================================
+Run at least once with 2 clients; selected cases with 3+.
+
+BASIC SHOT
+[ ] terrain hit
+[ ] direct player hit
+[ ] miss/out-of-bounds
+[ ] self splash damage
+[ ] crater + fall
+
+HEAVY BOMB
+[ ] higher damage/radius visible
+[ ] crater larger than basic
+[ ] pickup collection via blast
+[ ] miss ends turn correctly
+
+TRIPLE SHOT
+[ ] three trajectories visible
+[ ] three resolutions do not also apply hidden basic resolution
+[ ] pickups interact correctly
+[ ] turn resolves once
+
+CLUSTER BOMB
+[ ] parent flight then secondary impacts
+[ ] no duplicate base damage
+[ ] crater pattern matches visuals
+[ ] out-of-bounds/miss does not create nonsense impacts
+
+SHIELD
+[ ] activation consumes item
+[ ] turn continues
+[ ] next valid damage reduced
+[ ] shield disappears after absorption
+[ ] Air Strike consumes shield correctly
+
+HEAL
+[ ] +30 from sufficiently low HP
+[ ] clamp at 100 HP
+[ ] blocked at full HP
+[ ] item preserved when blocked at full HP
+[ ] successful use consumes item
+[ ] turn continues
+
+AIR STRIKE
+[ ] targeting uses current aim impact
+[ ] warning precedes damage
+[ ] exactly seven shells
+[ ] self damage
+[ ] friendly damage in team mode
+[ ] enemy damage
+[ ] shield interaction
+[ ] terrain destruction
+[ ] pickup collection by shell
+[ ] pickup collection preserves turn according to current rule
+[ ] no pickup/miss ends turn
+[ ] kill can end match
+[ ] terrain-caused void death animation — EXPECTED CURRENT BUG
+
+AFK
+[ ] vote unavailable before threshold
+[ ] spectator vote works
+[ ] player cannot vote own turn
+[ ] majority skip works
+[ ] active input cancels vote
+[ ] disconnect changes eligibility correctly
+
+==================================================
+DEBUG PRIORITY BEFORE PHASE 6D
+==================================================
+P0: None found.
+P1:
+- Fix Air Strike terrain/void death animation path.
+P2:
+- Decide/fix initial-player randomization fairness.
+- Manually validate Air Strike visual barrage/camera on two clients.
+P3:
+- Track terrain-code duplication for future refactor.
+- Mobile touch controls remain future UX work.
+
+==================================================
+VERSIONING RULE
+==================================================
+Do NOT overwrite this audit version when performing a later Coby Debug.
+Create:
+- COBY_DEBUG_V3.txt
+then V4, V5, etc.
+
+Likewise, new TODO snapshots should use incrementing versioned filenames.
+Older versions remain historical snapshots.
+
+END OF COBY DEBUG V2
