@@ -22,6 +22,8 @@ export function initCombatControls(gameCanvas) {
     const me = room.players?.find(player => player.id === playerId);
     const active = room.players?.find(player => player.id === room.match?.activePlayerId);
     const projectile = room.match?.projectile;
+    const airStrike = projectile?.weaponType === 'airstrike' ? projectile : null;
+    const warningRemaining = airStrike ? Math.max(0, ((airStrike.warningUntil ?? now) - now) / 1000) : 0;
     const myTurn = room.status === 'started' && room.match?.activePlayerId === playerId && me?.alive !== false;
     const remaining = room.status === 'started' ? Math.max(0, ((room.match?.turnEndsAt ?? now) - now) / 1000) : 0;
     const wind = room.match?.wind;
@@ -40,7 +42,7 @@ export function initCombatControls(gameCanvas) {
     const afkOpen = room.status === 'started' && !projectile && remaining <= 20 && now >= eligibleAt;
     const canVoteAfk = afkOpen && !myTurn && me?.alive !== false;
     const recentSkip = room.match?.lastAfkSkip && now < (room.match.lastAfkSkip.expiresAt ?? 0);
-    const stateText = room.status === 'finished' ? 'MATCH ENDED' : recentSkip ? 'TURN SKIPPED // AFK VOTE' : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
+    const stateText = room.status === 'finished' ? 'MATCH ENDED' : recentSkip ? 'TURN SKIPPED // AFK VOTE' : airStrike ? (warningRemaining > 0 ? `AIR STRIKE INBOUND // ${warningRemaining.toFixed(1)}s` : 'AIR STRIKE IMPACT') : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
     const afkStatus = room.status !== 'started' ? 'OFF'
       : projectile ? 'LOCKED'
         : !afkOpen ? `OPENS AT 20s`
@@ -85,7 +87,7 @@ export function initCombatControls(gameCanvas) {
           ${weaponButton(2,inv1?.label ?? 'EMPTY',inv1 ? 'special item' : 'inventory slot 1',selected===2,!inv1,true)}
           ${weaponButton(3,inv2?.label ?? 'EMPTY',inv2 ? 'special item' : 'inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Shield activates instantly and does not end your turn. If a shot successfully collects a box, the same player keeps the turn with the time they had before firing; a miss still ends the turn. AFK skip voting opens at 20 seconds remaining; press F1 to vote. Any action by the active player clears existing AFK votes.</p>
+        <p class="pickup-note">Shield and Heal activate instantly without ending your turn. Air Strike uses your aimed impact point, warns the arena, then drops seven staggered shells; self and friendly damage are enabled. If a damaging shot successfully collects a box, the same player keeps the turn with the time they had before firing; a miss still ends the turn. AFK skip voting opens at 20 seconds remaining; press F1 to vote. Any action by the active player clears existing AFK votes.</p>
       </section>`;
   }
 
