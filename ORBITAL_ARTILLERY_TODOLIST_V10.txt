@@ -1,0 +1,205 @@
+ORBITAL ARTILLERY — MANUAL PC QA / TODO — VERSION 10
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_TODOLIST_V9.txt
+
+RULES
+- Manual/visual/temporal/browser behavior is checked here.
+- Do not mark complete without actual PC/browser testing.
+- A visual suspicion is not a confirmed bug until reproduced or proven from source.
+- Desktop/web target only; mobile/touch out of scope.
+- Post-6F code gate: COBY_DEBUG_V11 PASS after fixing active-weapon badge motion anchoring.
+
+==================================================
+A. PHASE 6F — VISUAL & SPECTATOR POLISH
+==================================================
+DEPLOY / IDENTITY
+[ ] Live title/header show Phase 6F.
+[ ] Countdown shows only Phase 6F identity; no visible stale Phase 6E line.
+[ ] Normal refresh loads renderer6f phase6f-spectator-polish-2 and current combat-controls6f chain.
+[ ] Hard refresh loads the same 6F chain.
+[ ] No duplicate overlay canvases after entering/leaving game flow.
+
+LIVE SPECTATOR FEED
+[ ] Non-active client gets LIVE SPECTATOR FEED.
+[ ] Correct active player name.
+[ ] Correct selected weapon.
+[ ] Angle matches active client live.
+[ ] Power matches active client live.
+[ ] Wind direction/strength matches battle HUD.
+[ ] Feed updates immediately on weapon change.
+[ ] Feed disappears on spectator's own turn.
+[ ] Feed disappears while projectile/special resolves and resolution ribbon takes over.
+[ ] Readable but not intrusive at 1600x900.
+[ ] Readable under browser resizing/scaling.
+
+ACTIVE WEAPON BADGE
+[ ] Badge appears above active player before firing.
+[ ] BASIC / Heavy / Triple / Cluster / Shield / Heal / Air Strike / Nuke labels and colors correct.
+[ ] Badge follows exact camera zoom/drag/turn transition.
+[ ] Badge follows the tank continuously during a normal jump; no snap to landing point.
+[ ] Badge follows long void-jump/fall presentation without snapping ahead.
+[ ] Badge remains attached during any visible knockback/fall motion where applicable.
+[ ] Badge does not visibly drift from player.
+[ ] Badge does not badly overlap player name/HP/terrain.
+
+RESOLUTION RIBBON
+[ ] Basic: BASIC SHOT / PROJECTILE IN FLIGHT.
+[ ] Heavy: HEAVY BOMB / PROJECTILE IN FLIGHT.
+[ ] Triple: TRIPLE SHOT / VOLLEY IN FLIGHT.
+[ ] Cluster: CLUSTER BOMB / DISPERSAL IN PROGRESS.
+[ ] Air Strike: INBOUND countdown then SHELL IMPACTS.
+[ ] Nuke designator / charging / firing / terrain-collapse states correct.
+[ ] Ribbon does not obscure essential projectile/target information.
+[ ] Ribbon does not visually fight with Air Strike or Nuke world text.
+[ ] Two clients show matching resolution state/timing.
+
+SIDE HUD 6F
+[ ] Own turn reads YOUR TURN // selected weapon.
+[ ] Spectator reads SPECTATING <player> // weapon // angle // power.
+[ ] WEAPON cell correct.
+[ ] AIM SYNC reads LIVE during active matches.
+[ ] No visible 100 ms flicker between base/6D/6F HUD layers.
+[ ] FREE/FREE MAP movement fields remain correct.
+[ ] AFK status remains readable and correct.
+
+==================================================
+B. PHASE 6E BALANCE BASELINE
+==================================================
+Heavy 25 / Triple 20 / Cluster 20 / Shield 12 / Heal 12 / Air Strike 8 / Nuke 3
+[ ] Heavy common but not overwhelming.
+[ ] Triple/Cluster work as core offensive specials.
+[ ] Shield/Heal useful but not constant.
+[ ] Air Strike clearly rarer.
+[ ] Nuke exceptional.
+[ ] Record rough natural spawn counts before changing weights.
+[ ] 40 s turn good with free movement.
+[ ] pickup every 3 turns good.
+[ ] lifetime 4 good.
+[ ] max 2 pickups good.
+[ ] no special dominates every situation.
+[ ] no special feels pointless.
+
+==================================================
+C. LIVE AIM / FREE MOVEMENT
+==================================================
+[ ] Second client sees cannon angle, trajectory and power update live.
+[ ] No stale aim after turn switch.
+[ ] Basic/Heavy/Triple/Cluster previews correct.
+[ ] Air Strike seven-point preview correct.
+[ ] Nuke designator preview correct.
+[ ] No ±520 stop.
+[ ] More than 2 jumps in one turn.
+[ ] ~0.5 s jump cadence feels good.
+[ ] void jump keeps long fall.
+[ ] non-active movement rejected with no visible side effect.
+[ ] movement locked while attack resolves.
+
+==================================================
+D. NUKE LASER
+==================================================
+[ ] Natural rare spawn.
+[ ] Designator has no Basic damage/crater/explosion.
+[ ] Target locks at actual designator impact.
+[ ] Warning ~3 s; beam ~3 s.
+[ ] warning/beam/afterglow aligned under zoom/drag.
+[ ] beam catastrophic and readable.
+[ ] terrain destruction follows visible corridor.
+[ ] no obvious terrain outside beam deleted.
+[ ] direct damage 20; Shield 10 then consumed.
+[ ] self/friendly damage correct.
+[ ] no conventional knockback.
+[ ] terrain loss/falls/void resolve naturally.
+[ ] beam destroys pickups, does not collect them.
+[ ] exactly one turn advance after sequence.
+[ ] decide MORE / LESS / GOOD intensity.
+[ ] decide MORE / LESS / GOOD terrain destruction.
+
+==================================================
+E. AIR STRIKE
+==================================================
+[ ] warning visible/readable.
+[ ] exactly 7 shell visuals.
+[ ] stagger/order smooth.
+[ ] camera frames strike.
+[ ] visual impacts align damage/craters.
+[ ] self/friendly/Shield correct.
+[ ] pickup collection retains turn/time.
+[ ] no pickup advances exactly once.
+[ ] terrain falls smooth.
+[ ] two-client sync correct.
+
+==================================================
+F. EXISTING WEAPON / PICKUP REGRESSION
+==================================================
+[ ] Basic direct/terrain/miss/self/knockback.
+[ ] Heavy no double crater + Shield + pickup.
+[ ] Triple 3 shots, no Basic leakage, no OOB corruption.
+[ ] Cluster 5 subimpacts, no fake edge explosions.
+[ ] Shield instant/no turn/next damage half.
+[ ] Heal +30 cap100/full-HP rejection/no turn.
+[ ] pickup spawn every 3 turns / lifetime 4 / max 2.
+[ ] touch pickup / explosion pickup retain turn/time / full inventory block.
+[ ] box does not visibly change type after appearing.
+
+==================================================
+G. TURN / AFK / MULTIPLAYER
+==================================================
+[ ] weighted starter remains intentional.
+[ ] randomized physical spawns.
+[ ] Team alternation.
+[ ] AFK opens at 20 s.
+[ ] F1 vote/unvote and Help suppression.
+[ ] majority math 2/3/4+ players.
+[ ] valid action clears votes; invalid does not.
+[ ] majority advances exactly once.
+[ ] disconnect recalculation.
+[ ] active action cancels pending skip.
+[ ] 2-player Survival full match.
+[ ] 3-player disconnect flow.
+[ ] Team 2v2 full match.
+
+==================================================
+H. CAMERA / MAPS / BROWSER
+==================================================
+[ ] countdown overview / opening dive / turn transition.
+[ ] projectile/designator follow.
+[ ] manual drag / wheel zoom / double-click reset.
+[ ] fall/void camera / result timing.
+[ ] 6F badges/feeds remain correctly composed through camera changes.
+[ ] all seven maps: Rolling, Terraces, Twin Peaks, Basin, Broken Ridge, Islands, Canyon.
+[ ] Chrome/Chromium.
+[ ] Firefox when convenient.
+[ ] two tabs sync.
+[ ] two desktop browsers sync.
+[ ] canvas/overlays sharp at normal DPR.
+[ ] music/audio no duplicate behavior.
+[ ] Cloud Run wakes on CREATE/JOIN only.
+[ ] /health source/runtime parity checked separately.
+
+==================================================
+I. NON-BLOCKING TECH DEBT
+==================================================
+[ ] centralize duplicated terrain formulas.
+[ ] centralize item/weapon constants after manual validation.
+[ ] consider collapsing layered 6A->6C->6D->6E server wrappers after stability.
+[ ] consider folding free movement deeper into core after validation.
+[ ] consider consolidating renderer6d/renderer6f after visual QA.
+[ ] expose one shared visual-player-position API when renderer layers are consolidated; 6F currently mirrors base motion interpolation to keep badge aligned.
+[ ] remove historical phase fallback strings instead of overlay replacement after stability.
+[ ] clean obsolete humanError wording for movement_limit/no_jumps_remaining.
+[ ] convert reproduced issues into automated regressions where practical.
+
+==================================================
+J. PHASE GATES
+==================================================
+Phase 6F implementation: DONE IN CODE.
+Post-6F Coby Debug V11 code gate: PASS.
+Phase 6F manual visual gate: PENDING.
+Next planned: Phase 7A — Full Multiplayer QA.
+Then 7B Bugfix & Regression Hardening -> 8 Release Candidate -> 9 v1.0.
+
+VERSIONING
+Do not overwrite V10.
+Next TODO snapshot: ORBITAL_ARTILLERY_TODOLIST_V11.txt
+
+END TODO V10
