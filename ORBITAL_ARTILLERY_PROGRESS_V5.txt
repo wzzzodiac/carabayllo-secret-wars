@@ -1,0 +1,166 @@
+ORBITAL ARTILLERY — DEVELOPMENT PROGRESS — VERSION 5
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V4.txt
+
+SOURCE-OF-TRUTH RULE:
+Current executable code/commits and CI win over older summaries. Manual visual/gameplay checks remain pending until tested in a real browser.
+
+==================================================
+CURRENT STATE
+==================================================
+Current code phase: Phase 6D — Nuke Laser IMPLEMENTED IN CODE.
+Manual PC/browser QA: PENDING.
+Final pickup balance: PENDING.
+Broad release QA/polish: PENDING.
+
+Frontend:
+- wzzzodiac/orbital-artillery
+Backend:
+- wzzzodiac/orbital-artillery-server
+
+==================================================
+PHASE STATUS
+==================================================
+Phase 0 — Scaffold / architecture — COMPLETE
+Phase 1 — Private-room multiplayer — COMPLETE
+Phase 2 — Synchronized arena — COMPLETE
+Phase 2.5 — World / camera — COMPLETE
+Phase 3 — Turns / wind — COMPLETE
+Phase 4 — Movement / jump / aim / fire — COMPLETE
+Phase 5A — Destructible terrain — COMPLETE
+Phase 5B — HP / damage / death / victory — COMPLETE
+Phase 6A — Pickups / inventory / Heavy Bomb — COMPLETE
+Phase 6B — Triple Shot / Cluster Bomb / Shield — COMPLETE
+Phase 6B.1 — AFK Skip Vote — COMPLETE
+Phase 6C.1 — Heal — COMPLETE
+Phase 6C.2 — Air Strike — IMPLEMENTED; MANUAL QA PENDING
+Phase 6D — Nuke Laser — IMPLEMENTED; MANUAL QA PENDING
+
+==================================================
+PHASE 6D — NUKE LASER IMPLEMENTATION
+==================================================
+Architecture:
+- New backend wrapper module: phase6d.js.
+- Phase 6D wraps Phase 6C rather than rewriting existing closed mechanics.
+- server.js now uses Phase 6D public state, movement/jump/item/fire wrappers and turn advancement.
+- /health reports phase 6D in current source.
+- package CI checks phase6d.js.
+
+Pickup rarity:
+- Nuke weight: 3.
+- Phase 6D extends the existing Phase 6C pool rather than replacing it.
+- Effective pre-final-balance weights now:
+  Heavy 30
+  Triple 30
+  Cluster 25
+  Shield 15
+  Heal 15
+  Air Strike 8
+  Nuke Laser 3
+- Total weight: 126.
+- Final rebalance remains deferred until manual multiplayer QA.
+
+Targeting / timing:
+- Nuke uses the normal authoritative artillery projectile as a TARGET DESIGNATOR.
+- The designator follows the normal aim/power/wind trajectory.
+- Its impact position locks the Nuke target.
+- After target lock: 850 ms warning.
+- Beam visible duration: approximately 420 ms.
+- Resolution buffer follows beam presentation before turn/result progression.
+
+Beam geometry:
+- Diagonal beam centered on the locked target.
+- Approximate horizontal half-length: 520 world units.
+- Direct-hit half-width: 88 world units.
+- Terrain strip is removed with a chain of deep overlapping cuts/craters.
+- Cut step: 115.
+- Cut radius: 92.
+- Cut depth: 2450.
+
+Player interaction:
+- Direct beam damage: 20 HP.
+- Full self damage.
+- Full friendly fire.
+- Shield halves the applicable direct hit and is consumed.
+- No conventional Nuke knockback is applied.
+- Terrain removal can still make players fall; this is intentional and is the main danger of the weapon.
+- Players over destroyed void terrain receive fall presentation before void death finalization.
+
+Pickup interaction:
+- Pickups intersected by the beam are DESTROYED.
+- They are NOT collected by the shooter.
+- Nuke therefore does not use explosion-pickup-retains-turn behavior.
+
+Turn behavior:
+- Nuke always consumes the offensive action and ends the turn after its sequence resolves, unless match completion ends the match instead.
+
+==================================================
+PHASE 6D FRONTEND
+==================================================
+- index.html identifies Phase 6D and Nuke Laser.
+- renderer6d.js wraps the existing Phase 6C renderer.
+- Existing renderer is preserved to reduce regressions.
+- Nuke effects use a separate transparent overlay canvas so the base renderer cannot erase them.
+- Nuke overlay includes:
+  - pickup N identity
+  - selected-Nuke action label
+  - diagonal warning line/countdown after designator lock
+  - bright diagonal beam + flash
+- combat-controls6d.js wraps existing battle HUD and adds:
+  - NUKE DESIGNATOR IN FLIGHT
+  - NUKE LASER CHARGING
+  - NUKE LASER FIRING
+  - NUKE LASER RESOLVING
+  - rule text explaining damage/terrain/pickup/turn behavior
+- Frontend CI now syntax-checks renderer6d.js and combat-controls6d.js.
+
+==================================================
+TEST / CI RESULT
+==================================================
+Nuke regression tests cover:
+- item consumption / beam state
+- 20 direct damage
+- Shield 50% interaction
+- no conventional knockback
+- terrain-caused falling remains allowed
+- pickup destruction instead of collection
+- turn ending
+- public Phase 6D rules / rarity
+
+During development one Nuke test initially failed because it incorrectly treated a terrain-caused fall as knockback. The assertion was corrected to reject only knockback/knockbackVoid while allowing intentional fall motion.
+
+Verified after correction:
+- Server CI: SUCCESS, 20/20 tests.
+- Frontend CI on Phase 6D renderer overlay commit: SUCCESS.
+- GitHub Pages deployment on Phase 6D renderer overlay commit: SUCCESS.
+
+Important:
+These automated results do NOT certify the visual alignment, game feel or multiplayer presentation. Those remain manual QA.
+
+==================================================
+CURRENT MANUAL QA SOURCE
+==================================================
+Use:
+ORBITAL_ARTILLERY_TODOLIST_V5.txt
+
+It carries previous Air Strike/general accumulated QA plus a dedicated Nuke block.
+
+==================================================
+NEXT WORK
+==================================================
+When Walter is back at the PC:
+1. Run critical Air Strike checks.
+2. Run Nuke Laser manual checks.
+3. Run selected regression/multiplayer/AFK/camera checks.
+4. Report failures.
+5. Perform Coby Debug and fix reproduced issues.
+6. If gameplay is accepted, run final pickup rarity/balance pass.
+7. Broad accumulated QA/polish.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite this file.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V6.txt
+
+END PROGRESS V5
