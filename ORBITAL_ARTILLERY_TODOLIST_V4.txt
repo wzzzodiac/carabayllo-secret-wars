@@ -1,0 +1,311 @@
+ORBITAL ARTILLERY — MANUAL PC QA / TODO — VERSION 4
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_TODOLIST_V3.txt
+
+RULES:
+- Manual/visual/temporal/browser behavior stays here until Walter tests it on PC.
+- Do not mark manual QA complete from static review or CI.
+- Confirmed code bugs belong in debug/fix work, not here as assumptions.
+- Desktop/web is the product target. Mobile/touch gameplay is out of scope.
+
+==================================================
+A. AIR STRIKE — PRIORITY QA
+==================================================
+[ ] Warning marker clearly visible in canvas before first impact.
+[ ] HUD AIR STRIKE INBOUND countdown readable.
+[ ] Exactly 7 shell/bomb visuals visible.
+[ ] Shell visuals clearly read as Air Strike bombs.
+[ ] Stagger/order feels smooth and intentional.
+[ ] Camera frames useful strike zone.
+[ ] Camera does not snap/jitter during barrage.
+[ ] Visual impacts match real crater/damage positions.
+[ ] Expected craters appear.
+[ ] AIR STRIKE pickup has distinct visual identity.
+[ ] Self damage updates HP correctly.
+[ ] Friendly fire works in Team mode.
+[ ] Shield mitigates first applicable hit and disappears.
+[ ] Air Strike explosion can collect pickup.
+[ ] Collected pickup enters inventory and leaves map.
+[ ] Pickup collection preserves shooter turn and pre-shot remaining time.
+[ ] Resume time never feels below intended minimum (~1 s).
+[ ] No-pickup Air Strike advances turn exactly once.
+[ ] Match-ending Air Strike resolves cleanly.
+[ ] Ground destruction settles/falls players correctly.
+[ ] Early-shell fall + later-shell terrain changes do not restart/snap/teleport fall animation.
+[ ] Two simultaneous clients see same warning/shell timing/impacts.
+[ ] Spectator sees same strike zone/camera-relevant event timing.
+
+==================================================
+B. BASIC / SPECIAL WEAPONS
+==================================================
+BASIC
+[ ] Direct hit correct.
+[ ] Terrain hit/crater correct.
+[ ] Miss/out-of-bounds resolves cleanly.
+[ ] Self splash works.
+[ ] Knockback ends at server-consistent position.
+[ ] Crater-caused fall looks correct.
+
+HEAVY
+[ ] Clearly stronger/larger than BASIC.
+[ ] Larger crater correct.
+[ ] No BASIC+Heavy double crater.
+[ ] Shield interaction correct.
+[ ] Blast pickup collection works.
+[ ] Miss ends turn normally.
+
+TRIPLE
+[ ] Three trajectories visibly separate.
+[ ] No phantom BASIC explosion/damage/knockback.
+[ ] HP does not restore/jump incorrectly during resolution.
+[ ] Turn resolves exactly once.
+[ ] Central/out-of-bounds miss does not corrupt turn.
+[ ] Pickup interaction correct.
+
+CLUSTER
+[ ] Parent flight clear.
+[ ] Five subimpacts at expected pattern.
+[ ] No hidden BASIC damage/knockback.
+[ ] Craters match subimpacts.
+[ ] Out-of-bounds parent creates no fake edge explosions.
+[ ] Terrain settles correctly after sequence.
+[ ] Pickup interaction correct.
+
+SHIELD
+[ ] Activation consumes item.
+[ ] Does NOT consume offensive turn.
+[ ] Visual bubble/HUD active state clear.
+[ ] Next applicable damage is halved.
+[ ] Shield disappears after absorbing damage.
+[ ] Valid Shield use clears pending AFK votes.
+
+HEAL
+[ ] Pickup + identity clear.
+[ ] HUD says HEAL +30/use correctly.
+[ ] Low HP heals +30.
+[ ] 88 -> 100 with actual +12 feedback where shown.
+[ ] Clamp to 100.
+[ ] Full HP use rejected.
+[ ] Rejected full-HP use preserves item.
+[ ] Successful use consumes item.
+[ ] Does not end/reset offensive turn.
+[ ] Selected slot returns to BASIC.
+[ ] No projectile preview/trajectory appears for Heal use.
+[ ] HP/inventory/feedback sync between two clients.
+[ ] Valid Heal clears AFK votes.
+
+==================================================
+C. PICKUP SYSTEM
+==================================================
+[ ] Pickup cadence behaves as every 3 turns in real match.
+[ ] Lifetime is 4 real turns; no off-by-one regression.
+[ ] Maximum 2 boxes on map.
+[ ] Touch collection radius/feel works.
+[ ] Walking/contact collection works.
+[ ] Explosion collection works.
+[ ] Full inventory prevents collection.
+[ ] Explosion pickup grants item to shooter.
+[ ] Explosion pickup preserves shooter turn/time.
+[ ] No-pickup shot ends turn normally.
+[ ] Pickup-retain-turn + AFK timing remains sane.
+
+==================================================
+D. START / TURN ORDER / SPAWNS / WIND
+==================================================
+[ ] Weighted random starter behaves plausibly over repeated games.
+[ ] Host is not always starter and remains intentionally less favored.
+[ ] 2-player rough behavior compatible with 40/60 intent over many matches.
+[ ] 3-player rough behavior compatible with 20/40/40 intent over many matches.
+[ ] Physical spawn positions are randomized independently of join order.
+[ ] Spawn positions are valid after randomization.
+[ ] Survival circular order remains correct.
+[ ] Team alternates A/B where possible.
+[ ] New wind appears per turn.
+[ ] HUD wind matches projectile behavior qualitatively.
+[ ] 40 s normal turn timer behaves correctly.
+
+DESIGN NOTE:
+Starter weighting is intentional. Do not change it without explicit direction.
+
+==================================================
+E. AFK SKIP VOTE
+==================================================
+[ ] Vote unavailable before 20 s remaining.
+[ ] Opens at 20 s remaining.
+[ ] F1 adds vote.
+[ ] F1 again removes vote.
+[ ] F1 does not open browser Help during active match.
+[ ] Active player cannot vote own skip.
+[ ] 2-player majority = 1/1 spectator.
+[ ] 3-player majority = 2/2.
+[ ] 4-player majority = 2/3.
+[ ] 5-player majority = 3/4.
+[ ] Higher counts follow floor(eligible/2)+1.
+[ ] Valid active movement clears votes.
+[ ] Valid jump clears votes.
+[ ] Valid aim/power adjustment clears votes.
+[ ] Valid weapon selection clears votes.
+[ ] Valid fire/use clears votes.
+[ ] Invalid/rejected action does NOT clear votes.
+[ ] Majority skip advances exactly one turn.
+[ ] HUD TURN SKIPPED // AFK VOTE appears correctly.
+[ ] Voter disconnect recalculates majority.
+[ ] Disconnect can trigger already-sufficient remaining majority correctly.
+[ ] Active action cancels pending skip race correctly.
+[ ] AFK state synchronized across clients.
+[ ] AFK locked/appropriate while projectile/special resolves.
+[ ] AFK after pickup-retain-turn uses resumed deadline correctly.
+
+==================================================
+F. MULTIPLAYER / DISCONNECT / RECONNECT
+==================================================
+[ ] 2-player Survival full match lobby -> result.
+[ ] 3-player Survival survives one disconnect.
+[ ] Team 2v2 completes correctly.
+[ ] Host disconnect in lobby transfers host correctly.
+[ ] READY states reset/behave correctly after relevant lobby changes.
+[ ] Active-player disconnect advances to correct next player.
+[ ] Last-slot/wrap disconnect does not skip another player.
+[ ] Disconnect during AFK voting correct.
+[ ] Spectators see active aim trajectory.
+[ ] Spectators see same projectile/special timing.
+[ ] HP/inventory state synchronized between clients.
+[ ] Attempt to reproduce freeze/inactivity during own active turn.
+[ ] Reconnect attempts do not cause obvious duplicate-client/state problems.
+[ ] Full reconnect/rejoin behavior documented if current MVP does not support seamless return.
+
+==================================================
+G. CAMERA / VISUAL FLOW
+==================================================
+[ ] Lobby/countdown gives useful full-map overview.
+[ ] Smooth dive/transition to active player.
+[ ] Turn change transitions cleanly.
+[ ] Projectile follow smooth.
+[ ] Manual camera drag works.
+[ ] Mouse-wheel zoom works.
+[ ] Double-click returns to follow.
+[ ] Camera follows/handles void falls correctly.
+[ ] End-match result waits for important death/fall presentation.
+[ ] Damage numbers look correct.
+[ ] HP bars update correctly.
+[ ] Shield bubble clear.
+[ ] HUD does not cover important battlefield area at normal desktop widths.
+
+==================================================
+H. TERRAIN / MAP MATRIX
+==================================================
+Play all seven:
+[ ] Rolling Expanse
+[ ] Terrace Line
+[ ] Twin Peaks
+[ ] Impact Basin
+[ ] Broken Ridge
+[ ] Drift Islands
+[ ] Canyon Run
+
+Across maps:
+[ ] Lobby preview matches actual terrain.
+[ ] Preview spawn markers sensible.
+[ ] Actual randomized spawn points valid.
+[ ] No spawn inside void/terrain.
+[ ] Movement near ledges predictable.
+[ ] Jump near holes/gaps predictable.
+[ ] Terrain collision matches rendering.
+[ ] Craters update collision/rendering consistently.
+[ ] Tanks settle after lowered terrain.
+[ ] Void deaths animate correctly.
+[ ] Knockback into holes correct.
+[ ] Special-weapon terrain settlement does not leave invalid positions.
+
+==================================================
+I. FRONTEND / DEPLOY / CACHE / AUDIO
+==================================================
+[ ] Live Pages loads current Phase 6C.2 page.
+[ ] Normal refresh current renderer/HUD.
+[ ] Hard refresh same current renderer/HUD.
+[ ] No stale 6C.1 text remains where 6C.2 expected.
+[ ] No stale Air Strike module after cache busting.
+[ ] Two tabs synchronized.
+[ ] Two desktop browsers synchronized.
+[ ] Chrome/Chromium sanity pass.
+[ ] Firefox sanity pass when convenient.
+[ ] Canvas sharp enough at normal zoom/device pixel ratio.
+[ ] Music starts/behaves correctly.
+[ ] Audio/music does not duplicate across refresh/match transitions.
+[ ] Projectile/explosion presentation consistent.
+[ ] Cloud Run wakes on CREATE/JOIN.
+[ ] Opening page alone does not create unwanted gameplay connection.
+[ ] After backend code commit, verify Cloud Build/Cloud Run deployment before assuming live.
+[ ] /health reports expected phase/service state when needed.
+
+==================================================
+J. SERVER RESOURCE / IDLE SANITY
+==================================================
+[ ] Normal private use does not hit room/socket limits unexpectedly.
+[ ] Lobby/non-match idle socket can eventually disconnect as expected.
+[ ] Countdown/started match is protected from idle timeout.
+[ ] Connection/rate limiting does not interfere with normal manual testing.
+
+==================================================
+K. FUTURE TECH DEBT — NOT CURRENT QA BLOCKER
+==================================================
+[ ] Consider centralizing duplicated terrain formulas across server/client phase modules.
+[ ] Consider shared item/weapon constants/rules to reduce drift.
+[ ] Add automated regression whenever a manual edge case becomes reproduced bug.
+[ ] Continue regression expansion for Nuke and future mechanics.
+
+==================================================
+L. PHASE 6D — NUKE LASER
+==================================================
+Approved concept:
+- very rare
+- diagonal disintegration beam
+- dramatic terrain removal
+- direct damage ~20 HP
+- little/no conventional knockback
+- main threat = destroy support terrain / falls
+- eventual suggested rarity ~3
+
+Before coding:
+[ ] Finalize targeting/beam geometry.
+[ ] Finalize beam width.
+[ ] Finalize terrain destruction geometry.
+[ ] Finalize direct damage rule.
+[ ] Finalize Shield interaction.
+[ ] Finalize self damage.
+[ ] Finalize friendly fire.
+[ ] Finalize pickup interaction.
+[ ] Finalize turn-retain/end semantics.
+
+Implementation later:
+[ ] Server-authoritative implementation.
+[ ] Regression tests.
+[ ] Renderer/HUD/pickup identity.
+[ ] Add Nuke manual QA matrix to next version.
+
+==================================================
+M. FINAL BALANCE / RELEASE PASS
+==================================================
+Provisional weights, NOT final:
+- Heavy 25
+- Triple 20
+- Cluster 20
+- Shield 12
+- Heal 12
+- Air Strike 8
+- Nuke 3
+
+[ ] Rebalance rarity after Nuke.
+[ ] Rebalance damage/radii/craters after broad real matches.
+[ ] Full accumulated PC QA.
+[ ] Fix reproduced issues.
+[ ] Final polish/release cleanup.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V1/V2/V3.
+Current manual checklist: ORBITAL_ARTILLERY_TODOLIST_V4.txt
+Next snapshot: V5.
+
+END TODO V4
