@@ -1,0 +1,52 @@
+ORBITAL ARTILLERY — COBY DEBUG — VERSION 14
+Date: 2026-08-28
+Scope: quick post-7A.1 / post-7A.2 verification after COBY_DEBUG_V13.
+
+RESULT
+PASS — no new confirmed code anomaly found.
+
+HEADS REVIEWED
+Frontend head before this snapshot:
+- 75d5754d1f34eb529a7bbc3c51c5f4a550f78414
+Backend head:
+- e235dd4a68d42b80f06a4578c18922169039f56f
+
+REVIEWED
+- latest frontend/backend commits
+- phase7a1.js telemetry wrapper
+- server.js 7A.1 wiring and /health source identity
+- damage dealt / received attribution
+- self-damage invariant
+- impact damage plus same-resolution void death handling
+- kills / assists / death attribution
+- weapon-use tracking and most-used-weapon summary
+- event feed
+- SAME MAP and RANDOM MAP rematch reset path
+- lobby RANDOM terrain path
+- frontend match-stats module/cache chain
+- current CI and Pages status
+
+CI / DEPLOY EVIDENCE
+- latest Server CI run 49: SUCCESS
+- latest frontend head CI run 86: SUCCESS
+- latest frontend head Pages run 167: SUCCESS
+
+CLASSIFICATION
+A — Confirmed bug: none found in this pass.
+B — Manual check: still pending for browser rendering, two-client synchronization, stats presentation correctness during real matches, rematch UX, visual/game-feel and balance.
+C — Intentional: host-disadvantaged first-player weighting; Phase 6E pickup pool; random rematch chooses a different concrete terrain.
+D — Tech debt: layered gameplay wrappers remain; telemetry observes authoritative state rather than being deeply embedded in every historical resolver.
+
+IMPORTANT LIMIT
+GitHub source/CI does not prove the latest Cloud Run revision is deployed. Runtime /health parity remains a separate deployment check.
+
+GATE
+CODE / CI GATE: PASS.
+MANUAL PHASE 7A GATE: PENDING.
+APROBADO PARA CONTINUAR CON QA MANUAL / 7B SOLO DESPUES DE REPRODUCIR Y CLASIFICAR HALLAZGOS.
+
+VERSIONING
+Do not overwrite V14.
+Next Coby Debug snapshot: COBY_DEBUG_V15.txt
+
+END COBY DEBUG V14
