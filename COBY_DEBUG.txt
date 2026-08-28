@@ -1,0 +1,458 @@
+COBY DEBUG — ORBITAL ARTILLERY
+Last updated: 2026-08-28
+Purpose: Recovery, debugging and continuation instructions for ChatGPT/Coby from ANY new conversation.
+
+==================================================
+0. GOLDEN RULE
+==================================================
+DO NOT trust chat memory alone.
+DO NOT trust an old README alone.
+DO NOT assume the phase from filenames.
+
+The authoritative recovery order is:
+1. @GitHub latest commits in BOTH repositories.
+2. Current source code in BOTH repositories.
+3. ORBITAL_ARTILLERY_PROGRESS.txt.
+4. README.md.
+5. Chat memory only as supplemental context.
+
+If the documents disagree with newer GitHub code/commits, the code/commits win and the documents must be updated.
+
+==================================================
+1. REPOSITORIES
+==================================================
+Frontend:
+wzzzodiac/orbital-artillery
+
+Backend:
+wzzzodiac/orbital-artillery-server
+
+Current expected resume point at the time of writing:
+- Phase 6C.2 complete.
+- Heal implemented.
+- Air Strike implemented.
+- Next planned major feature: Phase 6D — Nuke Laser.
+
+==================================================
+2. REQUIRED @GitHub RECOVERY ACTIONS
+==================================================
+When the user opens a new chat and asks something like:
+- "where are we in Orbital Artillery?"
+- "continue Orbital Artillery"
+- "check the project"
+- "what phase are we in?"
+
+Coby should use @GitHub immediately.
+
+Recommended actions/commands conceptually:
+
+A) Find/confirm repositories
+@GitHub search/list repositories for:
+- orbital-artillery
+- orbital-artillery-server
+
+Relevant connector action:
+- search_installed_repositories_streaming
+
+B) Read latest commits from BOTH repos
+Relevant action:
+- search_commits
+
+Use repository_full_name for BOTH:
+- wzzzodiac/orbital-artillery
+- wzzzodiac/orbital-artillery-server
+
+Sort by committer-date descending.
+Read enough commits to understand the latest feature sequence, not only the last commit.
+
+C) Read persistent project documents from frontend repo
+Relevant action:
+- fetch_file
+
+Read:
+- README.md
+- ORBITAL_ARTILLERY_PROGRESS.txt
+- COBY_DEBUG.txt
+
+D) Inspect current implementation when needed
+Frontend likely-important files:
+- client.js
+- renderer.js
+- combat-controls.js
+- ui.js
+- socket.js
+- terrain-renderer.js
+- projectile-renderer.js
+- style.css
+- index.html
+
+Server likely-important files:
+- server.js
+- rooms.js
+- phase6a.js
+- phase6c.js
+- afk-vote.js
+- physics.js
+- config.js
+- validation.js
+- tests / CI files where present
+
+Relevant actions:
+- fetch_file
+- fetch
+- search
+- fetch_commit
+- compare_commits
+
+E) Check CI/debugging when a recent change may have failed
+Relevant actions:
+- fetch_commit_workflow_runs
+- get_commit_combined_status
+- fetch_workflow_run_jobs
+- fetch_workflow_job_steps
+- fetch_workflow_job_logs
+- rerun_failed_workflow_run_jobs / rerun_workflow_job if explicitly useful and permitted
+
+F) Search for a mechanic or bug
+Relevant action:
+- search
+
+Use concrete terms such as:
+- airstrike
+- heal
+- shield
+- projectile
+- pickup
+- afk
+- turnEndsAt
+- activePlayerId
+- selectedItemSlot
+
+Do NOT use an empty code-search query.
+
+==================================================
+3. STANDARD RESUME PROCEDURE
+==================================================
+For a new chat, do this sequence:
+
+STEP 1
+Read ORBITAL_ARTILLERY_PROGRESS.txt.
+
+STEP 2
+Read the latest ~20–50 commits across BOTH repositories.
+
+STEP 3
+Check whether commits are newer than the progress file.
+
+STEP 4
+If newer commits exist:
+- inspect those commits/files,
+- determine what actually changed,
+- update the progress file before claiming a resume point.
+
+STEP 5
+Read COBY_DEBUG.txt for workflow constraints.
+
+STEP 6
+Only then answer the user with:
+- current phase,
+- what was most recently completed,
+- current known bugs/risks if any,
+- exact next planned task.
+
+==================================================
+4. CURRENT ARCHITECTURE / DEBUG MENTAL MODEL
+==================================================
+The backend is authoritative.
+
+Client responsibilities:
+- input
+- UI
+- rendering
+- presentation/animation
+- socket communication
+
+Server responsibilities:
+- room state
+- turn validity
+- movement validity
+- aim state
+- projectile simulation/resolution
+- pickups
+- inventory
+- damage
+- shields/heals/utilities
+- deaths
+- victory
+- AFK voting
+
+When debugging disagreement between clients:
+FIRST suspect server state or event timing.
+Do not "fix" gameplay outcomes only in renderer/client unless the server state is already correct.
+
+When debugging visual-only errors:
+Check whether server public state is correct first, then renderer/UI/cache/module versioning.
+
+==================================================
+5. COMMON DEBUG CHECKLIST
+==================================================
+A. Feature appears on server but not browser
+Check:
+1. server public state exposes it,
+2. Socket.IO room_state contains it,
+3. client copies/keeps the field,
+4. renderer/UI reads correct field,
+5. HTML module/cache query versions were updated if necessary,
+6. browser is not serving stale GitHub Pages assets.
+
+B. Special weapon does base damage AND special damage
+Check special projectile resolution paths.
+Past bug class:
+- base-resolution leakage after Triple/Cluster/special mechanics.
+Look for guards/neutralization around special weapon resolution.
+
+C. Turn ends too early/too late
+Inspect:
+- match.turnEndsAt
+- projectile.resolveAt
+- specialResolveAt
+- resumeTurnMs
+- pendingResult
+- advanceTurnIfDue* functions
+- whether utility should consume turn
+
+D. Utility unexpectedly ends turn
+Current intended behavior:
+- Shield: does not consume offensive turn.
+- Heal: does not consume offensive turn.
+Verify Air Strike and offensive special weapons follow their intended resolution path.
+
+E. AFK skip misbehaves
+Inspect:
+- afk-vote.js
+- eligible voters
+- active player activity registration
+- cancellation on input
+- disconnect changes
+- majority threshold
+
+F. Pickup missing / wrong item
+Inspect:
+- pickup spawn cadence
+- pickup lifetime
+- max pickups
+- item pool weights
+- phase6c reroll/extension logic
+- inventory capacity
+- touch vs explosion collection
+
+G. Player dies after terrain deformation incorrectly
+Inspect:
+- surface calculation
+- post-explosion settle/fall logic
+- holes for current terrain preset
+- motion/fall timing
+- pending match result
+
+H. Different browser shows stale UI
+Likely cache problem.
+Past project history includes explicit cache-busting commits.
+Inspect index.html module/script URLs and GitHub Pages cache behavior before rewriting correct gameplay code.
+
+==================================================
+6. CURRENT IMPLEMENTED SPECIAL ITEMS
+==================================================
+Always verify in current source before changing numbers.
+Expected current set:
+- Heavy Bomb
+- Triple Shot
+- Cluster Bomb
+- Shield
+- Heal +30
+- Air Strike
+
+Permanent basic weapon remains slot 1.
+Inventory slots are 2 and 3.
+
+Expected current major values around Phase 6C.2:
+
+Heavy Bomb:
+- max damage approx 60
+- radius approx 320
+
+Shield:
+- damage factor 0.5
+
+Heal:
+- +30 HP
+- max HP 100
+- blocked at full HP
+- does not consume offensive turn
+
+Air Strike:
+- 7 shells
+- warning 1200 ms
+- shell stagger 120 ms
+- max damage per shell 16
+- radius 165
+- full friendly fire
+- self damage
+
+These values are a recovery aid, NOT permission to skip source verification.
+
+==================================================
+7. CURRENT ROADMAP
+==================================================
+Completed:
+Phase 0 — scaffold / architecture
+Phase 1 — private room networking
+Phase 2 — arena foundation
+Phase 3 — turns
+Phase 4 — movement / aim / projectile physics
+Phase 5A — terrain / destruction
+Phase 5B — HP / damage / death / victory
+Phase 6A — pickups / inventory / Heavy Bomb
+Phase 6B — Triple Shot / Cluster Bomb / Shield
+Phase 6C.1 — Heal
+Phase 6C.2 — Air Strike
+
+NEXT:
+Phase 6D — Nuke Laser
+
+After 6D:
+- weapon/item balance
+- pickup balance
+- QA/regression expansion
+- multiplayer stress/real-device tests
+- mobile UX/controls
+- responsive layout
+- latency behavior
+- browser/device compatibility
+- audio/visual polish
+- bug fixing
+
+Do not invent Phase 6D mechanics from memory if exact details are missing.
+Design/recover them before implementation.
+
+==================================================
+8. HOW TO UPDATE PROJECT MEMORY AFTER DEVELOPMENT
+==================================================
+Whenever a significant feature/subphase is finished:
+
+1. Update server/client code.
+2. Verify relevant CI/tests when available.
+3. Update README.md current status if phase changed.
+4. Update ORBITAL_ARTILLERY_PROGRESS.txt with:
+   - completed feature,
+   - important rules/values,
+   - architectural decisions,
+   - bug fixes,
+   - exact next resume point.
+5. Update COBY_DEBUG.txt if debugging/recovery workflow changed.
+6. Commit these documentation updates to main.
+
+Relevant @GitHub write actions:
+- fetch_file (always get current SHA first for existing files)
+- update_file
+- create_file
+- delete_file only if intentionally removing a file
+
+IMPORTANT:
+For update_file, use the CURRENT blob SHA from fetch_file.
+Never guess a SHA.
+Do not perform sequential writes to the same path in parallel.
+
+==================================================
+9. USEFUL @GitHub ACTION CHEAT SHEET
+==================================================
+Repository discovery:
+- search_installed_repositories_streaming
+- list_repositories
+- get_repo
+
+Commit/history inspection:
+- search_commits
+- fetch_commit
+- compare_commits
+
+Read code/docs:
+- fetch_file
+- fetch
+- search
+- fetch_blob
+
+CI/status:
+- get_commit_combined_status
+- fetch_commit_workflow_runs
+- fetch_workflow_run_jobs
+- fetch_workflow_job_steps
+- fetch_workflow_job_logs
+
+Write/update project docs/code:
+- create_file
+- update_file
+- delete_file
+
+Branch/PR workflow if later adopted:
+- create_branch
+- create_pull_request
+- fetch_pr
+- get_pr_diff
+- add_review_to_pr
+- merge_pull_request
+
+Issues if later adopted for backlog:
+- create_issue
+- search_issues
+- update_issue
+- add_issue_labels
+- add_comment_to_issue
+
+==================================================
+10. SOURCE-OF-TRUTH DECISION RULE
+==================================================
+If sources conflict, resolve in this order:
+
+1. Latest executable source on main.
+2. Latest commits on main.
+3. Current tests/CI expectations.
+4. ORBITAL_ARTILLERY_PROGRESS.txt.
+5. README.md.
+6. COBY_DEBUG.txt workflow notes.
+7. Previous chat conversation.
+
+Reason:
+Chats get long, memories get partial, and documentation can become stale. GitHub is the corpse we can actually autopsy XD.
+
+==================================================
+11. CURRENT EXACT RESUME SNAPSHOT
+==================================================
+Date: 2026-08-28
+
+Server expected health phase:
+6C.2
+
+Most recent completed gameplay feature:
+Air Strike
+
+Most recent supporting work:
+- Air Strike warning HUD
+- Air Strike seven-shell barrage rendering
+- Heal regression updated for Phase 6C.2
+- special weapon/turn/AFK regression hardening
+- syntax CI on frontend and server
+
+Next planned major feature:
+PHASE 6D — NUKE LASER
+
+Before coding Nuke Laser:
+- inspect latest commits in BOTH repos,
+- confirm no newer work exists,
+- read phase6c.js and current client renderer/control integration,
+- decide exact Nuke Laser design/rules,
+- implement server-authoritatively,
+- add regression coverage,
+- expose/render client state,
+- update README + progress + this debug file if necessary.
+
+END OF COBY DEBUG
