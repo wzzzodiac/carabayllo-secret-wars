@@ -1,4 +1,4 @@
-import { createRenderer as createPhase6fRenderer } from './renderer6f.js?v=phase7a-vehicle-readability-3';
+import { createRenderer as createPhase6fRenderer } from './renderer6f.js?v=phase7a-vehicle-readability-4';
 
 export function createRenderer(canvas, config) {
   const base=createPhase6fRenderer(canvas,config);
