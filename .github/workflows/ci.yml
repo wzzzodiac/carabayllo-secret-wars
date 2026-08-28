@@ -18,6 +18,7 @@ jobs:
       - run: node --check renderer.js
       - run: node --check renderer6d.js
       - run: node --check renderer6f.js
+      - run: node --check renderer7a-visual.js
       - run: node --check combat-controls.js
       - run: node --check combat-controls6d.js
       - run: node --check combat-controls6f.js
