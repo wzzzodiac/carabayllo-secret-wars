@@ -1,0 +1,40 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 10
+Date: 2026-08-28
+Purpose: quick independent pre-Phase 6F verification after Coby Debug V9.
+
+SCOPE
+- latest frontend/backend commits
+- Phase 6E -> Phase 6D delegation
+- authoritative server wiring
+- public pickup sanitization
+- Phase 6E item pool and pacing metadata
+- frontend Phase 6E identity/import map/cache chain
+- latest Server CI / Frontend CI / Pages status
+
+RESULT
+PASS — no new confirmed code anomaly found in this quick pass.
+
+VERIFIED
+- Latest backend gameplay commit remains 3ff74feb7003c421ec0a93d7acb9836b5d89e074 and Server CI is SUCCESS.
+- Phase 6E still delegates movement, jumping, firing, item selection and turn advancement to Phase 6D.
+- Server public state remains phase 6E.
+- Internal pickup normalization flags phase6cPoolRolled / phase6dPoolRolled / phase6ePoolRolled are stripped from public pickup objects while remaining on authoritative room objects.
+- Phase 6E pool remains exactly Heavy25 / Triple20 / Cluster20 / Shield12 / Heal12 / Air8 / Nuke3.
+- Frontend index/import-map remains Phase 6E with phase6e-balance-1 cache keys.
+- Latest Frontend CI is SUCCESS.
+- Latest GitHub Pages deployment for the current frontend head is SUCCESS.
+
+NO NEW FIXES REQUIRED
+This pass did not produce a new confirmed mechanical or integration defect.
+
+MANUAL QA
+Still pending and unchanged. Visual/game-feel/network behavior must be tested in browser before final release qualification.
+
+CODE-ONLY GATE
+PASS — Phase 6F may proceed from current source state.
+
+VERSIONING
+Do not overwrite V10.
+Next Coby Debug snapshot: COBY_DEBUG_V11.txt
+
+END COBY DEBUG V10
