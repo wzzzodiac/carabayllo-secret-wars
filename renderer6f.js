@@ -67,8 +67,8 @@ export function createRenderer(canvas, config) {
   }
   function drawPhase6fCountdown(activeRoom){
     if(activeRoom?.status!=='countdown')return;
-    const x=overlay.width/2,y=overlay.height/2+112;
-    ctx.save();ctx.textAlign='center';ctx.fillStyle='rgba(2,4,10,.90)';ctx.fillRect(x-360,y-16,720,28);ctx.fillStyle='#8cb4ff';ctx.font='800 11px ui-monospace,monospace';ctx.fillText('PHASE 6F // VISUAL + SPECTATOR POLISH // LIVE AIM TELEMETRY',x,y+3);ctx.restore();
+    const x=overlay.width/2,y=overlay.height/2+82;
+    ctx.save();ctx.textAlign='center';ctx.fillStyle='rgba(2,4,10,.98)';ctx.fillRect(x-420,y-19,840,32);ctx.fillStyle='#8cb4ff';ctx.font='800 11px ui-monospace,monospace';ctx.fillText('PHASE 6F // VISUAL + SPECTATOR POLISH // LIVE AIM TELEMETRY',x,y+3);ctx.restore();
   }
   function loop(){
     ctx.clearRect(0,0,overlay.width,overlay.height);
