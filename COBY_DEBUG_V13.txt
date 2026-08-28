@@ -1,0 +1,131 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 13
+Date: 2026-08-28
+Purpose: post-Phase 7A.1 Match Stats / Event Tracking and Phase 7A.2 Rematch / Match Loop code gate.
+
+RECOVERY PRIORITY
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI / Pages
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+AUDIT SCOPE
+- latest frontend/backend heads
+- phase7a1.js composition over Phase 6E gameplay
+- server.js authoritative wiring
+- match stats and event feed
+- damage / kill / assist / death attribution
+- self damage and void/terrain-collapse edge cases
+- pickups, utility use and weapon-use telemetry
+- match summary
+- RANDOM terrain
+- same-map and random-map rematch reset
+- match-stats7a1.js / client.js / index.html integration
+- frontend module cache chain
+- Server CI, Frontend CI and GitHub Pages
+
+CONFIRMED FINDINGS FIXED
+
+A1 — PHASE 7A MATCH-STATS MODULE COULD BE STALE AFTER FRONTEND UPDATE
+Root cause:
+- match-stats7a1.js changed after its initial phase7a1-stats-1 URL was introduced.
+- client.js still requested the original cache key, so a browser could reuse the earlier panel and miss the latest match-summary fields such as most-used weapon.
+Fix:
+- index import map now maps phase7a1-stats-1 to phase7a1-stats-2.
+- client entry cache advanced to phase7a1-stats-rematch-2.
+Verification:
+- Frontend CI on e97dbdacdbeb20e2b4938e35118f4d4a599018c1: SUCCESS.
+- GitHub Pages on the same head: SUCCESS.
+
+A2 — REAL PROJECTILE DAMAGE COULD BE LOST FROM STATS WHEN THE SAME RESOLUTION ALSO CAUSED A VOID DEATH
+Root cause:
+- the telemetry layer intentionally ignored HP->0 caused by void/environment so environmental death would not be counted as artificial damage.
+- if an actual impact first dealt damage and its knockback/terrain collapse also sent the target into void during the same server resolution, the final state was voided and the real impact damage was also discarded.
+Fix:
+- telemetry snapshots now include lastDamage timestamp, amount and source.
+- when a target is voided, only a fresh matching lastDamage amount is credited; the remaining HP loss caused by the environmental death is not counted as damage.
+- regression test covers damage + void in one resolution.
+Verification:
+- latest Server CI including the regression suite: SUCCESS.
+
+ADDITIONAL STAT INVARIANT HARDENED
+- self-damage increments damageReceived.
+- self-damage does NOT increment damageDealt or biggestHit.
+- regression test covers this explicitly.
+
+RE-REVIEW RESULT
+After A1/A2 fixes and the new regressions, no additional confirmed code/mechanical anomaly was found in this pass.
+
+VERIFIED FROM SOURCE / TESTS
+- authoritative gameplay remains inherited from Phase 6E/6D; Phase 7A.1 observes server outcomes rather than replacing combat physics.
+- public state exposes matchStats, eventFeed, deathAttribution, matchSummary and rematchRules.
+- stats include damage dealt/received, kills, assists, deaths, self-KOs, void deaths, pickups, biggest hit, shots/uses and per-weapon usage.
+- self-damage cannot inflate the damage leaderboard.
+- void deaths do not convert all remaining HP into fake damage.
+- damage + void preserves only the actual lastDamage amount.
+- kills are credited to the current non-self source when applicable.
+- assist rule: every other prior non-self contributor to the victim in the current match gets one assist on that death.
+- event feed is server-generated and capped at 36 events.
+- successful weapon/utility use increments weapon usage; failed actions do not.
+- finished match summary exposes duration, turns, result, top damage, top kills and most-used weapon.
+- RANDOM terrain is host/lobby-only, resolves to a concrete map and clears READY states.
+- rematch is host-only and finished-only.
+- rematch preserves room code, players, mode and teams.
+- same-map rematch preserves terrain; random rematch intentionally chooses another concrete terrain.
+- rematch resets HP/alive state, arena, pickups, inventories, selection, Shield and telemetry, then starts one new countdown.
+- match stats frontend is a DOM panel and does not modify renderer/camera authority.
+- frontend CI checks match-stats7a1.js.
+
+CLASSIFICATION
+A — confirmed bugs fixed:
+- stale Phase 7A stats module cache.
+- legitimate shot damage lost when the same resolution also voided the target.
+
+B — manual checks still required:
+- two-client live scoreboard parity and event ordering
+- visual readability/overflow with 2–8 players
+- real browser rematch buttons and repeated rematches
+- RANDOM-map UX
+- human-played kill/assist/self-KO/void attribution
+- all existing Phase 6F visual, balance, weapon, AFK, camera and browser QA
+- full Team/Survival end-to-end matches.
+
+C — intentional design:
+- assists use all prior non-killer contributors in the current match; no hidden time window for v1.
+- self-damage is received damage but not dealt damage.
+- environmental HP removal from falling into void is not damage dealt.
+- random-map selection excludes the current map.
+- host rematch immediately marks retained players ready and enters a fresh countdown rather than returning to a manual READY lobby.
+
+D — non-blocking tech debt:
+- server stack is layered rooms -> 6A -> 6C -> 6D -> 6E -> 7A.1.
+- telemetry observes authoritative state deltas instead of being embedded in every historical resolver; this is deliberate for regression safety but may be consolidated after manual QA.
+- phase7a1TestHooks exist only to regression-test telemetry edge cases.
+- disconnected players are removed from current public matchStats because the room player list is authoritative; persistent post-disconnect historical score rows can be considered later if manual QA shows a need.
+
+AUTOMATED STATUS
+- latest Phase 7A telemetry Server CI: SUCCESS.
+- Phase 7A frontend CI at corrected cache head: SUCCESS.
+- GitHub Pages at corrected cache head: SUCCESS.
+
+CODE-ONLY GATE
+PASS — no currently known confirmed source/CI blocker remains after the fixes above.
+
+MANUAL QA GATE
+PENDING — Phase 7A is NOT complete until desktop/two-client/full-match checks are executed.
+
+CORE FEATURE STATUS
+The planned v1 gameplay/core feature scope is now effectively feature-complete in code: existing combat + Phase 7A match stats/event tracking + rematch/random-map loop.
+This does NOT mean release ready; manual QA and Phase 7B hardening remain mandatory.
+
+PHASE GATE
+APROBADO PARA CONTINUAR CON QA MANUAL / 7B WHEN ISSUES ARE REPRODUCED.
+Do not skip manual Phase 7A.
+
+VERSIONING
+Do not overwrite V13.
+Next Coby Debug snapshot: COBY_DEBUG_V14.txt
+
+END COBY DEBUG V13
