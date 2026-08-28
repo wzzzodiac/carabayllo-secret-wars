@@ -14,9 +14,9 @@ Backend:
 
 **Current development phase: Phase 6D — Nuke Laser implemented in code.**
 
-Air Strike and Nuke Laser now have server-authoritative mechanics plus frontend presentation code. Phase 6D also changes traversal: the active player can move freely across reachable terrain and jump without a per-turn quota; the 40-second turn timer is now the main movement economy. Spectators receive and render the active player's live aim state.
+Air Strike and Nuke Laser have server-authoritative mechanics plus frontend presentation code. Phase 6D also changes traversal: the active player can move freely across reachable terrain and jump without a per-turn quota; the 40-second turn timer is now the main movement economy. Spectators receive and render the active player's live aim state.
 
-Manual deployed-browser QA is still pending for visual alignment, camera behavior, game feel and multiplayer synchronization.
+A broad **Coby Debug V7 code pass** was completed after the cinematic Nuke/free-movement changes. Confirmed issues found in that pass were fixed: rejected spectator traversal no longer mutates shared state, the Nuke overlay now uses the exact base camera transform, void jumps retain long fall/death timing, the Nuke beam geometry better matches its large terrain cut, and stale Phase 6C.2/Nuke-renderer identity inconsistencies were removed. Current automated code gate is green; manual deployed-browser QA is still pending.
 
 After manual QA/debug, the next planned work is final pickup/weapon balancing followed by broad desktop QA and polish.
 
@@ -28,9 +28,9 @@ For the canonical resume state, use the highest-numbered versions of:
 - `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
 
 Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V6.txt`
-- `COBY_DEBUG_V6.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V6.txt`
+- `ORBITAL_ARTILLERY_PROGRESS_V7.txt`
+- `COBY_DEBUG_V7.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V7.txt`
 
 ## Architecture
 
@@ -58,7 +58,8 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Weighted first-player selection that intentionally favors non-hosts
 - Randomized physical spawn positions
 - Free active-turn movement across reachable terrain
-- Unlimited per-turn jumping with short animation/cooldown
+- Unlimited per-turn jumping with short normal-jump cadence
+- Long natural fall/death timing remains for jumps into void
 - Live spectator aim: active angle, power and trajectory are visible to all clients
 - Projectile trajectory preview and simulation
 - Seven terrain presets
@@ -86,7 +87,8 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Max walk surface delta: 42
 - Jump distance: 180
 - Jump quota: none during active turn
-- Effective jump animation/cooldown: about 0.5 s
+- Normal jump visual: ~500 ms
+- Jump cooldown: ~450 ms
 - Aim: 5–85°, default 45°
 - Power: 10–100, default 55
 - Basic: 45 max damage, radius 260, crater 135/165
@@ -108,7 +110,8 @@ During the active player's 40-second turn:
 - movement is allowed across any normally reachable terrain
 - walking still respects terrain steepness/collision rules
 - jumping is not limited by a per-turn counter
-- jump spam is constrained by the short jump animation/cooldown
+- normal jump spam is constrained by the short jump animation/cooldown
+- jumps into void preserve the longer fall/death presentation rather than being shortened to the normal-jump timing
 - firing locks movement while the projectile/special action resolves
 - Shield and Heal remain instant utility actions under their existing turn rules
 
@@ -126,7 +129,9 @@ All clients receive the authoritative active-player aim state. Spectators can se
 - 3-second warning after target lock
 - Sustained 3-second diagonal disintegration beam
 - Catastrophic frontend presentation: darkening warning phase, animated lock line, multi-layer beam glow/core, particles/pulses and afterglow
+- Overlay uses the exact base renderer camera view rather than a separate approximate camera
 - Large terrain cut, approximately 1800 world units wide before edge clamping
+- Current diagonal beam vertical half-span: 320 world units
 - 20 HP direct damage with full self/friendly fire
 - Shield halves the applicable direct hit and is consumed
 - No conventional knockback
@@ -159,12 +164,15 @@ All clients receive the authoritative active-player aim state. Spectators can se
 - Phase 6B.1 — AFK Skip Vote ✅
 - Phase 6C.1 — Heal ✅
 - Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
-- Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; manual PC QA pending
+- Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; broad code debug passed; manual PC QA pending
 - Final balance + broad desktop QA ⏳
 
 ## Automated baseline
 
-The Phase 6D server suite includes regression coverage for the Nuke, free movement beyond the old 520 radius, jumping despite the old quota, cinematic Nuke timings and public spectator-aim state.
+Latest reviewed gameplay/test checkpoint after Coby Debug V7:
+- Server CI passed with regressions for Nuke mechanics/timing/geometry, invalid spectator traversal state, free movement, spectator aim and void-jump timing.
+- Frontend CI passed with the corrected shared-camera Phase 6D renderer chain.
+- GitHub Pages deployed the corrected renderer/cache checkpoint successfully.
 
 Automated checks do not replace manual browser/gameplay QA.
 
