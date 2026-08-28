@@ -1,0 +1,133 @@
+ORBITAL ARTILLERY — DEVELOPMENT PROGRESS — VERSION 9
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V8.txt
+
+SOURCE-OF-TRUTH RULE
+1. Current executable source/commits
+2. Current CI/tests
+3. Highest-numbered Progress/TODO/Coby Debug snapshots
+4. Older summaries/chats
+Manual browser/gameplay checks remain pending until tested on a real desktop PC.
+
+==================================================
+CURRENT STATE
+==================================================
+- Phase 6F — Visual & Spectator Polish: IMPLEMENTED IN FRONTEND CODE.
+- Backend gameplay remains Phase 6E authoritative baseline; 6F intentionally changes presentation only.
+- Phase 6E pickup balance remains 25/20/20/12/12/8/3.
+- Nuke, Air Strike, free movement and live spectator aim mechanics remain unchanged.
+- Pre-6F code gate: COBY_DEBUG_V10 PASS.
+- Manual deployed-browser visual QA remains pending.
+
+==================================================
+PHASE STATUS
+==================================================
+0 scaffold COMPLETE
+1 private rooms COMPLETE
+2 synchronized arena COMPLETE
+2.5 world/camera COMPLETE
+3 turns/wind COMPLETE
+4 movement/aim/fire COMPLETE; traversal expanded in 6D
+5A destructible terrain COMPLETE
+5B HP/damage/death/victory COMPLETE
+6A pickups/inventory/Heavy COMPLETE
+6B Triple/Cluster/Shield COMPLETE
+6B.1 AFK vote COMPLETE
+6C.1 Heal COMPLETE
+6C.2 Air Strike IMPLEMENTED; MANUAL QA PENDING
+6D Nuke Laser + free movement + live spectator aim IMPLEMENTED; CODE DEBUG PASS; MANUAL QA PENDING
+6E Balance & Gameplay Tuning baseline IMPLEMENTED; CODE DEBUG PASS; MANUAL BALANCE QA PENDING
+6F Visual & Spectator Polish IMPLEMENTED; FRONTEND QA PENDING
+7A Full Multiplayer QA NEXT
+7B Bugfix & Regression Hardening PLANNED
+8 Release Candidate / Final Polish PLANNED
+9 v1.0 Release PLANNED
+
+==================================================
+PHASE 6F — IMPLEMENTED PRESENTATION
+==================================================
+New frontend wrapper: renderer6f.js
+- wraps renderer6d.js instead of replacing hardened gameplay rendering
+- uses exact inherited camera snapshot
+- adds LIVE SPECTATOR FEED when another player owns the turn
+- spectator feed shows active player, selected weapon, angle, power and wind
+- adds colored active-weapon badge above the current player
+- adds weapon-specific top resolution ribbon while an attack resolves
+- resolution labels cover Basic, Heavy, Triple, Cluster, Air Strike and Nuke phases
+- replaces the inherited Phase 6E countdown identity visually with Phase 6F identity
+- does not modify projectile simulation, damage, terrain, turn timing or authoritative state
+
+New frontend wrapper: combat-controls6f.js
+- wraps combat-controls6d.js
+- spectator state includes active player + weapon + angle + power
+- own-turn state includes currently selected weapon
+- adds WEAPON cell to battle info
+- adds AIM SYNC cell showing LIVE during started matches
+- keeps Phase 6D/6E movement and Nuke HUD behavior underneath
+
+Renderer camera API bridge:
+- renderer6d.js now exposes getViewSnapshot() from its exact base renderer camera
+- 6F uses that view rather than approximating camera geometry
+
+==================================================
+UNCHANGED GAMEPLAY BASELINE
+==================================================
+No backend or balance rule was intentionally changed by Phase 6F.
+
+Still current:
+- turn 40 s
+- free movement during active turn
+- jump cooldown 450 ms
+- pickup every 3 turns
+- lifetime 4 turns
+- max 2 map pickups
+- pool: Heavy25 / Triple20 / Cluster20 / Shield12 / Heal12 / Air8 / Nuke3
+- full server authority remains in Phase 6E -> Phase 6D path
+
+==================================================
+PHASE 6F FRONTEND IDENTITY
+==================================================
+index.html now presents Phase 6F.
+Current import map:
+- historical renderer import -> renderer6f.js?v=phase6f-spectator-polish-1
+- historical combat-controls import -> combat-controls6f.js?v=phase6f-spectator-polish-1
+client cache key also advanced to phase6f-spectator-polish-1.
+
+Frontend CI now syntax-checks:
+- renderer6f.js
+- combat-controls6f.js
+in addition to all previous wrappers.
+
+==================================================
+KNOWN MANUAL-ONLY RISKS
+==================================================
+These are NOT confirmed bugs until reproduced:
+- spectator feed may need size/position tuning at different browser/window sizes
+- weapon badge may overlap labels/terrain in some camera compositions
+- resolution ribbon may compete visually with Nuke/Air Strike overlays
+- 6F countdown replacement should be visually checked for no stale Phase 6E bleed-through
+- 100 ms HUD wrapper refresh should be checked for visible flicker
+- two-client live aim telemetry should be compared visually under normal network latency
+
+==================================================
+CURRENT MANUAL QA SOURCE
+==================================================
+ORBITAL_ARTILLERY_TODOLIST_V9.txt
+
+==================================================
+NEXT WORK
+==================================================
+1. Manual Phase 6F visual/spectator QA when PC is available.
+2. Full Multiplayer QA — Phase 7A.
+3. Reproduce and isolate any issues.
+4. Phase 7B bugfix/regression hardening.
+5. Phase 8 release candidate/final polish.
+6. Phase 9 v1.0.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V9.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V10.txt
+
+END PROGRESS V9
