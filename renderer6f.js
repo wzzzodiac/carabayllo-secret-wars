@@ -3,9 +3,11 @@ import { createRenderer as createPhase6dRenderer } from './renderer6d.js?v=phase
 export function createRenderer(canvas, config) {
   const baseCtx=canvas.getContext('2d');
   const originalFillText=baseCtx.fillText.bind(baseCtx);
+  let legacyPlayerNames=new Set();
   baseCtx.fillText=(text,...args)=>{
     const value=String(text??'');
-    if(value.includes('// HP ')&&(value.startsWith('SURVIVAL')||value.startsWith('TEAM ')||value.startsWith('OUT')))return;
+    const legacyStatus=value.includes('// HP ')&&(value.startsWith('SURVIVAL')||value.startsWith('TEAM ')||value.startsWith('OUT'));
+    if(legacyStatus||legacyPlayerNames.has(value))return;
     originalFillText(text,...args);
   };
   const base=createPhase6dRenderer(canvas,config);
@@ -129,8 +131,8 @@ export function createRenderer(canvas, config) {
   }
   frameId=requestAnimationFrame(loop);
   return Object.freeze({
-    drawScaffold(){room=null;ctx.clearRect(0,0,overlay.width,overlay.height);base.drawScaffold();},
-    drawArena(nextRoom,nextLocalPlayerId=null){room=nextRoom;localPlayerId=nextLocalPlayerId;base.drawArena(nextRoom,nextLocalPlayerId);},
+    drawScaffold(){room=null;legacyPlayerNames=new Set();ctx.clearRect(0,0,overlay.width,overlay.height);base.drawScaffold();},
+    drawArena(nextRoom,nextLocalPlayerId=null){room=nextRoom;localPlayerId=nextLocalPlayerId;legacyPlayerNames=new Set((nextRoom?.players??[]).map(player=>String(player.name??'')));base.drawArena(nextRoom,nextLocalPlayerId);},
     getViewSnapshot(){return base.getViewSnapshot?.()??null;},
     destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlay.remove();baseCtx.fillText=originalFillText;base.destroy?.();}
   });
