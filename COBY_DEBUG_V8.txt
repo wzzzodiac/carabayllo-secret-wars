@@ -1,0 +1,197 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 8
+Date: 2026-08-28
+Purpose: post-Phase 6E code gate after balance wrapper, public Phase 6E identity and cache updates.
+
+==================================================
+0. RECOVERY PRIORITY
+==================================================
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+Current canonical snapshots after this audit:
+- ORBITAL_ARTILLERY_PROGRESS_V8.txt
+- ORBITAL_ARTILLERY_TODOLIST_V8.txt
+- COBY_DEBUG_V8.txt
+
+==================================================
+1. AUDIT SCOPE
+==================================================
+Reviewed:
+- latest frontend/backend commits around Phase 6E
+- phase6e.js
+- inherited Phase 6D movement, jump, Nuke and spectator behavior boundaries
+- server.js Phase 6E wiring
+- package check coverage
+- balance regression tests
+- index.html Phase 6E identity/import map/cache keys
+- renderer6d countdown overlay behavior
+- combat-controls6d Phase 6E explanatory text
+- Frontend CI
+- Server CI
+- GitHub Pages deployment
+
+Classification retained:
+A. confirmed code bug/inconsistency
+B. manual visual/gameplay check
+C. intentional design
+D. non-blocking technical debt
+
+==================================================
+2. PHASE 6E IMPLEMENTATION CHECK
+==================================================
+Final 100-point pool:
+Heavy 25
+Triple 20
+Cluster 20
+Shield 12
+Heal 12
+Air Strike 8
+Nuke 3
+TOTAL 100
+
+phase6e.js behavior:
+- wraps Phase 6D rather than rewriting combat.
+- every pickup newly spawned on the current turn is normalized exactly once.
+- phase6ePoolRolled prevents repeated rerolls in the same room state.
+- deterministic roll helper covers all 0..99 boundaries.
+- public state replaces inherited itemPool metadata with exact Phase 6E weights.
+- public state exposes phase='6E'.
+- public state exposes balanceRules.
+
+This preserves all previously debugged mechanics while changing only pickup frequency.
+
+==================================================
+3. CONFIRMED FINDINGS DURING 6E WORK
+==================================================
+A1 — FRONTEND CACHE CHAIN WOULD HAVE BEEN STALE
+Finding:
+- renderer6d.js and combat-controls6d.js changed for Phase 6E identity, while index.html initially still referenced older worldender cache keys.
+Fix:
+- import map advanced to phase6e-balance-1.
+- client.js entry cache key advanced to phase6e-balance-1.
+Result:
+- current frontend cannot intentionally resolve the old wrapper cache through the current index.
+
+A2 — VISIBLE PHASE IDENTITY WOULD HAVE MIXED 6E/6D
+Finding:
+- page/server moved to Phase 6E while base countdown renderer still contained historical PHASE 6D text.
+Fix:
+- current renderer6d overlay draws a Phase 6E countdown identity over the historical fallback whenever room.phase==='6E'.
+- index/header/footer and HUD explanatory text updated to Phase 6E.
+Result:
+- normal Phase 6E public flow presents Phase 6E consistently.
+
+No additional confirmed mechanical bug was found in the Phase 6E balance wrapper after these fixes.
+
+==================================================
+4. REGRESSION / CI STATUS
+==================================================
+Server:
+- phase6e.js syntax included in npm run check.
+- balance.test.js covers:
+  - exact total 100
+  - exact declared weights
+  - deterministic boundary mapping
+  - invalid roll bounds
+  - public Phase 6E balance metadata
+  - current pacing metadata
+  - newly spawned pickup normalized exactly once
+- latest reviewed Phase 6E balance regression commit CI: SUCCESS.
+
+Frontend:
+- renderer6d.js and combat-controls6d.js are included in Frontend CI.
+- current Phase 6E cache/identity commit CI: SUCCESS.
+- GitHub Pages deployment for current Phase 6E frontend commit: SUCCESS.
+
+Automated checks still do not certify visual feel or live multiplayer smoothness.
+
+==================================================
+5. CURRENT DESIGN DECISIONS — DO NOT 'FIX'
+==================================================
+- 100-point Phase 6E baseline pool is intentional.
+- Heavy 25 / Triple 20 / Cluster 20 / Shield 12 / Heal 12 / Air 8 / Nuke 3.
+- current weapon damage/radii remain unchanged in 6E.
+- turn remains 40 s pending manual free-movement playtest.
+- pickups remain every 3 turns.
+- pickup lifetime remains 4 real turns.
+- max 2 pickups remains.
+- free active-turn movement remains intentional.
+- no per-turn jump quota remains intentional.
+- jump cooldown remains ~450 ms.
+- Nuke 3 s warning + 3 s beam remains intentional pending visual tuning.
+- Nuke direct damage 20; terrain destruction is primary threat.
+- Nuke destroys intersected pickups.
+- anti-host starter weighting remains intentional.
+- desktop/web only; mobile/touch remains out of scope.
+
+==================================================
+6. MANUAL CHECKS — NOT BUGS UNTIL REPRODUCED
+==================================================
+Use ORBITAL_ARTILLERY_TODOLIST_V8.txt.
+Priority:
+- actual 6E pickup-frequency feel over multiple matches/spawns
+- whether Heavy/Triple/Cluster dominate too much
+- whether Shield/Heal appear often enough
+- whether Air Strike is appropriately rare
+- whether Nuke at 3% feels sufficiently exceptional
+- whether pickup every 3 turns/lifetime 4/max 2 still fits free movement
+- whether 40 s turns remain right
+- Nuke visual intensity/alignment
+- Air Strike visual/multi-shell fall behavior
+- two-client live spectator aim smoothness
+- disconnect/AFK/full-match regression
+
+==================================================
+7. NON-BLOCKING TECH DEBT
+==================================================
+D1. terrain formulas duplicated across modules.
+D2. free movement is still a Phase 6D compatibility wrapper over old Phase 4 internals.
+D3. Phase 6D/6E HUD remains a wrapper patch over base combat-controls.
+D4. renderer.js still contains historical PHASE 6D countdown fallback text. Current Phase 6E overlay covers it in normal 6E state; deeper cleanup can happen in Phase 6F.
+D5. client.js still contains obsolete humanError strings for movement_limit/no_jumps_remaining.
+D6. Phase 6E rerolls newly spawned pickups after inherited 6A/6C/6D generation. This is deliberate isolation for safety, but a future constants/refactor pass could centralize the pool into one generator after manual validation.
+
+None of D1-D6 is a current gameplay blocker from this audit.
+
+==================================================
+8. FINAL GATE
+==================================================
+Post-Phase 6E static/source review:
+- no remaining confirmed P0/P1/P2 gameplay/code blocker identified.
+- Server CI: PASS.
+- Frontend CI: PASS.
+- GitHub Pages deploy: PASS.
+- live Cloud Run source/deployment parity still requires runtime verification and must not be assumed from GitHub source alone.
+
+CODE-ONLY GATE: PASS.
+MANUAL QA/BALANCE GATE: PENDING.
+
+APROBADO PARA AVANZAR from code perspective.
+Do not claim manual Phase 6E balance validation until Walter actually plays it.
+
+==================================================
+9. NEXT RESUME POINT
+==================================================
+1. Use TODO V8 for manual QA.
+2. Fix any reproduced issue and add regression where practical.
+3. Revisit 6E weights/pacing only from gameplay evidence.
+4. Phase 6F — Visual & Spectator Polish.
+5. Phase 7A — Full Multiplayer QA.
+6. Phase 7B — Bugfix & Regression Hardening.
+7. Phase 8 — Release Candidate / Final Polish.
+8. Phase 9 — v1.0.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V8.
+Next Coby Debug: COBY_DEBUG_V9.txt
+Next TODO: ORBITAL_ARTILLERY_TODOLIST_V9.txt
+Next Progress: ORBITAL_ARTILLERY_PROGRESS_V9.txt
+
+END COBY DEBUG V8
