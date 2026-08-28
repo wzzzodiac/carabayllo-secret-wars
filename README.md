@@ -12,26 +12,23 @@ Backend:
 
 ## Current status
 
-**Current development phase: Phase 6F — Visual & Spectator Polish implemented in frontend code.**
+**Current development phase: Phase 7A — Full Multiplayer QA, in progress.**
 
-Phase 6F does not change authoritative gameplay or the Phase 6E balance baseline. It adds a dedicated frontend presentation layer so waiting players can follow every turn more clearly:
+Phase 7A is a validation phase rather than a new gameplay layer. The executable game remains:
+- authoritative backend: Phase 6E balance/gameplay contract
+- frontend presentation: Phase 6F visual/spectator layer
 
-- LIVE spectator feed with active player, selected weapon, angle, power and wind
-- active-weapon badge anchored to the current player using the exact inherited camera view
-- weapon-specific resolution ribbon for Basic, Heavy, Triple, Cluster, Air Strike and Nuke states
-- side-HUD WEAPON and AIM SYNC telemetry
-- Phase 6F countdown/landing identity without changing the backend phase contract
+The pre-7A gate is **COBY_DEBUG_V12.txt**, which passed with no known confirmed code blocker.
 
-The current authoritative pickup distribution remains:
-- Heavy Bomb: 25
-- Triple Shot: 20
-- Cluster Bomb: 20
-- Shield: 12
-- Heal +30: 12
-- Air Strike: 8
-- Nuke Laser: 3
+The first Phase 7A automated multiplayer contract suite is now implemented in backend `test/phase7a.test.js` and passed Server CI. It covers:
+- an 8-player Survival timeout cycle without skipped/repeated living players
+- balanced Team 2v2 alternation
+- authoritative spectator aim / power / selected-special public state
+- movement beyond the old 520-unit envelope
+- more than two jumps after normal cooldown/motion timing
+- movement lock while a projectile is in flight
 
-**COBY_DEBUG_V11.txt** is the current post-6F code gate. It found and fixed one Phase 6F presentation bug: the active-weapon badge used raw authoritative `spawn` while the tank itself used animated `motion`, so the badge could snap to a jump destination before the vehicle arrived. The badge now follows matching visual motion interpolation. Frontend CI and Pages passed on the corrected cache chain. Manual browser/visual QA is still pending.
+**This does not complete Phase 7A.** Two-client browser sync, visuals, camera behavior, latency feel, full human-played matches and balance still require manual desktop QA and remain unchecked in `ORBITAL_ARTILLERY_TODOLIST_V11.txt`.
 
 Mobile/touch gameplay is not part of the current roadmap.
 
@@ -41,9 +38,9 @@ For canonical recovery, use the highest-numbered versions of:
 - `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
 
 Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V9.txt`
-- `COBY_DEBUG_V11.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V10.txt`
+- `ORBITAL_ARTILLERY_PROGRESS_V10.txt`
+- `COBY_DEBUG_V12.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V11.txt`
 
 ## Architecture
 
@@ -100,15 +97,38 @@ The authoritative server routes through `phase6e.js`, which wraps Phase 6D and c
 
 The server public state exposes `phase: "6E"`, the exact `itemPool`, and `balanceRules` metadata. Server-only roll bookkeeping is hidden from public pickup objects. Tests verify the total pool, exact weights, deterministic 0–99 roll boundaries, public pacing metadata, one-time normalization and public-state cleanup.
 
+Current pickup distribution:
+- Heavy Bomb: 25
+- Triple Shot: 20
+- Cluster Bomb: 20
+- Shield: 12
+- Heal +30: 12
+- Air Strike: 8
+- Nuke Laser: 3
+
 ## Phase 6F presentation layer
 
 `renderer6f.js` wraps the Phase 6D renderer stack and adds presentation only. It receives the exact camera snapshot through the Phase 6D wrapper rather than calculating a second camera.
 
-During another player's turn, spectators see a LIVE feed with active player, weapon, angle, power and wind. The active vehicle carries a weapon badge using weapon-specific colors. The badge now follows the same visual motion interpolation as the tank during jumps/falls instead of raw destination `spawn`. While a shot resolves, the spectator feed gives way to a weapon-specific resolution ribbon; Air Strike and Nuke retain their richer world-space effects underneath.
+During another player's turn, spectators see a LIVE feed with active player, weapon, angle, power and wind. The active vehicle carries a weapon badge using weapon-specific colors. The badge follows the same visual motion interpolation as the tank during jumps/falls instead of raw destination `spawn`. While a shot resolves, the spectator feed gives way to a weapon-specific resolution ribbon; Air Strike and Nuke retain their richer world-space effects underneath.
 
-`combat-controls6f.js` wraps the current battle HUD. It adds active-weapon and aim-sync information and makes spectator state explicit without changing input authority or server state.
+`combat-controls6f.js` wraps the current battle HUD and adds active-weapon and aim-sync information without changing input authority or server state.
 
 Current renderer cache key: `phase6f-spectator-polish-2`.
+
+## Phase 7A automated QA
+
+Backend `test/phase7a.test.js` adds multiplayer contract coverage on top of all existing regression tests.
+
+Automated checks currently passed:
+- 8-player Survival turn-cycle wrap
+- balanced Team 2v2 alternation
+- spectator aim/weapon state parity
+- free movement beyond the former radius
+- unlimited jump quota contract with cooldown respected between actions
+- shot-in-flight movement lock
+
+These checks are intentionally narrower than the manual Phase 7A checklist. Automated CI is evidence for server contracts, not proof of browser rendering, network feel or end-to-end human gameplay.
 
 ## Key current constants
 
@@ -150,12 +170,6 @@ During the active player's 40-second turn:
 
 The turn clock is intentionally the main cost of repositioning. Phase 6E keeps 40 seconds until manual play determines whether it should change.
 
-## Spectator aim
-
-All clients receive the authoritative active-player aim state. Spectators can see angle, power and trajectory while the active player prepares a shot. Phase 6F surfaces that same authoritative information in a LIVE spectator feed and battle HUD rather than introducing any client-only aim authority.
-
-Triple, Air Strike and Nuke retain weapon-specific world presentation where available; the Nuke uses the normal artillery trajectory as its visible designator.
-
 ## Nuke Laser behavior
 
 - Very rare pickup: Phase 6E weight 3/100
@@ -163,7 +177,6 @@ Triple, Air Strike and Nuke retain weapon-specific world presentation where avai
 - Designator impact locks the target
 - 3-second warning after target lock
 - Sustained 3-second diagonal disintegration beam
-- Catastrophic frontend presentation with darkening, warning line, multi-layer beam glow/core, particles/pulses and afterglow
 - Overlay uses the exact base renderer camera view
 - Large diagonal terrain destruction corridor
 - Terrain is removed only where the surface intersects the beam corridor
@@ -202,19 +215,22 @@ Triple, Air Strike and Nuke retain weapon-specific world presentation where avai
 - Phase 6D — Nuke Laser + free movement + live spectator aim ✅ implementation; code debug passed; manual PC QA pending
 - Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; code debug passed; manual balance QA pending
 - Phase 6F — Visual & Spectator Polish ✅ implementation; post-6F code debug passed; manual visual QA pending
-- Phase 7A — Full Multiplayer QA ⏳
+- Phase 7A — Full Multiplayer QA 🔄 automated contracts passed; manual full QA pending
 - Phase 7B — Bugfix & Regression Hardening ⏳
 - Phase 8 — Release Candidate / Final Polish ⏳
 - Phase 9 — v1.0 Release ⏳
 
 ## Automated baseline
 
-Post-Phase 6F checkpoint:
-- active-weapon badge motion-anchor bug fixed in `renderer6f.js`
-- frontend renderer cache advanced to `phase6f-spectator-polish-2`
-- Frontend CI passed on corrected head `fe3e18723cf74718f71d2a36abeffa263d69ed38`
-- GitHub Pages deployment passed on the same corrected head
-- authoritative backend was not changed by Phase 6F; latest reviewed Server CI remains green after Phase 6E public-state cleanup and regression coverage
+Pre-Phase 7A frontend gate:
+- `COBY_DEBUG_V12.txt`: PASS
+- Frontend CI: green
+- GitHub Pages: green
+
+Phase 7A server checkpoint:
+- backend commit `2d24050b2f430e761b5d448e755c5d88331b1403`
+- Server CI run 39: SUCCESS
+- complete historical regression suite plus `test/phase7a.test.js`: PASS
 
 Automated checks do not replace browser/visual/multiplayer QA.
 
