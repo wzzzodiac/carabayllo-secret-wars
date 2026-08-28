@@ -1,0 +1,323 @@
+ORBITAL ARTILLERY — MANUAL PC QA / TODO — VERSION 12
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_TODOLIST_V11.txt
+
+RULES
+- Current project phase: Phase 7A — Full Multiplayer QA.
+- Phase 7A.1 Stats/Event Tracking and 7A.2 Rematch/Match Loop are implemented in code.
+- Automated/source checks and manual/browser checks remain separate.
+- Do NOT mark manual/visual/network/game-feel items complete without real desktop testing.
+- A visual suspicion is not a confirmed bug until reproduced or proven from source.
+- Desktop/web target only; mobile/touch out of scope.
+- Post-feature code gate: COBY_DEBUG_V13 PASS after fixing two confirmed anomalies.
+
+==================================================
+A. AUTOMATED CONTRACTS ALREADY PASSED
+==================================================
+[x] 8-player Survival timeout cycle visits each living player before wrapping. (CI)
+[x] Balanced Team 2v2 turn order alternates teams. (CI)
+[x] Public spectator aim mirrors authoritative angle/power/selected special. (CI)
+[x] Free movement exceeds historical 520-unit envelope. (CI)
+[x] More than 2 jumps allowed when cooldown/motion timing has elapsed. (CI)
+[x] Projectile in flight locks movement with shot_in_flight. (CI)
+[x] Zeroed authoritative Phase 7A.1 match stats/public feed contract. (CI)
+[x] Successful weapon/utility use telemetry contract. (CI)
+[x] Self-damage counts received but not dealt/biggest hit. (CI)
+[x] Real impact damage retained when same resolution also causes void death. (CI)
+[x] Same-map rematch reset contract. (CI)
+[x] Random-map rematch keeps room and changes concrete terrain. (CI)
+[x] RANDOM lobby terrain clears READY states. (CI)
+[x] Non-host rematch rejected. (CI)
+[x] Historical Server CI suite still passes with all Phase 7A tests.
+
+==================================================
+B. PHASE 7A.1 — MATCH STATS / EVENT TRACKING MANUAL QA
+==================================================
+LIVE SCOREBOARD
+[ ] Scoreboard appears during a real started match.
+[ ] Both clients show the same values after every resolution.
+[ ] 2-player layout readable.
+[ ] 4-player layout readable.
+[ ] 8-player layout scrolls/fits without breaking page layout.
+[ ] Ordering by damage/kills updates sensibly.
+[ ] Scoreboard does not obstruct essential battle controls/canvas.
+
+DAMAGE
+[ ] Basic damage dealt/received values match actual HP changes.
+[ ] Heavy damage values match actual HP changes.
+[ ] Triple aggregate damage is counted once per real damage event; no BASIC leakage in stats.
+[ ] Cluster aggregate damage is counted once per real impact.
+[ ] Air Strike shell damage totals correctly.
+[ ] Nuke direct damage totals correctly.
+[ ] Shielded damage uses actual post-Shield damage.
+[ ] Friendly fire counts as damage dealt by the shooter.
+[ ] Self-damage counts under TAKEN but does NOT increase DMG/BIGGEST.
+[ ] Pure void fall does not convert remaining HP into fake damage.
+[ ] Impact + knockback/terrain-collapse into void credits only the actual impact damage.
+[ ] No damage is double-counted across repeated room_state broadcasts.
+
+KILLS / DEATHS / ASSISTS
+[ ] Normal player kill credited to correct killer.
+[ ] Self-KO recorded without awarding a kill to another player.
+[ ] Pure self-caused void death recorded as void/self outcome correctly.
+[ ] Shooter-caused terrain collapse / knockback void credits the shooter kill.
+[ ] Three-player assist scenario: prior contributor gets exactly one assist when another player gets kill.
+[ ] Killer never gets an assist on their own kill.
+[ ] Victim never gets an assist on their own death.
+[ ] One victim death cannot award duplicate assists on later state broadcasts.
+[ ] deathAttribution cause/source matches what happened visually.
+
+PICKUPS / USES / BIGGEST HIT
+[ ] Touch pickup increments pickup count once.
+[ ] Explosion pickup increments shooter pickup count once.
+[ ] Full-inventory failed collection does not increment pickup count.
+[ ] Basic fire increments USES.
+[ ] Heavy/Triple/Cluster/Air Strike/Nuke successful fire increments correct weapon use.
+[ ] Shield successful activation increments Shield use.
+[ ] Heal successful activation increments Heal use.
+[ ] Heal rejected at full HP does not increment use.
+[ ] BIGGEST reflects largest real single damage delta, not cumulative volley total unless one actual resolution delta is that large.
+[ ] End summary most-used weapon matches observed uses.
+
+EVENT FEED
+[ ] Fire event appears once for projectile weapons.
+[ ] Damage events are readable and chronological.
+[ ] Self-damage event is distinct.
+[ ] Pickup event appears once.
+[ ] Shield/Heal utility events appear once.
+[ ] Death event includes sensible cause wording.
+[ ] Rematch event appears on new match.
+[ ] Feed remains synchronized on two clients.
+[ ] Feed cap/scroll behavior remains readable after long match.
+
+MATCH SUMMARY
+[ ] Correct winner/draw.
+[ ] Correct turn count.
+[ ] Duration looks plausible.
+[ ] Top damage player/value correct.
+[ ] Top kills player/value correct if inspected from state/devtools.
+[ ] Most-used weapon/type and count correct.
+[ ] Final scoreboard remains visible after match finishes.
+
+==================================================
+C. PHASE 7A.2 — REMATCH / MATCH LOOP MANUAL QA
+==================================================
+RANDOM TERRAIN IN LOBBY
+[ ] Host sees RANDOM MAP option.
+[ ] Selecting RANDOM resolves to a concrete map immediately.
+[ ] RANDOM does not leave terrainPreset='random'.
+[ ] READY states reset after RANDOM selection.
+[ ] Preview updates to the selected concrete map.
+[ ] Non-host cannot change terrain.
+
+REMATCH SAME MAP
+[ ] Only host sees/uses SAME MAP rematch button.
+[ ] Same room code remains.
+[ ] Same connected players remain.
+[ ] Same Team/Survival mode remains.
+[ ] Same teams remain.
+[ ] Same terrain remains.
+[ ] HP resets to 100.
+[ ] alive status resets.
+[ ] inventories reset empty.
+[ ] selected weapon returns Basic.
+[ ] Shields cleared.
+[ ] pickups/craters/arena reset.
+[ ] stats/event telemetry starts fresh.
+[ ] exactly one new countdown begins.
+[ ] no old result/overlay remains.
+
+REMATCH RANDOM MAP
+[ ] RANDOM MAP rematch keeps same room/players/mode/teams.
+[ ] New terrain differs from previous terrain.
+[ ] New concrete map renders correctly.
+[ ] all combat/stats reset same as SAME MAP.
+[ ] exactly one countdown starts.
+
+REMATCH ROBUSTNESS
+[ ] Non-host request rejected / no visible button.
+[ ] Rematch before finished is impossible/rejected.
+[ ] Two consecutive rematches work.
+[ ] Several consecutive rematches work without duplicate canvases/panels/listeners.
+[ ] Disconnect before/after match result does not produce broken rematch state.
+
+==================================================
+D. PHASE 6F — VISUAL & SPECTATOR POLISH
+==================================================
+DEPLOY / IDENTITY
+[ ] Live title/header show Phase 7A current development identity.
+[ ] Countdown still has coherent Phase 6F battle presentation with no stale duplicate phase text.
+[ ] Normal refresh loads current renderer6f + Phase 7A stats module.
+[ ] Hard refresh loads same current cache chain.
+[ ] No duplicate overlay canvases or stats panels.
+
+LIVE SPECTATOR FEED
+[ ] Non-active client gets LIVE SPECTATOR FEED.
+[ ] Correct active player name/weapon/angle/power/wind.
+[ ] Feed updates immediately on weapon/aim change.
+[ ] Feed disappears on own turn.
+[ ] Resolution ribbon replaces feed during shot.
+[ ] Readable at 1600x900 and reasonable browser resize.
+
+ACTIVE WEAPON BADGE
+[ ] Correct labels/colors.
+[ ] follows camera zoom/drag/turn transition.
+[ ] follows normal jump continuously.
+[ ] follows void jump/fall without snapping.
+[ ] follows knockback/fall where applicable.
+[ ] no severe name/HP/terrain overlap.
+
+RESOLUTION RIBBON / HUD
+[ ] Basic/Heavy/Triple/Cluster states correct.
+[ ] Air Strike warning/impacts state correct.
+[ ] Nuke designator/charging/firing/collapse states correct.
+[ ] two clients show matching resolution state.
+[ ] own turn / spectator HUD wording correct.
+[ ] WEAPON and AIM SYNC correct.
+[ ] no obvious 100 ms flicker between layered HUDs.
+[ ] FREE/FREE MAP fields correct.
+[ ] AFK display remains readable.
+
+==================================================
+E. PHASE 6E BALANCE BASELINE
+==================================================
+Heavy 25 / Triple 20 / Cluster 20 / Shield 12 / Heal 12 / Air Strike 8 / Nuke 3
+[ ] Record rough natural spawn counts across multiple matches.
+[ ] Heavy common but not overwhelming.
+[ ] Triple/Cluster useful core offensive specials.
+[ ] Shield/Heal useful but not constant.
+[ ] Air Strike clearly rarer.
+[ ] Nuke exceptional.
+[ ] 40 s good with free movement.
+[ ] pickup every 3 turns good.
+[ ] lifetime 4 good.
+[ ] max 2 pickups good.
+[ ] no special dominates every situation.
+[ ] no special feels pointless.
+
+==================================================
+F. LIVE AIM / FREE MOVEMENT
+==================================================
+[ ] second client sees live cannon angle/trajectory/power.
+[ ] no stale aim after turn switch.
+[ ] Basic/Heavy/Triple/Cluster previews correct.
+[ ] Air Strike seven-point preview correct.
+[ ] Nuke designator preview correct.
+[ ] no ±520 stop.
+[ ] >2 jumps in one turn.
+[ ] ~0.5 s jump cadence feels good.
+[ ] void jump keeps long natural fall.
+[ ] non-active movement rejected with no visible side effect.
+[ ] movement locked while attack resolves.
+
+==================================================
+G. NUKE LASER
+==================================================
+[ ] natural rare spawn.
+[ ] designator has no Basic damage/crater/explosion.
+[ ] target locks at actual designator impact.
+[ ] warning ~3 s; beam ~3 s.
+[ ] warning/beam/afterglow aligned under zoom/drag.
+[ ] terrain destruction follows visible corridor; no obvious outside deletion.
+[ ] direct damage 20; Shield 10 then consumed.
+[ ] self/friendly damage correct.
+[ ] no conventional knockback.
+[ ] terrain loss/falls/void resolve naturally.
+[ ] beam destroys pickups, does not collect them.
+[ ] exactly one turn advance.
+[ ] decide MORE / LESS / GOOD intensity and terrain destruction.
+
+==================================================
+H. AIR STRIKE
+==================================================
+[ ] warning visible/readable.
+[ ] exactly 7 shell visuals and smooth stagger/order.
+[ ] camera frames strike.
+[ ] impacts align damage/craters.
+[ ] self/friendly/Shield correct.
+[ ] pickup collection retains turn/time.
+[ ] no pickup advances exactly once.
+[ ] terrain falls smooth.
+[ ] two-client sync correct.
+
+==================================================
+I. EXISTING WEAPONS / PICKUPS REGRESSION
+==================================================
+[ ] Basic direct/terrain/miss/self/knockback.
+[ ] Heavy no double crater + Shield + pickup.
+[ ] Triple 3 shots, no Basic leakage, no OOB corruption.
+[ ] Cluster 5 subimpacts, no fake edge explosions.
+[ ] Shield instant/no turn/next damage half.
+[ ] Heal +30 cap100/full-HP rejection/no turn.
+[ ] pickup spawn every3 / lifetime4 / max2.
+[ ] touch pickup / explosion pickup retain turn/time / full inventory block.
+[ ] box does not visibly change type after appearing.
+
+==================================================
+J. TURN / AFK / MULTIPLAYER
+==================================================
+[ ] weighted starter remains intentional.
+[ ] randomized physical spawns.
+[ ] Team alternation visually/end-to-end.
+[ ] AFK opens at 20 s.
+[ ] F1 vote/unvote and Help suppression.
+[ ] majority math 2/3/4+ players.
+[ ] valid action clears votes; invalid does not.
+[ ] majority advances exactly once.
+[ ] disconnect recalculation.
+[ ] active action cancels pending skip.
+[ ] 2-player Survival full human-played match.
+[ ] 3-player disconnect flow.
+[ ] Team 2v2 full human-played match.
+[ ] larger 5–8 player match when practical.
+
+==================================================
+K. CAMERA / MAPS / BROWSER
+==================================================
+[ ] countdown overview / opening dive / turn transition.
+[ ] projectile/designator follow.
+[ ] manual drag / wheel zoom / double-click reset.
+[ ] fall/void camera / result timing.
+[ ] 6F overlays and 7A stats remain composed through camera changes.
+[ ] all seven maps: Rolling, Terraces, Twin Peaks, Basin, Broken Ridge, Islands, Canyon.
+[ ] Chrome/Chromium.
+[ ] Firefox when convenient.
+[ ] two tabs sync.
+[ ] two desktop browsers sync.
+[ ] canvas/overlays sharp at normal DPR.
+[ ] music/audio no duplicate behavior.
+[ ] Cloud Run wakes on CREATE/JOIN only in normal client flow.
+[ ] deployed /health source/runtime parity checked separately before release.
+
+==================================================
+L. NON-BLOCKING TECH DEBT
+==================================================
+[ ] centralize duplicated terrain formulas.
+[ ] centralize item/weapon constants after manual validation.
+[ ] consider collapsing server wrappers rooms->6A->6C->6D->6E->7A.1 after stability.
+[ ] consider folding free movement deeper into core.
+[ ] consider consolidating renderer6d/renderer6f.
+[ ] expose shared visual-player-position API instead of mirrored interpolation.
+[ ] remove historical phase fallback strings after stability.
+[ ] clean obsolete movement_limit/no_jumps_remaining humanError wording.
+[ ] consider whether disconnected players should remain as historical scoreboard rows.
+[ ] consolidate telemetry hooks after validation if appropriate.
+[ ] convert every reproduced important issue into regression coverage where practical.
+
+==================================================
+M. PHASE GATES
+==================================================
+Phase 7A automated contracts: PASS.
+Phase 7A.1 Stats/Event Tracking implementation: DONE IN CODE.
+Phase 7A.2 Rematch/Match Loop implementation: DONE IN CODE.
+Post-feature Coby Debug V13: PASS after 2 fixes.
+Phase 7A manual full multiplayer/browser gate: PENDING.
+Core v1 planned mechanic scope: effectively feature-complete in code, NOT manually validated.
+Next after manual findings: Phase 7B Bugfix & Regression Hardening.
+Then later presentation/map/vehicle polish and Phase 8 Release Candidate.
+
+VERSIONING
+Do not overwrite V12.
+Next TODO snapshot: ORBITAL_ARTILLERY_TODOLIST_V13.txt
+
+END TODO V12
