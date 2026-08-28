@@ -197,6 +197,19 @@ export function createRenderer(canvas, config) {
     else drawAfterglow(a,b,center,q,now);
   }
 
+  function drawPhase6eCountdown(activeRoom){
+    if(activeRoom?.status!=='countdown'||activeRoom?.phase!=='6E')return;
+    const x=overlayCanvas.width/2,y=overlayCanvas.height/2+82;
+    ctx.save();
+    ctx.fillStyle='rgba(2,4,10,.94)';
+    ctx.fillRect(x-410,y-18,820,28);
+    ctx.textAlign='center';
+    ctx.fillStyle='#8995b8';
+    ctx.font='12px ui-monospace,monospace';
+    ctx.fillText('PHASE 6E // 100-POINT BALANCED PICKUP POOL // FULL ARSENAL',x,y+2);
+    ctx.restore();
+  }
+
   function overlayLoop() {
     ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
     if (room?.arena && ['lobby','countdown','started','finished'].includes(room.status)) {
@@ -204,6 +217,7 @@ export function createRenderer(canvas, config) {
       drawNukePickupOverlay(room,view);
       drawSelectedNuke(room,view);
       drawNukeBeam(room,view,Date.now());
+      drawPhase6eCountdown(room);
     }
     frameId=requestAnimationFrame(overlayLoop);
   }
