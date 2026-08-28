@@ -1,0 +1,215 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 7
+Date: 2026-08-28
+Purpose: broad code gate after cinematic Nuke, free movement and live spectator aim.
+
+==================================================
+0. RECOVERY PRIORITY
+==================================================
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+Current canonical snapshots after this audit:
+- ORBITAL_ARTILLERY_PROGRESS_V7.txt
+- ORBITAL_ARTILLERY_TODOLIST_V7.txt
+- COBY_DEBUG_V7.txt
+
+==================================================
+1. AUDIT SCOPE
+==================================================
+Reviewed broadly:
+- recent commits in frontend + backend
+- V6 Progress / TODO / Coby Debug
+- backend Phase 6D wrapper and inherited Phase 6C/6A/core movement behavior
+- Nuke targeting, timing, damage, Shield, terrain destruction, pickup handling and turn resolution
+- free movement / jump validation and shared state behavior
+- server event wiring / AFK activity path
+- public spectator aim state
+- frontend base renderer, Phase 6D overlay renderer, HUD wrapper, client input path and index cache mapping
+- latest Server CI, Frontend CI and Pages deployment
+
+Classification rule retained:
+A. confirmed source bug/inconsistency
+B. manual visual/gameplay check
+C. intentional design
+D. non-blocking tech debt
+
+==================================================
+2. CONFIRMED FINDINGS FIXED
+==================================================
+A1 — INVALID SPECTATOR TRAVERSAL MUTATED SHARED STATE
+Root cause:
+- Phase 6D compatibility wrapper expanded movementRadius/jumpsRemaining before inherited validation.
+- rejected non-active movement/jump could leave traversal bookkeeping changed.
+Fix:
+- snapshot/restore traversal state on failed actions.
+- expose free traversal only after successful action.
+- public state hides obsolete Phase 4 radius/quota bookkeeping.
+Regression:
+- non-active move/jump rejects with not_your_turn and leaves shared state/player position unchanged.
+
+A2 — NUKE OVERLAY CAMERA COULD DIVERGE FROM BASE WORLD
+Root cause:
+- renderer6d used an independently approximated fixed 1000x1000 camera view.
+- renderer.js owns actual zoom, drag, transitions and projectile follow.
+Fix:
+- renderer.js exposes getViewSnapshot().
+- renderer6d uses the exact base current view for every Nuke world-to-screen transform.
+Result:
+- source-level camera transform divergence removed.
+- visual quality/alignment still requires manual browser observation.
+
+A3 — NUKE BEAM GEOMETRY DID NOT MATCH TERRAIN-CUT CONCEPT
+Root cause:
+- beam used about 2100 vertical units over 1800 horizontal units, reading near-vertical while the gameplay effect removed a broad terrain support band.
+Fix:
+- vertical half-span reduced to 320.
+- horizontal half-length remains 900.
+- diagonal beam now crosses the broad destruction band coherently.
+Regression checks major horizontal coverage and bounded vertical spread.
+
+A4 — FREE NORMAL-JUMP SHORTENING ALSO SHORTENED VOID JUMPS
+Root cause:
+- inherited void death jump uses motion.type='jump'.
+- Phase 6D shortened all jump motions to 500 ms.
+Fix:
+- shorten only jumps whose toY remains inside WORLD_HEIGHT.
+- jump into void retains long core fall/death timing.
+Regression added using Terraces central gap.
+
+A5 — PHASE 6D FRONTEND IDENTITY INCONSISTENCIES
+Fixed:
+- Nuke now has native base-renderer item style instead of Heavy fallback.
+- Nuke designator preview uses Nuke color.
+- Nuke designator impact no longer renders fake Basic explosion.
+- countdown stale PHASE 6C.2 text changed to PHASE 6D + Nuke Laser.
+- frontend renderer chain cache-busted to worldender-3.
+
+==================================================
+3. FINAL CODE-GATE STATUS
+==================================================
+After fixes and regressions:
+- no remaining confirmed P0/P1/P2 mechanical/code blocker was identified in this broad static/CI pass.
+- Server CI latest reviewed gameplay/test commit: SUCCESS.
+- Frontend CI latest reviewed gameplay/cache commit: SUCCESS.
+- GitHub Pages latest reviewed gameplay/cache deployment: SUCCESS.
+
+CODE-ONLY GATE: PASS.
+MANUAL QA GATE: PENDING.
+
+Do NOT describe Phase 6D as visually/gameplay validated yet.
+
+==================================================
+4. CURRENT NUKE RULES
+==================================================
+- pickup weight 3, current total pool 126.
+- authoritative artillery designator.
+- warning 3000 ms after lock.
+- sustained beam 3000 ms.
+- afterglow/resolution ~1500 ms.
+- horizontal half-length 900.
+- vertical half-span 320.
+- direct beam half-width 115.
+- terrain cut radius 145 / depth 4200 / step 105.
+- direct damage 20.
+- self/friendly fire yes.
+- Shield halves applicable direct hit and is consumed.
+- conventional knockback no.
+- terrain falls intentional.
+- intersected pickups destroyed, not collected.
+- Nuke always ends offensive turn if match continues.
+
+==================================================
+5. CURRENT FREE MOVEMENT RULES
+==================================================
+- no active-turn movement radius gameplay limit.
+- no per-turn jump quota.
+- 40 s clock is movement economy.
+- move step 15.
+- terrain steepness/collision/void rules inherited.
+- jump distance 180.
+- normal jump visual 500 ms.
+- jump cooldown 450 ms.
+- jump into void retains long fall/death motion.
+- shot/special resolution locks movement.
+- invalid non-active actions must not mutate shared traversal state.
+
+==================================================
+6. SPECTATOR AIM SOURCE STATUS
+==================================================
+Verified from source:
+- aimAngle/aimPower are authoritative match state.
+- server emits room state after valid setAim.
+- base renderer draws aim preview for active player independently of local-player identity.
+- Phase 6D public state exposes spectatorAim.
+- Triple/Air Strike/Nuke have specific preview presentation.
+- HUD explicitly labels live spectator aim.
+
+Still manual:
+- actual second-client latency/smoothness.
+- visual clarity under network delay/turn transitions.
+
+==================================================
+7. MANUAL QA — DO NOT PROMOTE TO BUG WITHOUT EVIDENCE
+==================================================
+Use ORBITAL_ARTILLERY_TODOLIST_V7.txt.
+Highest priority:
+- Nuke visual intensity/duration feel.
+- exact Nuke overlay alignment through camera zoom/transitions.
+- Nuke terrain destruction correspondence/feel.
+- jump into void natural long fall presentation.
+- free-movement feel and 40 s turn duration.
+- two-client spectator aim sync.
+- Air Strike multi-shell falling-player edge case.
+- general multiplayer/AFK/disconnect regressions.
+
+==================================================
+8. NON-BLOCKING TECH DEBT
+==================================================
+D1. duplicated terrain formulas across core/special/frontend modules.
+D2. free movement remains a Phase 6D compatibility wrapper over historical Phase 4 core constants.
+D3. Phase 6D HUD remains a patch wrapper over base combat-controls.
+D4. client.js still contains obsolete user-facing error strings for old movement radius / no-jumps quota. This is wording debt, not current gameplay authority.
+D5. possible 100 ms base-HUD/Phase6D-HUD patch flicker is only a manual suspicion; do not call bug unless reproduced.
+
+Avoid broad refactor solely for cleanliness before manual play unless a confirmed bug requires it.
+
+==================================================
+9. DESIGN DECISIONS — DO NOT 'FIX'
+==================================================
+- host starter disadvantage weighting is intentional.
+- desktop/web only; mobile/touch is out of scope.
+- free active-turn movement is intentional.
+- no per-turn jump quota is intentional.
+- Nuke 3 s warning + 3 s beam is intentional pending manual tuning.
+- Nuke direct damage remains 20; terrain destruction is primary threat.
+- no conventional Nuke knockback; terrain falls intended.
+- Nuke destroys pickups rather than collecting them.
+- Nuke always ends offensive turn.
+
+==================================================
+10. NEXT RESUME POINT
+==================================================
+Code-only gate is currently clear enough to continue development.
+Manual QA remains accumulated and must be performed when Walter reaches PC.
+
+Before final balance/release claims:
+1. run TODO V7 manually.
+2. report/reproduce failures.
+3. fix confirmed failures and add regressions where practical.
+4. tune Nuke/movement only from actual gameplay observations.
+5. then final weapon/pickup balance and broad polish.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V7.
+Next Coby Debug: COBY_DEBUG_V8.txt
+Next TODO: ORBITAL_ARTILLERY_TODOLIST_V8.txt
+Next Progress: ORBITAL_ARTILLERY_PROGRESS_V8.txt
+
+END COBY DEBUG V7
