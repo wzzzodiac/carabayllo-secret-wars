@@ -1,0 +1,159 @@
+ORBITAL ARTILLERY — PERSISTENT DEVELOPMENT PROGRESS — VERSION 2
+Created: 2026-08-28
+Previous snapshot preserved: ORBITAL_ARTILLERY_PROGRESS.txt
+Canonical gameplay resume point: Phase 6C.2 complete; Phase 6D — Nuke Laser next.
+Canonical QA state: Coby Debug V2 completed; TODO List V1 created.
+
+==================================================
+PROJECT STATE
+==================================================
+Frontend:
+wzzzodiac/orbital-artillery
+
+Backend:
+wzzzodiac/orbital-artillery-server
+
+Architecture remains:
+- browser frontend
+- Canvas 2D
+- Node.js + Socket.IO authoritative backend
+- private rooms
+- 2–8 players
+- no accounts/database for MVP
+
+==================================================
+PHASE STATUS
+==================================================
+Phase 0 — Scaffold / architecture — COMPLETE
+Phase 1 — Private room multiplayer — COMPLETE
+Phase 2 — Synchronized arena foundation — COMPLETE
+Phase 3 — Authoritative turn system — COMPLETE
+Phase 4 — Movement / aiming / projectile physics — COMPLETE
+Phase 5A — Terrain / destructible ground — COMPLETE
+Phase 5B — HP / damage / death / victory — COMPLETE
+Phase 6A — Pickups / inventory / Heavy Bomb — COMPLETE
+Phase 6B — Triple Shot / Cluster Bomb / Shield — COMPLETE
+Phase 6C.1 — Heal — COMPLETE
+Phase 6C.2 — Air Strike — COMPLETE
+Phase 6D — Nuke Laser — NEXT
+
+==================================================
+CURRENT IMPLEMENTED SPECIAL ITEMS
+==================================================
+- Basic weapon: permanent slot 1
+- Heavy Bomb
+- Triple Shot
+- Cluster Bomb
+- Shield
+- Heal +30
+- Air Strike
+
+Inventory:
+- slots 2 and 3 for special pickups
+
+==================================================
+CURRENT QA / DEBUG SNAPSHOT
+==================================================
+Automated status observed:
+- Latest reviewed Backend Server CI: SUCCESS
+- Frontend CI: SUCCESS
+- GitHub Pages deployment: SUCCESS
+
+Regression tests present for:
+- core turn/weapon/AFK behavior
+- Heal
+- Air Strike
+
+==================================================
+NEW FINDINGS FROM COBY DEBUG V2
+==================================================
+CONFIRMED ISSUE A — Air Strike void death presentation
+- Air Strike terrain deformation can cause immediate death with motion=null.
+- This can skip the normal falling animation used by base projectile void deaths.
+- Priority: fix before or at start of Phase 6D.
+
+CONFIRMED ISSUE B — Initial player randomization is weighted
+- chooseInitialPlayerId() does not give all players equal starting probability.
+- Unless deliberate, this is a fairness bug/undesired rule.
+- Decision recommended: make starter selection uniform.
+
+POTENTIAL VISUAL RISK
+- settleAfterAirStrike() can run after each shell.
+- Multiple shells may overwrite/restart a player's fall motion.
+- Must be manually tested and then fixed if visible.
+
+TECHNICAL DEBT
+- terrain/base surface formulas exist in multiple server/client files.
+- Current values appear aligned but future drift risk is high.
+
+MOBILE STATUS
+- layout is responsive.
+- full combat controls are still keyboard-oriented.
+- touch-native gameplay remains future work.
+
+==================================================
+MANUAL QA SOURCE
+==================================================
+Use:
+ORBITAL_ARTILLERY_TODOLIST_V1.txt
+
+It contains manual checks for:
+- Air Strike visuals/camera
+- all existing weapons
+- AFK behavior
+- multiplayer/disconnects
+- all seven terrains
+- cache/browser behavior
+- narrow-screen/mobile sanity
+
+==================================================
+CURRENT CRITICAL ORDER OF WORK
+==================================================
+1. Manually verify the critical Air Strike visual path on at least two clients.
+2. Fix Air Strike terrain-caused void death animation.
+3. Decide/fix initial starter fairness.
+4. Re-run backend tests/CI.
+5. Update QA snapshots as new versioned files.
+6. Begin Phase 6D — Nuke Laser.
+
+==================================================
+VERSIONED DOCUMENT RULE
+==================================================
+For audit/progress/TODO snapshots, do not destroy historical versions.
+
+Current documents:
+- README.md — general public/current overview
+- ORBITAL_ARTILLERY_PROGRESS.txt — original persistent progress snapshot
+- ORBITAL_ARTILLERY_PROGRESS_V2.txt — this post-audit snapshot
+- COBY_DEBUG.txt — original recovery/debug guide
+- COBY_DEBUG_V2.txt — current code/mechanics/visual audit
+- ORBITAL_ARTILLERY_TODOLIST_V1.txt — current manual/fix checklist
+
+Future audit sequence:
+- COBY_DEBUG_V3.txt
+- ORBITAL_ARTILLERY_TODOLIST_V2.txt
+- ORBITAL_ARTILLERY_PROGRESS_V3.txt
+
+Do not overwrite previous versioned snapshots.
+
+==================================================
+NEW CHAT RESUME PROCEDURE
+==================================================
+1. Use @GitHub.
+2. Read latest commits from both repositories.
+3. Read the highest-numbered:
+   - ORBITAL_ARTILLERY_PROGRESS_V*.txt
+   - COBY_DEBUG_V*.txt
+   - ORBITAL_ARTILLERY_TODOLIST_V*.txt
+4. Compare those snapshots with newer commits.
+5. If newer gameplay work exists, code/commits win.
+6. Continue from the latest verified state.
+
+CURRENT EXACT RESUME POINT:
+Phase 6C.2 code complete.
+QA audit complete.
+Two code issues identified.
+Manual QA list created.
+Next feature after fixes/critical checks: Phase 6D — Nuke Laser.
+
+END PROGRESS V2
