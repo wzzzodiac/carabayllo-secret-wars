@@ -2,13 +2,26 @@ import { createRenderer as createBaseRenderer } from './renderer.js?v=phase6c-ai
 
 export function createRenderer(canvas, config) {
   const base = createBaseRenderer(canvas, config);
-  const ctx = canvas.getContext('2d');
+  const overlayCanvas = document.createElement('canvas');
+  overlayCanvas.width = canvas.width;
+  overlayCanvas.height = canvas.height;
+  overlayCanvas.setAttribute('aria-hidden', 'true');
+  Object.assign(overlayCanvas.style, {
+    position: 'absolute',
+    inset: '0',
+    width: '100%',
+    height: '100%',
+    pointerEvents: 'none',
+    zIndex: '2'
+  });
+  canvas.parentElement?.appendChild(overlayCanvas);
+  const ctx = overlayCanvas.getContext('2d');
   let room = null;
   let localPlayerId = null;
   let frameId = null;
 
   const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
-  function worldToScreen(x,y,view){return{x:(x-view.x)/view.width*canvas.width,y:(y-view.y)/view.height*canvas.height};}
+  function worldToScreen(x,y,view){return{x:(x-view.x)/view.width*overlayCanvas.width,y:(y-view.y)/view.height*overlayCanvas.height};}
 
   function approximateView(activeRoom) {
     const q = activeRoom?.match?.projectile;
@@ -27,6 +40,7 @@ export function createRenderer(canvas, config) {
   }
 
   function drawNukePickupOverlay(activeRoom, view) {
+    if (activeRoom?.match?.projectile?.weaponType === 'nuke') return;
     for (const box of activeRoom?.pickups ?? []) {
       if (box.type !== 'nuke') continue;
       const p = worldToScreen(box.x, box.y-8, view);
@@ -96,12 +110,13 @@ export function createRenderer(canvas, config) {
       ctx.lineWidth=8;
       ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
       ctx.fillStyle=`rgba(235,125,255,${.08+.18*fade})`;
-      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillRect(0,0,overlayCanvas.width,overlayCanvas.height);
     }
     ctx.restore();
   }
 
   function overlayLoop() {
+    ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
     if (room?.arena && ['lobby','countdown','started','finished'].includes(room.status)) {
       const view=approximateView(room);
       drawNukePickupOverlay(room,view);
@@ -113,8 +128,8 @@ export function createRenderer(canvas, config) {
   frameId=requestAnimationFrame(overlayLoop);
 
   return Object.freeze({
-    drawScaffold(){room=null;base.drawScaffold();},
+    drawScaffold(){room=null;ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);base.drawScaffold();},
     drawArena(nextRoom,nextLocalPlayerId=null){room=nextRoom;localPlayerId=nextLocalPlayerId;base.drawArena(nextRoom,nextLocalPlayerId);},
-    destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;}
+    destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlayCanvas.remove();}
   });
 }
