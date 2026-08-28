@@ -1,0 +1,135 @@
+ORBITAL ARTILLERY — DEVELOPMENT PROGRESS — VERSION 6
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V5.txt
+
+SOURCE-OF-TRUTH RULE
+1. Current executable source/commits
+2. Current CI/tests
+3. Highest-numbered Progress/TODO/Coby Debug snapshots
+4. Older summaries/chats
+Manual visual/gameplay checks remain pending until tested in a real desktop browser.
+
+CURRENT STATE
+- Phase 6D Nuke Laser: IMPLEMENTED IN CODE; MANUAL QA PENDING.
+- Air Strike: IMPLEMENTED IN CODE; MANUAL QA PENDING.
+- Free active-turn movement: IMPLEMENTED IN CODE; MANUAL GAME-FEEL QA PENDING.
+- Live spectator aim: already supported by authoritative aim state/base renderer and explicitly exposed/labelled in Phase 6D; MANUAL TWO-CLIENT QA PENDING.
+- Final pickup/weapon rebalance: PENDING until manual play.
+- Broad release QA/polish: PENDING.
+
+PHASE STATUS
+0 scaffold COMPLETE
+1 private rooms COMPLETE
+2 synchronized arena COMPLETE
+2.5 world/camera COMPLETE
+3 turns/wind COMPLETE
+4 movement/aim/fire COMPLETE; traversal rules expanded in Phase 6D
+5A destructible terrain COMPLETE
+5B HP/damage/death/victory COMPLETE
+6A pickups/inventory/Heavy COMPLETE
+6B Triple/Cluster/Shield COMPLETE
+6B.1 AFK vote COMPLETE
+6C.1 Heal COMPLETE
+6C.2 Air Strike IMPLEMENTED; MANUAL QA PENDING
+6D Nuke Laser + free movement + live spectator aim IMPLEMENTED; MANUAL QA PENDING
+
+PHASE 6D — CURRENT NUKE DESIGN
+Rarity:
+- weight 3 in current pre-final pool total 126.
+
+Targeting:
+- normal authoritative artillery projectile acts as designator.
+- angle/power/wind affect designator normally.
+- designator impact locks Nuke target.
+- all clients receive active aim state; spectators see the same live aim/trajectory produced by the active player.
+
+Cinematic timing:
+- warning after target lock: 3000 ms.
+- sustained laser: 3000 ms.
+- resolution/afterglow buffer: approximately 1500 ms after beam.
+
+Visual presentation code:
+- darkening warning phase.
+- animated dashed lock/cut line.
+- growing concentric target rings/countdown.
+- multi-layer magenta/white beam with large glow.
+- sustained particles/pulses/jitter during beam.
+- full-screen energy tint.
+- terrain-collapse afterglow before turn resolution.
+- separate transparent overlay canvas remains used to avoid base-renderer erase races.
+
+Terrain destruction:
+- horizontal half-length 900 world units before edge clamping (~1800 total width).
+- direct beam half-width 115.
+- cut radius 145.
+- cut depth 4200.
+- cut step 105.
+- purpose is to remove a major terrain section and make falls the primary strategic threat.
+
+Damage/rules:
+- 20 direct HP.
+- full self/friendly damage.
+- Shield halves direct hit and is consumed.
+- no conventional knockback.
+- terrain-caused falling is intentional.
+- intersected pickups are destroyed, not collected.
+- Nuke always ends offensive turn after resolution if match continues.
+
+FREE MOVEMENT — NEW CURRENT RULE
+Old Phase 4 gameplay limits are no longer active limits in Phase 6D:
+- old movement radius ±520: removed as gameplay limit.
+- old two-jumps-per-turn quota: removed as gameplay limit.
+
+Current behavior:
+- active player may walk across any normally reachable terrain during the 40 s turn.
+- existing terrain steepness/collision/void rules remain.
+- move step remains 15.
+- jump distance remains 180.
+- jump visual/cooldown approximately 0.5 s (450 ms cooldown, 500 ms visual motion).
+- projectile/special in flight still locks movement.
+- 40 s turn clock is the intended movement economy.
+- pickup contact collection remains inherited from existing movement wrappers.
+
+SPECTATOR AIM
+- match aimAngle/aimPower remain server authoritative and broadcast in room_state.
+- base renderer already draws active-player trajectory regardless of local player identity.
+- Phase 6D public state additionally exposes spectatorAim with active player, angle, power and selected item type.
+- Phase 6D HUD explicitly labels non-active clients as SPECTATING // LIVE AIM VISIBLE.
+- Nuke selection tells spectators NUKE DESIGNATOR // SPECTATING AIM.
+
+AUTOMATED CHECKPOINT
+Backend commit e2b34d4f872293124df84badf9d7cf9ff12ca113:
+- Server CI SUCCESS.
+- tests include:
+  * 3 s Nuke warning
+  * 3 s Nuke beam
+  * major beam width
+  * 20 damage / Shield / no knockback
+  * pickup destruction
+  * correct turn ending
+  * movement beyond old 520 radius
+  * jump works despite old quota
+  * free movement public rules
+  * spectator aim public state
+
+Frontend:
+- renderer6d.js updated for sustained catastrophic sequence.
+- combat-controls6d.js updated for free movement/live spectator aim HUD.
+- index cache-busting updated to phase6d-worldender-2.
+- Frontend CI/Pages must be checked at the latest commit before claiming deployment validated; manual visuals still pending regardless.
+
+CURRENT MANUAL QA SOURCE
+ORBITAL_ARTILLERY_TODOLIST_V6.txt
+
+NEXT WORK
+1. Continue code-only work only where it does not require game feel judgment.
+2. When Walter reaches PC, run TODO V6 point-by-point.
+3. Fix reproduced issues and perform Coby Debug.
+4. Only after gameplay observations, do final pickup/weapon balancing.
+5. Broad desktop QA/polish.
+
+VERSIONING
+Do not overwrite V6.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V7.txt
+
+END PROGRESS V6
