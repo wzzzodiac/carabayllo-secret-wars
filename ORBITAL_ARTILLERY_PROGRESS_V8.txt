@@ -1,0 +1,174 @@
+ORBITAL ARTILLERY — DEVELOPMENT PROGRESS — VERSION 8
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V7.txt
+
+SOURCE-OF-TRUTH RULE
+1. Current executable source/commits
+2. Current CI/tests
+3. Highest-numbered Progress/TODO/Coby Debug snapshots
+4. Older summaries/chats
+Manual browser/gameplay checks remain pending until tested on a real desktop PC.
+
+==================================================
+CURRENT STATE
+==================================================
+- Phase 6E — Balance & Gameplay Tuning baseline: IMPLEMENTED IN CODE.
+- Post-6E Coby Debug: CODE GATE PASS.
+- Phase 6D Nuke Laser/free movement/live spectator aim remains implemented underneath 6E.
+- Air Strike remains implemented; manual QA pending.
+- Manual deployed-browser QA remains accumulated and pending.
+- Next planned phase after manual/balance validation: Phase 6F — Visual & Spectator Polish.
+
+CODE-ONLY GATE RESULT:
+PASS — no confirmed mechanical/code blocker remains from the Phase 6E implementation after the post-6E audit and CI review.
+This is NOT a manual gameplay/visual pass.
+
+==================================================
+PHASE STATUS
+==================================================
+0 scaffold COMPLETE
+1 private rooms COMPLETE
+2 synchronized arena COMPLETE
+2.5 world/camera COMPLETE
+3 turns/wind COMPLETE
+4 movement/aim/fire COMPLETE; traversal expanded in 6D
+5A destructible terrain COMPLETE
+5B HP/damage/death/victory COMPLETE
+6A pickups/inventory/Heavy COMPLETE
+6B Triple/Cluster/Shield COMPLETE
+6B.1 AFK vote COMPLETE
+6C.1 Heal COMPLETE
+6C.2 Air Strike IMPLEMENTED; MANUAL QA PENDING
+6D Nuke Laser + free movement + live spectator aim IMPLEMENTED; CODE DEBUG PASS; MANUAL QA PENDING
+6E Balance & Gameplay Tuning baseline IMPLEMENTED; POST-6E CODE DEBUG PASS; MANUAL BALANCE/FEEL QA PENDING
+6F Visual & Spectator Polish NEXT AFTER MANUAL/BALANCE VALIDATION
+7A Full Multiplayer QA PLANNED
+7B Bugfix & Regression Hardening PLANNED
+8 Release Candidate / Final Polish PLANNED
+9 v1.0 Release PLANNED
+
+==================================================
+PHASE 6E — BALANCE BASELINE
+==================================================
+Final baseline pickup pool is now an exact 100-point distribution:
+- Heavy Bomb: 25
+- Triple Shot: 20
+- Cluster Bomb: 20
+- Shield: 12
+- Heal +30: 12
+- Air Strike: 8
+- Nuke Laser: 3
+TOTAL: 100
+
+This means the weights are directly readable as baseline percentages per newly spawned pickup before gameplay-driven future tuning.
+
+Implementation:
+- new server wrapper: phase6e.js
+- Phase 6E delegates all combat/traversal/turn logic to Phase 6D
+- only newly spawned pickups are normalized once through the Phase 6E 100-point pool
+- deterministic roll-boundary helper + regression tests added
+- public state reports phase=6E and exposes balanceRules
+- server /health source reports phase 6E
+
+==================================================
+GAMEPLAY VALUES PRESERVED IN 6E
+==================================================
+Phase 6E intentionally does NOT change weapon damage/radii from the current implemented baseline.
+It also preserves current pacing until manual play gives evidence to change it.
+
+Pacing baseline:
+- turn: 40 s
+- pickup spawn cadence: every 3 turns
+- pickup lifetime: 4 real turns
+- max pickups on map: 2
+- inventory: 2 special slots + permanent Basic
+- free active-turn movement: yes
+- per-turn jump quota: none
+- normal jump cooldown: 450 ms
+- normal jump visual: ~500 ms
+- jump distance: 180
+- move step: 15
+
+Weapon baseline retained:
+- Basic: 45 max damage, radius 260, crater 135/165
+- Heavy: 60 max damage, radius 320, crater 190/90
+- Triple: 3 shots ±6°, 20 each, radius 175, crater 78/78
+- Cluster: 5 subimpacts, 14 each, radius 150, crater 70/70
+- Shield: next applicable damage ×0.5
+- Heal: +30, max HP 100
+- Air Strike: 7 shells, 16 max damage/shell, radius 165, crater 72/62
+- Nuke: 20 direct HP, no conventional knockback, catastrophic terrain removal
+
+Manual gameplay may justify future tuning; do not silently change these values without recording the change.
+
+==================================================
+PHASE 6E FRONTEND IDENTITY
+==================================================
+- index.html now presents Phase 6E.
+- frontend footer exposes the 25/20/20/12/12/8/3 pool.
+- HUD explanatory text describes current free movement and Phase 6E pool.
+- current cache key: phase6e-balance-1.
+- renderer6d overlay replaces the historical base countdown line with a Phase 6E countdown identity when room.phase === '6E'.
+- underlying renderer.js retains its Phase 6D fallback text as compatibility/debt; current Phase 6E public state covers it during normal 6E countdown.
+
+==================================================
+POST-6E COBY DEBUG SUMMARY
+==================================================
+Reviewed:
+- phase6e.js pool selection and one-time pickup normalization
+- deterministic 0..99 roll boundaries
+- public pool metadata / balanceRules
+- server Phase 6E wiring
+- AFK activity path through inherited actions
+- free movement/jump delegation
+- special weapon delegation
+- frontend Phase 6E identity
+- import-map/cache chain
+- frontend CI coverage
+- backend CI coverage
+- Pages build/deployment for the Phase 6E frontend commit
+
+Result:
+- no new confirmed gameplay/turn/combat regression identified.
+- Server CI: SUCCESS on Phase 6E balance regression commit.
+- Frontend CI: SUCCESS on Phase 6E cache/identity commit.
+- GitHub Pages deployment: SUCCESS on Phase 6E frontend commit.
+- live Cloud Run Phase 6E health still belongs to deployment/runtime verification and should not be assumed solely from source.
+
+==================================================
+CURRENT MANUAL QA SOURCE
+==================================================
+ORBITAL_ARTILLERY_TODOLIST_V8.txt
+
+Highest new 6E checks:
+- verify Phase 6E identity live
+- verify effective new pickup variety over multiple spawns
+- evaluate whether Heavy/Triple/Cluster appear too frequently or correctly
+- evaluate Shield/Heal utility frequency
+- evaluate Air Strike rarity
+- evaluate Nuke rarity
+- decide whether 40 s still fits free movement
+- decide whether pickup every 3 turns remains right
+- decide whether max 2 pickups/lifetime 4 turns remains right
+- only then tune numbers if needed
+
+==================================================
+NEXT WORK
+==================================================
+1. Manual PC QA from TODO V8 when available.
+2. Record reproduced bugs/feel issues separately.
+3. Fix real bugs and add regressions.
+4. Adjust 6E balance only from actual play observations.
+5. Phase 6F — Visual & Spectator Polish.
+6. Phase 7A — Full Multiplayer QA.
+7. Phase 7B — Bugfix & Regression Hardening.
+8. Phase 8 — Release Candidate / Final Polish.
+9. Phase 9 — v1.0.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V8.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V9.txt
+
+END PROGRESS V8
