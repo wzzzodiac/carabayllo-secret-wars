@@ -1,0 +1,201 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 5
+Date: 2026-08-28
+Purpose: canonical recovery/debug protocol after Phase 6D Nuke Laser implementation.
+
+==================================================
+0. CURRENT RECOVERY PRIORITY
+==================================================
+Resolve conflicts in this order:
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+Current expected canonical snapshots after this development pass:
+- ORBITAL_ARTILLERY_PROGRESS_V5.txt
+- ORBITAL_ARTILLERY_TODOLIST_V5.txt
+- COBY_DEBUG_V5.txt
+
+==================================================
+1. CURRENT CODE PHASE
+==================================================
+Phase 6D — Nuke Laser implemented in source.
+Manual PC QA is NOT complete.
+Do not describe Phase 6D as visually/gameplay-validated until Walter tests it.
+
+==================================================
+2. PHASE 6D FILE MAP
+==================================================
+Backend:
+- phase6d.js — Phase 6D wrapper around Phase 6C; Nuke pickup extension, targeting, beam, terrain destruction, direct damage, falls, pickup destruction, turn resolution, public state.
+- server.js — wired to Phase 6D wrappers and Phase 6D /health label.
+- test/nuke.test.js — Nuke regression tests.
+- package.json — syntax-checks phase6d.js and runs all test/*.test.js.
+
+Frontend:
+- renderer6d.js — wrapper around existing Phase 6C renderer; separate transparent overlay canvas for Nuke-specific pickup/selection/warning/beam presentation.
+- combat-controls6d.js — wrapper around existing battle HUD; adds Nuke states/rules.
+- index.html — Phase 6D labels/import-map/cache-busting.
+- .github/workflows/ci.yml — checks renderer6d.js and combat-controls6d.js.
+
+==================================================
+3. NUKE RULES — CURRENT SOURCE DESIGN
+==================================================
+Rarity:
+- weight 3.
+- actual pickup reroll extends Phase 6C pool.
+- pre-final total pool weight 126.
+
+Targeting:
+- normal artillery projectile is a designator.
+- its authoritative impact locks target.
+- 850 ms warning follows target lock.
+- beam visible approx 420 ms.
+
+Beam:
+- diagonal.
+- half-length 520 world units.
+- direct hit half-width 88.
+- terrain strip approximated with overlapping deep cuts:
+  radius 92, depth 2450, step 115.
+
+Damage:
+- 20 direct HP.
+- self damage YES.
+- friendly fire YES.
+- Shield halves applicable hit and is consumed.
+- conventional knockback NO.
+- terrain-caused falling YES and intentional.
+
+Pickups:
+- beam destroys intersected pickups.
+- destroyed pickups are not collected.
+- Nuke does not trigger pickup-retains-turn.
+
+Turn:
+- Nuke always ends the turn after resolution if match continues.
+
+==================================================
+4. IMPORTANT IMPLEMENTATION DECISIONS
+==================================================
+Why phase6d.js wrapper:
+- preserve closed Phase 6C logic.
+- minimize regression surface.
+- isolate Nuke mechanics/tests.
+
+Why designator projectile:
+- reuse existing aim/power/wind/camera/projectile authority.
+- no client-selected arbitrary target coordinate.
+- no new targeting input protocol required.
+
+Why separate frontend overlay canvas:
+- an initial same-canvas wrapper approach could be erased by the base renderer's requestAnimationFrame/clear cycle.
+- Phase 6D now draws Nuke-specific visuals on a transparent canvas layered above the main canvas.
+- this architecture must be manually checked for camera alignment.
+
+Why pickups are destroyed:
+- Nuke is a disintegration weapon, not an explosion pickup collector.
+- avoids inheriting the normal explosion pickup-retains-turn exception.
+
+==================================================
+5. DEVELOPMENT REGRESSION FOUND DURING 6D
+==================================================
+Server CI initially failed one Nuke test.
+The implementation was not adding knockback; the test incorrectly asserted that player.motion remain null.
+The Nuke had destroyed support terrain and correctly created motion.type='fall'.
+Test was corrected to reject only:
+- knockback
+- knockbackVoid
+while allowing terrain-caused fall.
+
+Final reviewed Server CI after correction: SUCCESS, 20/20 tests.
+Final reviewed Frontend CI on separate-overlay renderer: SUCCESS.
+Reviewed GitHub Pages deployment on same frontend gameplay commit: SUCCESS.
+
+==================================================
+6. MANUAL QA RISKS TO CHECK
+==================================================
+Use ORBITAL_ARTILLERY_TODOLIST_V5.txt.
+Highest Nuke-specific risks:
+- overlay canvas alignment with base camera.
+- target designator creates no accidental BASIC explosion/damage/crater.
+- warning line matches actual beam.
+- beam visual matches terrain destruction.
+- Nuke pickup identity is readable.
+- Shield direct damage reads as 10 HP.
+- no conventional knockback while terrain falls still occur.
+- destroyed pickups do not enter inventory.
+- turn advances exactly once.
+- multi-client synchronization.
+- edge-of-map beam/cut behavior.
+
+==================================================
+7. COBY_GITHUB_DEBUGGING PROCEDURE
+==================================================
+When Walter asks for coby_debug:
+1. Read latest commits in BOTH repos.
+2. Read highest progress/debug/TODO versions.
+3. Inspect current source for mechanics, turns, multiplayer, UI, renderer and boundaries.
+4. Inspect latest CI/workflows.
+5. Classify findings:
+   A. confirmed code bug
+   B. manual check
+   C. intentional design
+   D. tech debt
+6. Fix confirmed bugs when requested/appropriate.
+7. Re-run/re-check CI after writes.
+8. Put unprovable visual/temporal/game-feel checks in a NEW TODO version.
+9. Never mark manual QA complete without Walter testing it.
+10. Never call a phase fully QA-closed based only on CI.
+
+==================================================
+8. HISTORICAL REGRESSION CLASSES
+==================================================
+Continue checking for:
+- BASIC resolver leakage into specials.
+- special duplicate damage/crater/knockback.
+- turn stuck/double advance.
+- pickup lifetime/retain-turn errors.
+- AFK majority/pending-skip races.
+- active disconnect/wrap errors.
+- terrain settlement errors.
+- out-of-bounds special behavior.
+- stale browser module/cache.
+- result overlay before fall/death presentation.
+- Phase 6D overlay/base-camera divergence.
+
+==================================================
+9. DESIGN DECISIONS — DO NOT 'FIX'
+==================================================
+- Host-weighted starter disadvantage is intentional.
+- Desktop/web only; mobile/touch gameplay is out of scope.
+- Nuke has no conventional knockback but terrain falls are intended.
+- Nuke destroys pickups rather than collecting them.
+- Nuke always ends turn.
+
+==================================================
+10. NEXT RESUME POINT
+==================================================
+Code implementation through Phase 6D exists.
+Backend tests/CI: green at last reviewed 6D gameplay commit.
+Frontend syntax CI and Pages: green at last reviewed 6D gameplay commit.
+Manual QA for Air Strike + Nuke + accumulated regressions remains pending until Walter is at PC.
+
+After manual QA/debug:
+- fix reproduced issues
+- final pickup rarity/balance pass
+- broad accumulated PC QA
+- polish/release cleanup
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite V5.
+Next audit: COBY_DEBUG_V6.txt
+Next TODO: ORBITAL_ARTILLERY_TODOLIST_V6.txt
+Next progress: ORBITAL_ARTILLERY_PROGRESS_V6.txt
+
+END COBY DEBUG V5
