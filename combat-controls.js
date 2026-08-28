@@ -18,18 +18,35 @@ export function initCombatControls(gameCanvas) {
       return;
     }
 
+    const now = Date.now();
     const me = room.players?.find(player => player.id === playerId);
     const active = room.players?.find(player => player.id === room.match?.activePlayerId);
     const projectile = room.match?.projectile;
     const myTurn = room.status === 'started' && room.match?.activePlayerId === playerId && me?.alive !== false;
-    const remaining = room.status === 'started' ? Math.max(0, ((room.match?.turnEndsAt ?? Date.now()) - Date.now()) / 1000) : 0;
+    const remaining = room.status === 'started' ? Math.max(0, ((room.match?.turnEndsAt ?? now) - now) / 1000) : 0;
     const wind = room.match?.wind;
     const arrow = wind?.direction === 'left' ? '←' : wind?.direction === 'right' ? '→' : '·';
     const selected = me?.selectedItemSlot ?? 1;
     const inv1 = me?.inventory?.[0] ?? null;
     const inv2 = me?.inventory?.[1] ?? null;
     const alive = room.players?.filter(player => player.alive !== false).length ?? 0;
-    const stateText = room.status === 'finished' ? 'MATCH ENDED' : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
+
+    const afkVote = room.match?.afkSkipVote;
+    const eligibleAt = afkVote?.eligibleAt ?? ((room.match?.turnStartedAt ?? now) + 20_000);
+    const voteCount = afkVote?.votes?.length ?? 0;
+    const eligibleVoters = afkVote?.eligibleVoters ?? Math.max(0, alive - 1);
+    const requiredVotes = afkVote?.requiredVotes ?? (eligibleVoters > 0 ? Math.floor(eligibleVoters / 2) + 1 : 0);
+    const hasVoted = afkVote?.votes?.includes(playerId) ?? false;
+    const afkOpen = room.status === 'started' && !projectile && remaining <= 20 && now >= eligibleAt;
+    const canVoteAfk = afkOpen && !myTurn && me?.alive !== false;
+    const recentSkip = room.match?.lastAfkSkip && now < (room.match.lastAfkSkip.expiresAt ?? 0);
+    const stateText = room.status === 'finished' ? 'MATCH ENDED' : recentSkip ? 'TURN SKIPPED // AFK VOTE' : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
+    const afkStatus = room.status !== 'started' ? 'OFF'
+      : projectile ? 'LOCKED'
+        : !afkOpen ? `OPENS AT 20s`
+          : myTurn ? `${voteCount}/${requiredVotes} VOTES`
+            : canVoteAfk ? `${hasVoted?'VOTED ':' '}${voteCount}/${requiredVotes}`.trim()
+              : 'INELIGIBLE';
 
     panel.innerHTML = `
       <section class="info-block">
@@ -58,6 +75,7 @@ export function initCombatControls(gameCanvas) {
           <div class="control-line"><span>${key('W')} ${key('S')} angle</span><strong>${Math.round(room.match?.aimAngle ?? 45)}°</strong></div>
           <div class="control-line"><span>${key('Q')} ${key('E')} power</span><strong>${Math.round(room.match?.aimPower ?? 55)}%</strong></div>
           <div class="control-line"><span>${key('F')} use / fire</span><strong>${projectile?'LOCKED':myTurn?'READY':'WAIT'}</strong></div>
+          <div class="control-line"><span>${key('F1')} skip AFK turn</span><strong>${esc(afkStatus)}</strong></div>
         </div>
       </section>
       <section class="info-block">
@@ -67,7 +85,7 @@ export function initCombatControls(gameCanvas) {
           ${weaponButton(2,inv1?.label ?? 'EMPTY',inv1 ? 'special item' : 'inventory slot 1',selected===2,!inv1,true)}
           ${weaponButton(3,inv2?.label ?? 'EMPTY',inv2 ? 'special item' : 'inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Shield activates instantly and does not end your turn. If a shot successfully collects a box, the same player keeps the turn with the time they had before firing; a miss still ends the turn. Everyone can see the active aiming trajectory.</p>
+        <p class="pickup-note">Shield activates instantly and does not end your turn. If a shot successfully collects a box, the same player keeps the turn with the time they had before firing; a miss still ends the turn. AFK skip voting opens at 20 seconds remaining; press F1 to vote. Any action by the active player clears existing AFK votes.</p>
       </section>`;
   }
 
