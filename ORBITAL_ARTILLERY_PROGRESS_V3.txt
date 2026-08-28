@@ -1,0 +1,402 @@
+ORBITAL ARTILLERY — CONSOLIDATED PROJECT PROGRESS — VERSION 3
+Date: 2026-08-28
+Sources merged:
+- recovered project summary from previous chat
+- current GitHub source and commits
+- ORBITAL_ARTILLERY_PROGRESS.txt / V2
+- COBY_DEBUG.txt / V2
+- ORBITAL_ARTILLERY_TODOLIST_V2.txt
+
+SOURCE-OF-TRUTH RULE:
+Latest executable code/commits win over older summaries. Manual/visual behavior that has not been personally tested remains MANUAL QA, not a confirmed bug.
+
+==================================================
+PROJECT OBJECTIVE
+==================================================
+Browser/desktop 2D turn-based multiplayer artillery game inspired by Gunbound/Wild Ones.
+- 2–8 players.
+- Team and Survival modes.
+- Private room codes.
+- Authoritative server.
+- Destructible 2D terrain.
+- Camera overview/zoom/follow/manual drag.
+- Turns, wind, movement, jumping, aiming, power, projectiles, pickups and special weapons.
+- Desktop/web is the target. No mobile gameplay release is planned.
+
+==================================================
+REPOSITORIES / LIVE SERVICES
+==================================================
+Frontend:
+- wzzzodiac/orbital-artillery
+- GitHub Pages: https://wzzzodiac.github.io/orbital-artillery/
+
+Backend:
+- wzzzodiac/orbital-artillery-server
+- Cloud Run base URL: https://orbital-artillery-server-git-873648916633.us-east1.run.app
+- Health endpoint: /health
+
+==================================================
+ARCHITECTURE / DEPLOYMENT
+==================================================
+Frontend:
+- GitHub Pages.
+- Vanilla HTML/CSS/JavaScript.
+- Canvas 2D.
+- Socket.IO client loaded on demand.
+- Opening the page does not intentionally wake Cloud Run; connection starts on CREATE/JOIN.
+
+Backend:
+- Node.js + Socket.IO.
+- Authoritative room/game state.
+- In-memory rooms; no DB in MVP.
+- Cloud Run target in us-east1.
+- public/unauthenticated service.
+- CORS constrained to configured client origin.
+- Port 8080 default.
+- GitHub/Cloud Build deployment workflow was established; do not assume deployment finished without verification.
+
+Known server limits/defaults from current config:
+- max players: 8
+- max rooms: 20
+- max concurrent sockets: 64
+- connection attempts: 20/minute per IP
+- packet limit: 30/second
+- idle socket timeout: 30 minutes outside countdown/started matches
+- countdown/started matches protected from idle timeout
+
+Cloud cost intent recovered from previous project state:
+- low private usage, target approximately €0/month
+- budget alert €5/month
+- thresholds 50/90/100/150%
+- budget alerts are NOT a hard cap
+
+==================================================
+PHASE HISTORY
+==================================================
+PHASE 0 — SCAFFOLD / ARCHITECTURE — COMPLETE
+- Separate frontend/backend repos.
+- Application shell and renderer boundaries.
+- Socket/server bootstrap.
+- GitHub Pages + Cloud Run/no-DB MVP architecture.
+
+PHASE 1 — PRIVATE ROOM MULTIPLAYER — COMPLETE
+- Create/join private rooms.
+- Temporary names.
+- Up to 8 players.
+- Host assignment.
+- READY.
+- Disconnect cleanup.
+- Server-authoritative synchronization.
+
+PHASE 2 — SYNCHRONIZED ARENA — COMPLETE
+- Shared arena state.
+- Player/spawn foundation.
+- Renderer driven by server state.
+
+PHASE 2.5 — WORLD / CAMERA — COMPLETE
+- Logical world: 5000×5000.
+- Logical viewport concept: 1000×1000.
+- Countdown overview.
+- Zoom/transition to active player.
+- Manual camera drag.
+- Wheel zoom.
+- Double click returns to follow.
+- Projectile follow.
+
+PHASE 3 — TURNS / WIND — COMPLETE
+- Server-authoritative turns.
+- 40 seconds per normal turn.
+- Circular Survival order.
+- A/B alternation in Team when possible.
+- New wind per turn.
+- HUD: turn/time/wind/angle/power.
+- Shot resolution normally ends turn.
+
+PHASE 4 — MOVEMENT / JUMP / AIM / FIRE — COMPLETE
+Controls:
+- A/D move
+- SPACE jump
+- W/S angle
+- Q/E power
+- F fire/use
+- 1/2/3 weapon slots
+- F1 AFK vote during matches
+
+Current core values:
+- movement radius ±520 per turn
+- move step 15
+- max walk surface delta 42
+- jump distance 180
+- max 2 jumps/turn
+- angle 5–85°, default 45°
+- power 10–100, default 55
+- projectile gravity 480
+
+PHASE 5A — DESTRUCTIBLE TERRAIN — COMPLETE
+Seven current presets:
+- Rolling Expanse / rolling
+- Terrace Line / terraces
+- Twin Peaks / twinpeaks
+- Impact Basin / basin
+- Broken Ridge / brokenridge
+- Drift Islands / islands
+- Canyon Run / canyon
+
+Implemented:
+- crater destruction
+- lobby terrain selection/preview
+- safe/even spawn foundation then physical spawn randomization at match start
+
+PHASE 5B — HP / DAMAGE / DEATH / VICTORY — COMPLETE
+- 100 HP.
+- distance-based explosion damage.
+- direct vehicle hits.
+- elimination.
+- Survival victory.
+- Team victory.
+- void/fall presentation.
+- explosion knockback.
+- delayed resolution for animations.
+
+Basic weapon:
+- max damage 45
+- radius 260
+- crater radius 135
+- crater depth 165
+
+PHASE 6A / 6B — PICKUPS / INVENTORY / SPECIAL WEAPONS — COMPLETE
+Inventory:
+- slot 1 BASIC permanent
+- slots 2/3 special pickups
+- keyboard and clickable HUD selection
+
+Pickup baseline:
+- spawn every 3 turns
+- lifetime 4 turns
+- max 2 pickups on map
+- contact radius 64
+- collect by movement or explosion
+- full inventory blocks collection
+- successful explosion pickup preserves shooter turn and pre-shot remaining time
+- miss/no pickup ends turn normally
+
+Heavy Bomb:
+- max damage 60
+- radius 320
+- crater 190 / depth 90
+- historical double BASIC+Heavy crater bug fixed
+- historical Heavy/Shield internal BASIC-resolution issue fixed
+
+Triple Shot:
+- 3 projectiles
+- ±6° spread
+- damage 20 per impact
+- radius 175
+- crater 78/78
+- historical BASIC-resolution leakage fixed
+- historical central-projectile/HP restoration issue fixed
+- out-of-bounds turn corruption hardened
+
+Cluster Bomb:
+- parent shot + 5 secondary impacts
+- offsets -180,-90,0,+90,+180
+- damage 14 each
+- radius 150
+- crater 70/70
+- out-of-bounds false edge subexplosions fixed
+
+Shield:
+- next applicable damage ×0.5
+- consumed when it absorbs damage
+- instant activation
+- does not consume offensive turn
+- counts as active-player activity for AFK cancellation
+
+PHASE 6B.1 — AFK SKIP VOTE — COMPLETE
+- opens with 20 s remaining
+- living non-active players can vote
+- active player cannot vote own skip
+- F1 toggles vote
+- strict majority: floor(eligible/2)+1
+Examples:
+- 2 total alive: 1/1 spectator vote
+- 3 total alive: 2/2
+- 4 total alive: 2/3
+- 5 total alive: 3/4
+- valid active-player activity clears votes
+- invalid actions do not count as activity
+- majority skips immediately
+- HUD skip message
+- F1 reserved during match
+- voter disconnect recalculates majority
+- pending skip cancelled by active activity
+- no double turn advance
+
+PHASE 6C.1 — HEAL — COMPLETE
+- HEAL +30 pickup
+- current weight 15
+- same pickup/inventory mechanics
+- heals +30, max 100
+- 88→100 records actual +12
+- full HP use rejected
+- rejected full-HP use preserves item
+- instant/no projectile
+- does not consume turn
+- counts as AFK-clearing activity
+- visual + pickup and HUD support implemented
+- regression tests present
+
+PHASE 6C.2 — AIR STRIKE — CODE/VISUAL IMPLEMENTATION COMPLETE; MANUAL QA PENDING
+Mechanics:
+- AIR STRIKE pickup
+- weight 8
+- uses current aimed impact zone
+- item consumed on successful use
+- warning 1200 ms
+- 7 shells
+- stagger 120 ms
+- spacing 105
+- max damage per shell 16
+- radius 165
+- crater radius 72
+- crater depth 62
+- full friendly fire
+- full self damage
+- Shield mitigates first applicable impact then is consumed
+- explosions can collect pickups
+- pickup collection preserves turn/time
+- no pickup advances turn after sequence
+- terrain/player settling after shell deformation
+- match-ending results supported
+
+IMPORTANT MERGE CORRECTION:
+The recovered old summary said Air Strike renderer/warning/identity work was still pending. GitHub contains later commits that added:
+- warning HUD
+- Air Strike warning/strike rendering
+- seven-shell barrage visuals
+- Air Strike pickup style
+- cache-busting for current renderer/HUD modules
+Therefore this is no longer a DEVELOPMENT TODO. It remains a MANUAL PC QA item because nobody has personally validated the deployed visual sequence in the current session.
+
+==================================================
+IMPORTANT HISTORICAL BUGS ALREADY FIXED
+==================================================
+- Triple/Cluster BASIC internal resolution leakage.
+- Triple central resolution HP restoration problem.
+- Heavy double crater.
+- Heavy + Shield + low-HP incorrect calculation through BASIC resolution.
+- Pickup lifetime off-by-one.
+- Active disconnect skipping a player around turn-order wrap.
+- AFK majority inconsistency after disconnect.
+- AFK pending skip surviving valid active activity.
+- Triple out-of-bounds corrupting turn.
+- Cluster out-of-bounds creating fake edge subimpacts.
+- Special terrain leaving players unsettled after deformation.
+
+==================================================
+CURRENT TEST / CI STATE
+==================================================
+Backend current check command includes syntax checks and node:test.
+Regression coverage includes core turn/AFK/weapons plus dedicated Heal and Air Strike tests.
+Latest verified server workflow on current gameplay commit d04c2f7...: SUCCESS.
+
+Frontend syntax CI covers current modules.
+Latest checked frontend CI after documentation/QA updates: SUCCESS.
+Latest checked GitHub Pages deployment: SUCCESS.
+
+CI does NOT replace manual browser/gameplay QA.
+
+==================================================
+DESIGN DECISIONS / NON-BUGS
+==================================================
+1. STARTER WEIGHTING IS INTENTIONAL.
+Current design intentionally gives host lower starting probability.
+Examples:
+- 2 players: host 40%, other 60%
+- 3 players: host 20%, others 40/40
+General implementation uses hostWeight=0.4/(n-1), with remaining probability shared by non-hosts.
+Do not "fix" this unless Walter changes the design.
+
+2. DESKTOP/WEB TARGET.
+No mobile/touch gameplay release is planned. Responsive CSS may exist, but mobile controls are not roadmap requirements.
+
+3. AIR STRIKE FALL/MULTI-SHELL PRESENTATION.
+Static review raised possible concerns, but these are NOT confirmed bugs. They belong in manual PC QA until reproduced.
+
+==================================================
+NUKE LASER — APPROVED FUTURE IDEA / PHASE 6D
+==================================================
+Recovered approved concept:
+- very rare pickup
+- diagonal disintegration beam
+- destroys a strip of terrain
+- direct player damage around 20 HP
+- little or no knockback
+- main danger is terrain removal and resulting falls
+
+Exact mechanics must still be finalized against current code before implementation.
+
+==================================================
+PROPOSED FINAL PICKUP REBALANCE — NOT FINAL
+==================================================
+Recovered proposal:
+- Heavy 25
+- Triple 20
+- Cluster 20
+- Shield 12
+- Heal 12
+- Air Strike 8
+- Nuke 3
+
+Do not apply automatically; balance after Nuke/QA.
+
+==================================================
+CURRENT MANUAL QA SOURCE
+==================================================
+Highest checklist after this consolidation:
+ORBITAL_ARTILLERY_TODOLIST_V3.txt
+
+Manual QA includes:
+- Spectator aim.
+- Shield HUD/turn behavior.
+- AFK HUD/F1/vote synchronization.
+- Heal visual/mechanical synchronization.
+- Air Strike warning, 7 bombs, camera, damage, pickup, fall interaction.
+- Existing weapon regressions.
+- turn/disconnect/freeze scenarios.
+- all seven maps.
+- browser/cache synchronization.
+
+==================================================
+COBY_GITHUB_DEBUGGING ACTION
+==================================================
+Standard project debug procedure:
+1. Read latest GitHub state in BOTH repos.
+2. Read highest versioned progress/debug/TODO files.
+3. Review mechanics, turn flow, multiplayer, UI, renderer, boundary states and regressions.
+4. Find consistent code-level bugs.
+5. Fix confirmed code bugs directly when requested.
+6. Run/check CI and regression state.
+7. Re-review after changes.
+8. Anything that needs seeing/playing goes to highest-version manual TODO.
+9. Never mark manual QA complete without Walter actually testing it.
+10. Advance phase only when no consistent detectable failure remains and CI is green; manual QA status must be stated separately.
+
+==================================================
+CURRENT EXACT RESUME POINT
+==================================================
+Current code phase: 6C.2.
+Air Strike mechanical + renderer implementation exists.
+No currently accepted consistent mechanical bug is known from closed phases.
+Critical Air Strike/browser/multiplayer checks remain manual because Walter is not currently at the PC.
+Next feature after appropriate current QA/debug gate: Phase 6D — Nuke Laser.
+After Nuke: pickup rebalance + large PC QA session.
+
+==================================================
+VERSION RULE
+==================================================
+Historical snapshots remain untouched.
+This V3 supersedes V2 as the current consolidated progress source.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V4.txt
+
+END PROGRESS V3
