@@ -39,7 +39,7 @@ export function createRenderer(canvas, config) {
   }
   function worldToScreen(x,y,view){return{x:(x-view.x)/view.width*overlay.width,y:(y-view.y)/view.height*overlay.height};}
   function roundedPanel(x,y,w,h,stroke='rgba(140,180,255,.36)'){
-    ctx.fillStyle='rgba(3,7,15,.78)';ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(x,y,w,h,10);ctx.fill();ctx.stroke();
+    ctx.fillStyle='rgba(3,7,15,.82)';ctx.strokeStyle=stroke;ctx.lineWidth=1.8;ctx.beginPath();ctx.roundRect(x,y,w,h,11);ctx.fill();ctx.stroke();
   }
   function drawLiveSpectator(activeRoom){
     if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;
@@ -54,28 +54,28 @@ export function createRenderer(canvas, config) {
     const voteWindow=Boolean(vote&&now>=Number(vote.eligibleAt??Infinity)&&remaining<=20000);
     const votes=vote?.votes?.length??0,required=vote?.requiredVotes??0;
     const myVote=Boolean(vote?.votes?.includes(localPlayerId));
-    const x=24,y=24,w=480,h=122,color=weaponColor(type),pulse=.65+.35*((Math.sin(now/170)+1)/2);
+    const x=24,y=24,w=640,h=160,color=weaponColor(type),pulse=.65+.35*((Math.sin(now/170)+1)/2);
     ctx.save();roundedPanel(x,y,w,h,voteWindow?`rgba(255,207,125,${.44+.22*pulse})`:`rgba(140,180,255,${.28+.18*pulse})`);
-    ctx.fillStyle='#8cb4ff';ctx.font='900 10px ui-monospace,monospace';ctx.fillText('LIVE SPECTATOR FEED',x+16,y+20);
-    ctx.fillStyle=color;ctx.font='900 17px ui-monospace,monospace';ctx.fillText(`${player.name} // ${weaponLabel(type)}`,x+16,y+45);
-    ctx.fillStyle='#e7edff';ctx.font='800 11px ui-monospace,monospace';ctx.fillText(`AIM ${angle}°   POWER ${power}%   WIND ${arrow} ${wind?.strength??0}`,x+16,y+66);
+    ctx.fillStyle='#8cb4ff';ctx.font='900 13px ui-monospace,monospace';ctx.fillText('LIVE SPECTATOR FEED',x+20,y+26);
+    ctx.fillStyle=color;ctx.font='900 22px ui-monospace,monospace';ctx.fillText(`${player.name} // ${weaponLabel(type)}`,x+20,y+58);
+    ctx.fillStyle='#e7edff';ctx.font='800 14px ui-monospace,monospace';ctx.fillText(`AIM ${angle}°   POWER ${power}%   WIND ${arrow} ${wind?.strength??0}`,x+20,y+84);
     if(voteWindow){
-      ctx.fillStyle='#ffcf7d';ctx.font='900 13px ui-monospace,monospace';ctx.fillText(`${player.name} AFK? // F1 TO SKIP TURN`,x+16,y+91);
-      ctx.fillStyle='#ffffff';ctx.font='900 12px ui-monospace,monospace';ctx.fillText(`VOTES: ${votes}/${required}`,x+16,y+111);
-      ctx.textAlign='right';ctx.fillStyle=myVote?'#a6ff87':'#b8c4dd';ctx.font='800 10px ui-monospace,monospace';ctx.fillText(myVote?'VOTED // F1 WITHDRAW':'F1 TO VOTE',x+w-16,y+111);ctx.textAlign='left';
+      ctx.fillStyle='#ffcf7d';ctx.font='900 17px ui-monospace,monospace';ctx.fillText(`${player.name} AFK? // PRESS F1 TO SKIP TURN`,x+20,y+119);
+      ctx.fillStyle='#ffffff';ctx.font='900 16px ui-monospace,monospace';ctx.fillText(`VOTES TO SKIP: ${votes}/${required}`,x+20,y+145);
+      ctx.textAlign='right';ctx.fillStyle=myVote?'#a6ff87':'#b8c4dd';ctx.font='800 13px ui-monospace,monospace';ctx.fillText(myVote?'VOTED // F1 TO WITHDRAW':'F1 TO VOTE',x+w-20,y+145);ctx.textAlign='left';
     }else{
-      ctx.fillStyle='#8fa0bf';ctx.font='800 10px ui-monospace,monospace';ctx.fillText(`AFK SKIP OPENS AT 20s // ${(remaining/1000).toFixed(0)}s REMAINING`,x+16,y+96);
+      ctx.fillStyle='#8fa0bf';ctx.font='800 13px ui-monospace,monospace';ctx.fillText(`AFK SKIP OPENS AT 20s // ${(remaining/1000).toFixed(0)}s REMAINING`,x+20,y+125);
     }
-    ctx.fillStyle=voteWindow?'#ffcf7d':color;ctx.globalAlpha=pulse;ctx.beginPath();ctx.arc(x+w-17,y+17,4,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.fillStyle=voteWindow?'#ffcf7d':color;ctx.globalAlpha=pulse;ctx.beginPath();ctx.arc(x+w-21,y+21,5,0,Math.PI*2);ctx.fill();ctx.restore();
   }
   function drawWeaponBadge(activeRoom,view){
     if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;
     const id=activeRoom.match?.activePlayerId,player=activeRoom.players?.find(p=>p.id===id);if(!player?.spawn)return;
     const pos=visualPlayerPosition(player);if(!pos)return;
-    const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-92,view);
-    if(p.x<-160||p.x>overlay.width+160||p.y<-80||p.y>overlay.height+80)return;
-    const label=weaponLabel(type),color=weaponColor(type),width=clamp(label.length*8.2+34,96,190);
-    ctx.save();roundedPanel(p.x-width/2,p.y-18,width,28,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 11px ui-monospace,monospace';ctx.fillText(label,p.x,p.y);ctx.restore();
+    const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-100,view);
+    if(p.x<-180||p.x>overlay.width+180||p.y<-90||p.y>overlay.height+90)return;
+    const label=weaponLabel(type),color=weaponColor(type),width=clamp(label.length*10+44,120,230);
+    ctx.save();roundedPanel(p.x-width/2,p.y-22,width,36,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 14px ui-monospace,monospace';ctx.fillText(label,p.x,p.y+1);ctx.restore();
   }
   function resolutionText(q,now){
     const type=q?.weaponType??'basic';
@@ -93,13 +93,13 @@ export function createRenderer(canvas, config) {
   }
   function drawResolutionRibbon(activeRoom){
     const q=activeRoom?.match?.projectile;if(activeRoom?.status!=='started'||!q)return;
-    const now=Date.now(),[title,state]=resolutionText(q,now),type=q.weaponType??'basic',color=weaponColor(type),w=440,h=52,x=(overlay.width-w)/2,y=20;
-    ctx.save();roundedPanel(x,y,w,h,`${color}99`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 14px ui-monospace,monospace';ctx.fillText(title,overlay.width/2,y+21);ctx.fillStyle='#e7edff';ctx.font='800 11px ui-monospace,monospace';ctx.fillText(state,overlay.width/2,y+39);ctx.restore();
+    const now=Date.now(),[title,state]=resolutionText(q,now),type=q.weaponType??'basic',color=weaponColor(type),w=540,h=68,x=(overlay.width-w)/2,y=20;
+    ctx.save();roundedPanel(x,y,w,h,`${color}99`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 18px ui-monospace,monospace';ctx.fillText(title,overlay.width/2,y+28);ctx.fillStyle='#e7edff';ctx.font='800 14px ui-monospace,monospace';ctx.fillText(state,overlay.width/2,y+52);ctx.restore();
   }
   function drawPhase6fCountdown(activeRoom){
     if(activeRoom?.status!=='countdown')return;
-    const x=overlay.width/2,y=overlay.height/2+82;
-    ctx.save();ctx.textAlign='center';ctx.fillStyle='rgba(2,4,10,.98)';ctx.fillRect(x-420,y-19,840,32);ctx.fillStyle='#8cb4ff';ctx.font='800 11px ui-monospace,monospace';ctx.fillText('PHASE 6F // VISUAL + SPECTATOR POLISH // LIVE AIM TELEMETRY',x,y+3);ctx.restore();
+    const x=overlay.width/2,y=overlay.height/2+88;
+    ctx.save();ctx.textAlign='center';ctx.fillStyle='rgba(2,4,10,.98)';ctx.fillRect(x-480,y-22,960,40);ctx.fillStyle='#8cb4ff';ctx.font='800 15px ui-monospace,monospace';ctx.fillText('PHASE 6F // VISUAL + SPECTATOR POLISH // LIVE AIM TELEMETRY',x,y+5);ctx.restore();
   }
   function loop(){
     ctx.clearRect(0,0,overlay.width,overlay.height);
