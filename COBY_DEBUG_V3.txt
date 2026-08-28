@@ -1,0 +1,247 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 3
+Date: 2026-08-28
+Purpose: canonical recovery/debug protocol after merging the recovered previous-chat summary with current GitHub state.
+
+==================================================
+0. RECOVERY PRIORITY
+==================================================
+Never rely on chat memory alone.
+Resolve conflicts in this order:
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+Current canonical files:
+- ORBITAL_ARTILLERY_PROGRESS_V3.txt
+- ORBITAL_ARTILLERY_TODOLIST_V3.txt
+- COBY_DEBUG_V3.txt
+
+==================================================
+1. REPOS
+==================================================
+Frontend:
+wzzzodiac/orbital-artillery
+
+Backend:
+wzzzodiac/orbital-artillery-server
+
+Current expected phase:
+6C.2
+
+Next planned feature:
+6D — Nuke Laser
+
+==================================================
+2. COBY_GITHUB_DEBUGGING ACTION
+==================================================
+When Walter asks for a coby_debug:
+1. Read latest commits in BOTH repositories.
+2. Read highest versioned progress/debug/TODO files.
+3. Inspect current source for mechanics, turn flow, multiplayer, UI, renderer, state boundaries and regressions.
+4. Inspect latest CI/workflow results.
+5. Separate findings into:
+   A) CONFIRMED CODE BUG — source/reproduction proves it.
+   B) MANUAL CHECK — requires actually seeing/playing in browser.
+   C) DESIGN DECISION — intentional; do not fix.
+   D) TECH DEBT — future maintainability, not current bug.
+6. Fix confirmed code bugs directly only when requested/appropriate.
+7. Re-check CI after code changes.
+8. Add all unprovable visual/temporal/game-feel items to a NEW TODO version.
+9. Never mark manual QA complete without Walter testing it on PC.
+10. Do not advance phase based only on CI if required manual checks remain; state both automated and manual status.
+
+==================================================
+3. IMPORTANT CORRECTIONS FROM RECOVERED CONTEXT
+==================================================
+STARTER WEIGHTING:
+Intentional design, NOT bug.
+- 2 players host 40%, other 60%
+- 3 players host 20%, others 40/40
+- general current weighted implementation is intentional
+Do not change unless Walter explicitly requests it.
+
+MOBILE:
+OUT OF SCOPE.
+Orbital Artillery is a desktop/web game. Do not add touch/mobile gameplay to roadmap or QA requirements unless Walter changes direction.
+
+AIR STRIKE FALL PRESENTATION:
+Static review raised possible fall/multi-shell visual concerns. Walter has NOT tested those scenarios in the current session. Therefore they are MANUAL CHECKS, not accepted confirmed bugs.
+
+AIR STRIKE RENDERER:
+Recovered old summary said dedicated renderer/warning/identity were pending. Current GitHub has later commits implementing Air Strike warning HUD, barrage rendering, pickup styling and cache-busting. Treat implementation as present; verify manually in deployed browser.
+
+==================================================
+4. CURRENT MECHANIC SNAPSHOT
+==================================================
+Core:
+- 2–8 players
+- Team / Survival
+- 40 s turns
+- 5000×5000 world
+- authoritative server
+
+Controls:
+A/D move
+SPACE jump
+W/S angle
+Q/E power
+F fire/use
+1/2/3 slots
+F1 AFK vote
+
+Movement/aim:
+- ±520 movement radius
+- step 15
+- max walk delta 42
+- jump 180
+- 2 jumps/turn
+- angle 5–85 default45
+- power 10–100 default55
+- gravity480
+
+Basic:
+45 damage max / radius260 / crater135 depth165
+
+Pickups:
+- basic slot1
+- two special inventory slots
+- spawn every 3 turns
+- lifetime4
+- max2 map pickups
+- contact radius64
+- movement/explosion collection
+- explosion pickup retains turn/time
+
+Specials:
+Heavy 60 / radius320 / crater190 depth90
+Triple 3 shots ±6°, 20 each / radius175 / crater78/78
+Cluster 5 subimpacts offsets -180,-90,0,90,180, 14 each / radius150 / crater70/70
+Shield 50% next applicable damage, instant/no turn end
+Heal +30 cap100, full-HP reject/no consume, instant/no turn end
+Air Strike weight8, 7 shells, warning1200ms, stagger120ms, spacing105, damage16, radius165, crater72/62, self+friendly damage
+
+==================================================
+5. AFK RULES
+==================================================
+- opens at 20 s remaining
+- living non-active players only
+- F1 toggle
+- strict majority floor(eligible/2)+1
+- valid active activity clears votes
+- invalid action does not
+- voter disconnect recalculates
+- pending skip cancelled by active activity
+- no double advance
+
+==================================================
+6. KNOWN HISTORICAL BUG CLASSES — CHECK FOR REGRESSION
+==================================================
+- special weapon BASIC-resolution leakage
+- Heavy double crater
+- Heavy/Shield low-HP damage interaction
+- Triple HP restoration/order bug
+- pickup lifetime off-by-one
+- active disconnect/wrap skipping player
+- AFK majority after disconnect
+- pending AFK skip surviving active action
+- Triple out-of-bounds corrupting turn
+- Cluster out-of-bounds fake edge explosions
+- terrain deformation not settling players correctly
+- stale browser module/cache after renderer changes
+
+==================================================
+7. DEBUG CHECKLIST BY SYMPTOM
+==================================================
+Feature works on server but not browser:
+1. public state contains field
+2. room_state emits field
+3. client preserves field
+4. UI/renderer reads correct field
+5. module/cache version current
+6. deployed Pages actually updated
+
+Turn stuck/double advances:
+Inspect turnEndsAt, projectile resolveAt/specialResolveAt, pendingResult, shotResolvedAt, pickup-retain flow and AFK skip path.
+
+Visual/server disagreement:
+Check authoritative state first. Do not fix gameplay outcome only in renderer.
+
+Special damage duplicated:
+Check base-resolution leakage and whether special resolver neutralizes/owns base projectile resolution.
+
+Pickup incorrect:
+Check spawn cadence, lifetime, max count, pool weight, inventory space and movement-vs-explosion collection.
+
+Disconnect issue:
+Check old/new turnOrder, turnIndex, activePlayerId, resultFor and camera target.
+
+==================================================
+8. AUTOMATED STATUS BASELINE
+==================================================
+Backend package check runs syntax checks + node --test test/*.test.js.
+Dedicated tests exist for core, Heal and Air Strike.
+Latest verified gameplay-era Server CI after Phase 6C.2: SUCCESS.
+Frontend CI and Pages latest checked documentation-era runs: SUCCESS.
+
+Do NOT convert CI success into "visual QA passed".
+
+==================================================
+9. MANUAL QA SOURCE
+==================================================
+Use highest version:
+ORBITAL_ARTILLERY_TODOLIST_V3.txt
+
+Highest-priority manual block is current Air Strike deployed-browser verification plus general multiplayer/AFK/regression matrix.
+
+==================================================
+10. NUKE LASER RECOVERED APPROVED CONCEPT
+==================================================
+Preserve for Phase 6D:
+- very rare
+- diagonal disintegration beam
+- destroys strip of terrain
+- direct damage about20 HP
+- little/no knockback
+- main threat terrain removal/falls
+
+Do not invent unresolved details. Before implementation decide beam geometry, targeting, Shield, friendly/self damage, pickup interaction and turn semantics.
+
+Recovered proposed post-Nuke weights, NOT final:
+Heavy25 / Triple20 / Cluster20 / Shield12 / Heal12 / AirStrike8 / Nuke3
+
+==================================================
+11. DEPLOYMENT / SERVER NOTES
+==================================================
+Frontend Pages live project URL:
+https://wzzzodiac.github.io/orbital-artillery/
+
+Current backend configured base URL:
+https://orbital-artillery-server-git-873648916633.us-east1.run.app
+
+Config defaults:
+maxPlayers8, maxRooms20, maxSockets64, connections20/min/IP, packets30/s, idle30min, port8080.
+Active countdown/started matches are protected from idle socket timeout.
+
+Do not manually deploy Cloud Run by default if GitHub/Cloud Build integration is expected to deploy main; always verify actual deployment before assuming new server code is live.
+
+==================================================
+12. CURRENT RESUME SNAPSHOT
+==================================================
+Phase 6C.2 implementation exists including current Air Strike renderer/HUD work.
+Current code/test baseline is healthy from the last reviewed CI.
+No accepted consistent mechanical bug is currently pending from closed phases.
+Manual PC QA remains pending because Walter is away from PC.
+Next feature after appropriate QA/debug gate: Phase 6D Nuke Laser.
+After Nuke: final pickup rebalance + broad PC QA.
+
+VERSION RULE:
+Never overwrite V3.
+Next audit: COBY_DEBUG_V4.txt
+Next TODO: ORBITAL_ARTILLERY_TODOLIST_V4.txt
+Next progress: ORBITAL_ARTILLERY_PROGRESS_V4.txt
+
+END COBY DEBUG V3
