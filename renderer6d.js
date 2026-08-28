@@ -1,4 +1,4 @@
-import { createRenderer as createBaseRenderer } from './renderer.js?v=phase6c-airstrike-visual-1';
+import { createRenderer as createBaseRenderer } from './renderer.js?v=phase6d-camera-api-1';
 
 export function createRenderer(canvas, config) {
   const base = createBaseRenderer(canvas, config);
@@ -24,21 +24,11 @@ export function createRenderer(canvas, config) {
   const lerp = (a,b,t) => a+(b-a)*t;
   function worldToScreen(x,y,view){return{x:(x-view.x)/view.width*overlayCanvas.width,y:(y-view.y)/view.height*overlayCanvas.height};}
 
-  function approximateView(activeRoom) {
-    const q = activeRoom?.match?.projectile;
-    const target = q?.weaponType === 'nuke'
-      ? { x:q.targetX ?? q.impactX ?? 2500, y:q.targetY ?? q.impactY ?? 2500 }
-      : activeRoom?.players?.find(p=>p.id===(activeRoom.camera?.targetPlayerId||activeRoom.match?.activePlayerId||localPlayerId))?.spawn;
-    if (!target) return {x:0,y:0,width:activeRoom?.arena?.worldWidth??5000,height:activeRoom?.arena?.worldHeight??5000};
-    const width = 1000;
-    const height = 1000;
-    return {
-      x:clamp(target.x-width/2,0,(activeRoom.arena?.worldWidth??5000)-width),
-      y:clamp(target.y-height/2,0,(activeRoom.arena?.worldHeight??5000)-height),
-      width,
-      height
-    };
+  function fallbackView(activeRoom) {
+    const arena=activeRoom?.arena;
+    return {x:0,y:0,width:arena?.worldWidth??5000,height:arena?.worldHeight??5000};
   }
+  function exactView(activeRoom){return base.getViewSnapshot?.()??fallbackView(activeRoom);}
 
   function drawNukePickupOverlay(activeRoom, view) {
     if (activeRoom?.match?.projectile?.weaponType === 'nuke') return;
@@ -52,17 +42,16 @@ export function createRenderer(canvas, config) {
       ctx.rotate(Math.PI/4);
       ctx.shadowBlur=22;
       ctx.shadowColor='#f3b0ff';
-      ctx.fillStyle='rgba(216,112,255,.38)';
+      ctx.fillStyle='rgba(216,112,255,.22)';
       ctx.strokeStyle='#f8c8ff';
       ctx.lineWidth=3;
-      ctx.fillRect(-15,-15,30,30);
-      ctx.strokeRect(-15,-15,30,30);
+      ctx.strokeRect(-18,-18,36,36);
       ctx.rotate(-Math.PI/4);
       ctx.shadowBlur=0;
       ctx.fillStyle='#fff';
-      ctx.font='900 13px ui-monospace,monospace';
+      ctx.font='900 11px ui-monospace,monospace';
       ctx.textAlign='center';
-      ctx.fillText('N',0,5);
+      ctx.fillText('ULT',0,-24);
       ctx.restore();
     }
   }
@@ -211,7 +200,7 @@ export function createRenderer(canvas, config) {
   function overlayLoop() {
     ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
     if (room?.arena && ['lobby','countdown','started','finished'].includes(room.status)) {
-      const view=approximateView(room);
+      const view=exactView(room);
       drawNukePickupOverlay(room,view);
       drawSelectedNuke(room,view);
       drawNukeBeam(room,view,Date.now());
