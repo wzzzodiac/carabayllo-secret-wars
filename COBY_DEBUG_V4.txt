@@ -1,0 +1,423 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 4
+Date: 2026-08-28
+Purpose: canonical recovery/debug protocol after merging the detailed recovered master with current GitHub state.
+
+==================================================
+0. RECOVERY PRIORITY
+==================================================
+Never rely on chat memory alone.
+Resolve conflicts in this order:
+1. latest executable source on main
+2. latest commits on main
+3. current tests / CI
+4. highest ORBITAL_ARTILLERY_PROGRESS_V*.txt
+5. highest ORBITAL_ARTILLERY_TODOLIST_V*.txt
+6. highest COBY_DEBUG_V*.txt
+7. older summaries/chats
+
+Current canonical files:
+- ORBITAL_ARTILLERY_PROGRESS_V4.txt
+- ORBITAL_ARTILLERY_TODOLIST_V4.txt
+- COBY_DEBUG_V4.txt
+
+==================================================
+1. REPOS / SERVICES
+==================================================
+Frontend:
+wzzzodiac/orbital-artillery
+Live:
+https://wzzzodiac.github.io/orbital-artillery/
+
+Backend:
+wzzzodiac/orbital-artillery-server
+Base:
+https://orbital-artillery-server-git-873648916633.us-east1.run.app
+Health:
+/health
+
+Current phase:
+6C.2 — Heal + Air Strike implemented; manual PC QA pending.
+
+Next planned feature:
+6D — Nuke Laser.
+
+==================================================
+2. COBY_GITHUB_DEBUGGING ACTION
+==================================================
+When Walter asks for a Coby Debug:
+1. Read latest commits in BOTH repos.
+2. Read highest progress/debug/TODO versions.
+3. Inspect current source for mechanics, turn flow, multiplayer, UI, renderer, state boundaries and historical regression classes.
+4. Inspect latest CI/workflow results.
+5. Check frontend/backend deployment assumptions if relevant.
+6. Separate findings into:
+   A) CONFIRMED CODE BUG — source/reproduction proves it.
+   B) MANUAL CHECK — requires actually seeing/playing.
+   C) DESIGN DECISION — intentional; do not fix.
+   D) TECH DEBT — maintainability, not current bug.
+7. Fix confirmed code bugs directly only when requested/appropriate.
+8. Re-check CI after code changes.
+9. Re-review connected systems after fixes.
+10. Add all unprovable visual/temporal/game-feel items to a NEW TODO version.
+11. Never mark manual QA complete without Walter testing it on PC.
+12. Phase gate result must state BOTH automated and manual status.
+
+Result labels:
+- APROBADO PARA AVANZAR
+- NO APROBADO
+
+==================================================
+3. DESIGN DECISIONS — DO NOT MISCLASSIFY AS BUGS
+==================================================
+STARTER WEIGHTING:
+Intentional.
+- 2 players host 40%, other 60%
+- 3 players host 20%, others 40/40
+- larger rooms follow current weighted formula
+Do not normalize unless Walter explicitly changes rule.
+
+DESKTOP/WEB TARGET:
+Mobile/touch gameplay is out of scope.
+Do not add touch controls/mobile release QA unless direction changes.
+
+NO DATABASE / EPHEMERAL ROOMS:
+In-memory room loss after Cloud Run restart is accepted for MVP.
+
+CLOUD RUN:
+GitHub/Cloud Build source-trigger deployment is the normal path. Do not default to manual deploys.
+
+==================================================
+4. CORE CONSTANT SNAPSHOT
+==================================================
+World:
+5000×5000
+
+HP:
+100
+
+Turn:
+40 s
+
+Movement:
+±520 / step15 / max surface delta42
+
+Jump:
+180 / max2 / ~620 ms
+
+Aim:
+default45 / range5–85
+
+Power:
+default55 / range10–100
+
+Projectile:
+gravity480 / dt0.02 / max8s / impact pause~900ms / vehicle hit radius~26
+
+Knockback:
+gravity~520 / dt0.02 / max~2.4s / max speed~520 / lift bias~115
+
+Void fall:
+~2200ms + ~250ms finish buffer
+
+BASIC:
+45 dmg / radius260 / crater135 depth165
+
+Heavy:
+60 / 320 / crater190 depth90
+
+Triple:
+3 shots ±6° / 20 each / radius175 / crater78/78
+
+Cluster:
+5 subimpacts offsets -180,-90,0,+90,+180 / 14 each / radius150 / crater70/70
+
+Shield:
+50% next applicable damage
+
+Heal:
++30 / cap100 / instant / no turn consumption
+
+Air Strike:
+7 shells / warning1200ms / stagger120ms / spacing105 / damage16 / radius165 / crater72/62 / full self+friendly damage
+
+Pickups:
+every3 turns / lifetime4 / max2 / contact radius64 / two special slots
+
+AFK:
+opens at20s remaining / F1 / strict majority of other living players
+
+==================================================
+5. FILE RESPONSIBILITY MAP
+==================================================
+FRONTEND
+index.html
+- page shell, phase text, lobby, canvas, battle info, cache-busters
+
+style.css
+- layout/responsive desktop styling
+
+client.js
+- socket integration, create/join, lobby actions, input, movement/aim/fire, inventory selection, AFK F1, display-state prep
+
+renderer.js
+- terrain, vehicles, camera, projectiles, pickups, aim preview, explosions, countdown/results, weapon visuals
+
+combat-controls.js
+- battle HUD, timer, wind, active player, HP, jumps, selected item, AFK state, Air Strike warning
+
+socket.js
+- lazy Socket.IO, connect-on-demand, reconnect attempts
+
+music.js
+- Web Audio music
+
+wind-gusts.js
+- wind visuals
+
+projectile-renderer.js / terrain-renderer.js
+- auxiliary rendering modules/scaffolding
+
+BACKEND
+server.js
+- HTTP, /health, Socket.IO, events/broadcasts, rate limits, tick loop, idle protection
+
+rooms.js
+- room lifecycle, joins/leaves, match start, terrains, turns, aim, movement, BASIC projectile, victory, base destructible terrain
+
+phase6a.js
+- pickups, Heavy, Triple, Cluster, Shield, special damage/craters, retain-turn, settlement
+
+phase6c.js
+- Heal, Air Strike, Phase 6C pool/public rules, Air Strike resolution
+
+afk-vote.js
+- AFK state, eligibility, vote toggle, threshold, active-activity reset, pending-skip handling
+
+test/core.test.js
+- disconnect/AFK/pickup lifetime/Heavy/Triple/turn corruption regressions
+
+test/heal.test.js
+- Heal regressions
+
+test/airstrike.test.js
+- Air Strike consumption/warning/delay/self+friendly/pickup retain/public state
+
+==================================================
+6. HISTORICAL REGRESSION CLASSES
+==================================================
+Always check nearby logic for these when modifying related systems:
+- renderer syntax regression
+- stale client/cache modules
+- jump visual sync
+- void-fall result timing
+- explosion knockback
+- Shield consuming/locking turn
+- pickup-retain-turn timing
+- F1 browser Help conflict
+- Heavy BASIC crater stacking
+- Heavy + Shield + low-HP base-resolution error
+- Triple/Cluster BASIC-resolution leak
+- Triple central-resolution damage/HP restoration bug
+- special terrain invalid settlement
+- pickup lifetime off-by-one
+- active disconnect turn wrap skip
+- AFK majority after disconnect
+- AFK pending-skip race after active action
+- Triple/Cluster out-of-bounds turn corruption
+- Cluster fake edge explosions
+- Heal full-HP waste
+- CI missing new phase modules
+- phase-version assertion drift in tests
+
+==================================================
+7. DEBUG CHECKLIST BY SYMPTOM
+==================================================
+SERVER FEATURE DOES NOT APPEAR IN BROWSER
+1. public state exposes field
+2. room_state emits updated field
+3. client keeps/parses it
+4. renderer/HUD reads correct field
+5. import/cache version current
+6. Pages deployment actually updated
+
+TURN STUCK / DOUBLE ADVANCE
+Inspect:
+- turnEndsAt
+- projectile impactAt/resolveAt/specialResolveAt
+- pendingResult
+- shotResolvedAt
+- pickup-retain path/resume time
+- AFK pending skip and active-input cancellation
+- disconnect turnIndex/turnOrder repair
+
+DUPLICATE DAMAGE / CRATER / KNOCKBACK
+Inspect:
+- base BASIC resolution leakage
+- special resolver ownership
+- whether internal base effect is neutralized before special effects
+
+PICKUP WRONG
+Inspect:
+- every-3-turn cadence
+- 4-turn lifetime
+- max2
+- item pool/weights
+- inventory capacity
+- movement vs explosion collector ownership
+- retain-turn timer
+
+AFK WRONG
+Inspect:
+- eligibleAt/open threshold
+- eligible voter set
+- votes
+- requiredVotes=floor(eligible/2)+1
+- disconnect recalculation
+- registerActiveTurnActivity
+- pending skip cancellation
+
+DISCONNECT WRONG
+Inspect:
+- previous/new turnOrder
+- removed index
+- previous turnIndex
+- activePlayerId
+- resultFor
+- camera target
+
+VISUAL / SERVER DISAGREEMENT
+Treat server state as authoritative. Do not patch gameplay outcomes only in renderer.
+
+AIR STRIKE VISUAL ISSUE
+Inspect:
+- warningUntil
+- airStrikeShells[] positions/impactAt/applied
+- targetX
+- renderer cache version
+- camera state
+- spectator room_state synchronization
+Then place purely visual feel questions in TODO.
+
+==================================================
+8. SERVER RESOURCE / DEPLOY CHECKS
+==================================================
+Config expectations:
+- maxPlayers8
+- maxRooms20
+- maxSockets64
+- connections20/min/IP
+- packets30/s
+- idle30min
+- port8080
+- active countdown/started protected from idle timeout
+
+Deployment:
+- commit main
+- Cloud Build trigger
+- Cloud Run deploy
+Do not assume completed deployment without verification.
+
+Cost:
+- min instances0
+- expected max1
+- €5 budget alert is notification only, not hard cap
+
+==================================================
+9. CI BASELINE
+==================================================
+Backend npm run check:
+- syntax checks server/rooms/phase modules/AFK/auxiliary modules
+- node --test test/*.test.js
+
+Frontend CI checks:
+client, renderer, combat-controls, ui, socket, music, audio, wind-gusts, projectile-renderer, terrain-renderer
+
+Latest reviewed gameplay-era Server CI after 6C.2: SUCCESS.
+Latest checked frontend CI/Pages after documentation updates: SUCCESS.
+
+CI green != manual browser QA green.
+
+==================================================
+10. AIR STRIKE STATUS CORRECTION
+==================================================
+The detailed recovered master was written while dedicated Air Strike canvas visuals were still the active visual block.
+Later GitHub commits superseded that state with:
+- warning HUD
+- warning/target rendering
+- seven-shell barrage rendering
+- pickup identity/styling
+- module cache-busting
+
+Current classification:
+IMPLEMENTED IN CODE; MANUAL PC QA PENDING.
+
+Do not reopen renderer implementation merely because the older master says it was pending.
+Potential multi-shell/fall oddities are MANUAL CHECKS unless reproduced/proven.
+
+==================================================
+11. MANUAL QA SOURCE
+==================================================
+Use:
+ORBITAL_ARTILLERY_TODOLIST_V4.txt
+
+It now includes the recovered master checks for:
+- Air Strike visuals/sync
+- all weapons
+- pickup cadence/lifetime
+- weighted starter/random spawns
+- AFK matrix
+- disconnect/reconnect
+- camera controls
+- all seven terrains
+- deployment/cache/audio
+- server idle/resource sanity
+
+==================================================
+12. NUKE LASER — APPROVED PHASE 6D CONCEPT
+==================================================
+Preserve:
+- very rare
+- diagonal terrain-disintegration beam
+- dramatic
+- direct damage ~20HP
+- little/no conventional knockback
+- primary danger = terrain removal/falls
+- suggested eventual rarity ~3
+
+Before coding, decide:
+- targeting/beam geometry
+- beam width
+- terrain destruction geometry
+- Shield behavior
+- self/friendly damage
+- pickup interaction
+- turn-retain/end semantics
+
+Do not invent unresolved mechanics as if already approved.
+
+Proposed eventual post-Nuke weights, NOT final:
+Heavy25 / Triple20 / Cluster20 / Shield12 / Heal12 / AirStrike8 / Nuke3
+
+==================================================
+13. CURRENT RESUME SNAPSHOT
+==================================================
+Phase 6C.2 code exists including Air Strike mechanical and visual implementation.
+No accepted consistent mechanical bug is currently open from closed phases.
+Manual accumulated PC QA remains pending.
+
+Expected next order:
+1. critical Air Strike/manual QA at PC
+2. Coby Debug gate when appropriate
+3. finalize Nuke details
+4. implement Phase 6D + tests + renderer
+5. Coby Debug
+6. final rarity/balance pass
+7. full PC QA
+8. fixes
+9. final polish
+
+VERSION RULE:
+Never overwrite V4.
+Next audit/progress/TODO snapshots are V5.
+
+END COBY DEBUG V4
