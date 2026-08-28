@@ -16,8 +16,8 @@ export function createRenderer(canvas, config) {
       ? { x:q.targetX ?? q.impactX ?? 2500, y:q.targetY ?? q.impactY ?? 2500 }
       : activeRoom?.players?.find(p=>p.id===(activeRoom.camera?.targetPlayerId||activeRoom.match?.activePlayerId||localPlayerId))?.spawn;
     if (!target) return {x:0,y:0,width:activeRoom?.arena?.worldWidth??5000,height:activeRoom?.arena?.worldHeight??5000};
-    const width = q?.weaponType === 'nuke' ? 1700 : 1000;
-    const height = q?.weaponType === 'nuke' ? 1700 : 1000;
+    const width = 1000;
+    const height = 1000;
     return {
       x:clamp(target.x-width/2,0,(activeRoom.arena?.worldWidth??5000)-width),
       y:clamp(target.y-height/2,0,(activeRoom.arena?.worldHeight??5000)-height),
@@ -67,6 +67,7 @@ export function createRenderer(canvas, config) {
   function drawNukeBeam(activeRoom, view, now) {
     const q=activeRoom?.match?.projectile;
     if (!q || q.weaponType!=='nuke' || !q.nukeBeam) return;
+    if (now < (q.targetLockedAt ?? q.impactAt ?? 0)) return;
     const a=worldToScreen(q.nukeBeam.ax,q.nukeBeam.ay,view);
     const b=worldToScreen(q.nukeBeam.bx,q.nukeBeam.by,view);
     const center=worldToScreen(q.targetX??q.impactX,q.targetY??q.impactY,view);
