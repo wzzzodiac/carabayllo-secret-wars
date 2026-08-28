@@ -1,0 +1,346 @@
+ORBITAL ARTILLERY — PERSISTENT DEVELOPMENT PROGRESS
+Last updated: 2026-08-28
+Canonical resume point: Phase 6C.2 complete; next planned feature Phase 6D — Nuke Laser.
+
+==================================================
+PROJECT STRUCTURE
+==================================================
+Frontend repository:
+- wzzzodiac/orbital-artillery
+- Browser client
+- Vanilla HTML/CSS/JavaScript + Canvas 2D
+- Intended for GitHub Pages
+
+Server repository:
+- wzzzodiac/orbital-artillery-server
+- Node.js + Socket.IO
+- Authoritative multiplayer state and gameplay resolution
+- Intended for Google Cloud Run
+- In-memory rooms for MVP
+- No accounts / no persistent DB in MVP
+
+Core design:
+- 2–8 players
+- Private room codes
+- Temporary player names
+- Turn-based 2D artillery
+- Server authoritative
+
+==================================================
+PHASE HISTORY
+==================================================
+
+PHASE 0 — SCAFFOLD / ARCHITECTURE — COMPLETE
+Goal:
+- Establish separate frontend and backend repositories.
+- Create browser shell, renderer boundaries, protocol placeholders and server bootstrap.
+- Keep MVP architecture cheap/simple: GitHub Pages frontend + Cloud Run backend + no DB.
+
+Completed:
+- Frontend application shell.
+- Base styling and Canvas renderer structure.
+- Socket boundary.
+- Server health endpoint.
+- Shared constants/protocol structure.
+
+Original milestone:
+- Create one private room and connect up to eight tabs/devices before implementing gameplay.
+
+--------------------------------------------------
+PHASE 1 — PRIVATE ROOM MULTIPLAYER — COMPLETE
+Completed:
+- Create room.
+- Join room using private code.
+- Temporary player names.
+- Host assignment.
+- Ready state.
+- Disconnect cleanup.
+- 2–8 player room target.
+- Server-authoritative room state synchronization.
+- Socket.IO connection handling.
+- Basic connection/rate-limit protection.
+
+--------------------------------------------------
+PHASE 2 — SYNCHRONIZED ARENA FOUNDATION — COMPLETE
+Completed:
+- Shared arena state.
+- Player placement/spawn foundation.
+- Synchronized game state between clients.
+- Browser renderer driven from authoritative server state.
+
+--------------------------------------------------
+PHASE 3 — TURN SYSTEM — COMPLETE
+Completed:
+- Authoritative active-player turn state.
+- Turn advancement.
+- Turn timing.
+- Match countdown/start handling.
+- Handling of players leaving/disconnecting during matches.
+- Later hardened with AFK and disconnect regression fixes.
+
+--------------------------------------------------
+PHASE 4 — MOVEMENT / AIMING / ARTILLERY PHYSICS — COMPLETE
+Completed:
+- Horizontal movement.
+- Jumping.
+- Movement smoothing/presentation.
+- Aim angle.
+- Aim power.
+- Wind.
+- Live projectile trajectory preview.
+- Server-side projectile simulation.
+- Projectile collision with terrain and players.
+- Out-of-bounds projectile behavior.
+- Spectators can see active aim trajectory.
+
+--------------------------------------------------
+PHASE 5A — TERRAIN / DESTRUCTION — COMPLETE
+Completed:
+- Multiple terrain presets.
+- Destructible terrain.
+- Craters.
+- Layered terrain rendering.
+- Terrain preview in lobby.
+- Spawn balancing improvements.
+- Natural holes/gaps in maps.
+
+Current terrain families:
+- Rolling Expanse
+- Terrace Line
+- Twin Peaks
+- Impact Basin
+- Broken Ridge
+- Drift Islands
+- Canyon Run
+
+--------------------------------------------------
+PHASE 5B — HEALTH / DAMAGE / DEATH / VICTORY — COMPLETE
+Completed:
+- 100 HP baseline.
+- Explosion damage.
+- Death handling.
+- Void/fall deaths.
+- Delayed fall presentation before death resolution.
+- Survival victory.
+- Team victory.
+- Match result presentation.
+- Base weapon damage balancing.
+- Explosion/impact polish.
+- Procedural game music and presentation polish added around this phase.
+
+--------------------------------------------------
+PHASE 6A — PICKUPS / INVENTORY / HEAVY BOMB — COMPLETE
+Core inventory model:
+- Slot 1 = permanent basic weapon.
+- Slot 2 = inventory item.
+- Slot 3 = inventory item.
+- Therefore: 2 pickup inventory slots + basic weapon.
+
+Pickup rules currently implemented:
+- Spawn periodically during match.
+- Current cadence: every 3 turns.
+- Current lifetime: 4 turns.
+- Maximum simultaneous pickups: 2.
+- Pickup by touching/movement.
+- Pickup by explosion if inventory space exists.
+- Successful pickup-via-shot can preserve the active turn.
+
+Heavy Bomb:
+- High-damage special projectile.
+- Current server values around Phase 6A:
+  - max damage 60
+  - explosion radius 320
+  - crater radius 190
+  - crater depth 90
+
+Other work:
+- Weapon selection HUD moved outside arena.
+- Numeric weapon selection 1/2/3.
+- Reliable click selection fixes.
+- Explosion knockback implemented and animated ballistically.
+
+--------------------------------------------------
+PHASE 6B — TRIPLE SHOT / CLUSTER BOMB / SHIELD — COMPLETE
+Triple Shot:
+- Three-projectile volley.
+- Side projectiles currently offset around ±6 degrees.
+- Lower per-projectile damage; intended for area coverage.
+
+Cluster Bomb:
+- Parent projectile followed by multiple local impacts.
+- Current secondary offsets: approximately -180, -90, 0, +90, +180 around impact center.
+- Multiple explosions/craters.
+
+Shield:
+- Pickup utility.
+- Current damage factor: 0.5 (50% damage received).
+- Consumed when it absorbs damage.
+- Activating Shield does not end the offensive turn.
+
+Turn-flow refinements:
+- Shield activation keeps controls active.
+- Successful pickup shots can keep turn alive.
+- Match starts and spawn positions randomized.
+
+--------------------------------------------------
+TURN / AFK HARDENING — COMPLETE AS CURRENT BASELINE
+Implemented after 6B and before 6C:
+- F1 AFK turn-skip voting.
+- Server-authoritative voting state.
+- HUD support for AFK voting.
+- Voter eligibility handling.
+- Active player input cancels pending AFK skip.
+- Active-player disconnect no longer corrupts turn order.
+- Special weapon misses outside arena hardened.
+- Regression tests added for turns, AFK voting and weapons.
+- Server/frontend syntax CI added.
+
+--------------------------------------------------
+PHASE 6C.1 — HEAL — COMPLETE
+Heal pickup:
+- Label: HEAL +30.
+- Restores up to 30 HP.
+- Max HP 100.
+- Cannot be used at full HP.
+- Instant utility.
+- Does NOT consume the offensive turn.
+- Item is consumed on use.
+- Selection returns to basic weapon.
+- Client feedback / HUD / renderer support implemented.
+- Regression tests implemented.
+
+--------------------------------------------------
+PHASE 6C.2 — AIR STRIKE — COMPLETE / CURRENT RESUME POINT
+This is the latest implemented feature as of 2026-08-28.
+
+Current Air Strike behavior:
+- 7-shell barrage.
+- Warning period before shell impacts.
+- Warning duration: 1200 ms.
+- Shell stagger: 120 ms.
+- Damage per shell: max 16 before distance falloff.
+- Explosion radius: 165.
+- Crater radius: 72.
+- Crater depth: 62.
+- Horizontal shell spacing: 105.
+- Full friendly fire enabled.
+- Self-damage enabled.
+- Can damage enemies, teammates and shooter.
+- Can interact with Shield.
+- Can destroy terrain.
+- Can cause players to fall/die after terrain changes.
+- Can collect pickups with shell explosions when inventory allows.
+- Can trigger match-ending results.
+- Warning HUD implemented.
+- Shell barrage rendering implemented.
+- Client cache-busting updates performed.
+- Server health reports phase 6C.2.
+- Regression coverage updated.
+
+Latest known feature sequence:
+1. AFK/turn/special-weapon hardening.
+2. Heal implementation.
+3. Air Strike server implementation.
+4. Air Strike regression coverage.
+5. Air Strike frontend exposure.
+6. Air Strike warning HUD.
+7. Air Strike barrage renderer.
+8. Cache busting for updated renderer/HUD modules.
+
+==================================================
+CURRENT GAMEPLAY LOOP
+==================================================
+Already functional in broad form:
+
+Create room
+-> join players
+-> select mode/team/terrain
+-> ready/start
+-> spawn
+-> alternate authoritative turns
+-> move/jump
+-> aim/power/wind
+-> shoot
+-> projectile resolves on server
+-> terrain can deform
+-> players take damage / get knocked back / fall
+-> pickups appear
+-> inventory/special weapons are used
+-> players die
+-> survival/team winner is determined
+
+This is no longer a networking scaffold. It is a playable core loop requiring continued feature work, balancing, QA and presentation/mobile polish.
+
+==================================================
+NEXT PLANNED DEVELOPMENT
+==================================================
+
+PHASE 6D — NUKE LASER — NEXT
+Status:
+- Planned.
+- Not implemented as of this file update.
+
+Intent:
+- Next major special weapon/item after Air Strike.
+- Exact gameplay parameters should be re-verified/design-reviewed before implementation rather than invented from memory.
+
+After Phase 6D:
+- Special-weapon balance pass.
+- Pickup probability/cadence balance.
+- Damage/radius/crater balance.
+- Turn-flow QA.
+- Map edge-case QA.
+- Disconnect/reconnect/AFK QA.
+- Real multiplayer testing with several clients.
+- Mobile controls / responsive UX.
+- Browser/device compatibility.
+- Network latency behavior.
+- Audio/visual polish.
+- General bug fixing and regression expansion.
+
+==================================================
+KNOWN ORGANIZATIONAL RULES
+==================================================
+1. The server must remain authoritative for gameplay-critical state:
+   - turns
+   - damage
+   - inventory
+   - projectile resolution
+   - pickup resolution
+   - death
+   - victory
+
+2. Do not trust client state for gameplay outcomes.
+
+3. Keep MVP architecture simple:
+   - no account system unless deliberately added later
+   - no DB unless persistence becomes necessary
+   - private room codes first
+
+4. Before implementing a new feature, verify current code/commits in BOTH repositories.
+
+5. Whenever a phase or major subphase is completed, update this file and README.md in the same development session.
+
+6. Keep COBY_DEBUG.txt updated when workflow, repository structure, debug procedure or resume instructions change.
+
+==================================================
+RESUME INSTRUCTION FOR A NEW CHAT
+==================================================
+A new ChatGPT conversation should NOT rely on chat memory alone.
+
+Use @GitHub and inspect:
+- wzzzodiac/orbital-artillery
+- wzzzodiac/orbital-artillery-server
+
+Then read:
+- README.md
+- ORBITAL_ARTILLERY_PROGRESS.txt
+- COBY_DEBUG.txt
+
+Then inspect the latest commits in BOTH repositories and compare them against this file.
+
+If GitHub contains newer gameplay commits than this document, GitHub code/commits are the source of truth and this document must be updated before continuing.
+
+CURRENT RESUME POINT:
+Phase 6C.2 Air Strike is implemented.
+Next planned feature: Phase 6D — Nuke Laser.
