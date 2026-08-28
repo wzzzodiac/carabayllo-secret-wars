@@ -12,11 +12,11 @@ Backend:
 
 ## Current status
 
-**Current development phase: Phase 6C.2 — Heal + Air Strike implemented.**
+**Current development phase: Phase 6D — Nuke Laser implemented in code.**
 
-Air Strike mechanics, warning HUD and barrage renderer are present in the current code. Manual deployed-browser QA is still pending for its visual sequence, camera behavior and multiplayer synchronization.
+Air Strike and Nuke Laser now have server-authoritative mechanics plus frontend presentation code. Manual deployed-browser QA is still pending for visual alignment, camera behavior, game feel and multiplayer synchronization.
 
-The next planned gameplay feature is **Phase 6D — Nuke Laser**, followed by final pickup/weapon balancing and broad desktop QA.
+After manual QA/debug, the next planned work is final pickup/weapon balancing followed by broad desktop QA and polish.
 
 Mobile/touch gameplay is not part of the current roadmap.
 
@@ -26,9 +26,9 @@ For the canonical resume state, use the highest-numbered versions of:
 - `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
 
 Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V4.txt`
-- `COBY_DEBUG_V4.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V4.txt`
+- `ORBITAL_ARTILLERY_PROGRESS_V5.txt`
+- `COBY_DEBUG_V5.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V5.txt`
 
 ## Architecture
 
@@ -68,6 +68,7 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Shield
 - Heal +30
 - Air Strike
+- Nuke Laser
 - F1 AFK turn-skip voting
 - Disconnect/turn-order hardening
 - Frontend/server CI and regression tests
@@ -89,8 +90,23 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Shield: next applicable damage ×0.5
 - Heal: +30, cap 100
 - Air Strike: 7 shells, 1200 ms warning, 120 ms stagger, 105 spacing, 16 max damage/shell, radius 165, crater 72/62
+- Nuke Laser: weight 3, 20 direct damage, 850 ms post-designator warning, diagonal terrain cut, no conventional knockback
 - Pickups: every 3 turns, lifetime 4 turns, max 2, contact radius 64
 - AFK vote: opens at 20 s remaining, strict majority of other living players
+
+## Nuke Laser behavior
+
+- Very rare pickup, current weight 3
+- Uses the normal artillery projectile as a server-authoritative target designator
+- Designator impact locks the target
+- 850 ms warning after target lock
+- Diagonal disintegration beam
+- 20 HP direct damage with full self/friendly fire
+- Shield halves the applicable direct hit and is consumed
+- No conventional knockback
+- Main danger is removing support terrain and causing falls
+- Pickups intersected by the beam are destroyed rather than collected
+- Nuke always ends the turn after resolution if the match continues
 
 ## Current terrain presets
 
@@ -117,19 +133,17 @@ Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 conne
 - Phase 6B.1 — AFK Skip Vote ✅
 - Phase 6C.1 — Heal ✅
 - Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
-- Phase 6D — Nuke Laser ⏭ NEXT
+- Phase 6D — Nuke Laser ✅ implementation; manual PC QA pending
 - Final balance + broad desktop QA ⏳
 
-## Phase 6D concept
+## Automated baseline
 
-Nuke Laser is an approved future concept, not yet implemented:
-- very rare
-- diagonal terrain-disintegration beam
-- direct player damage around 20 HP
-- little or no conventional knockback
-- main danger is destroying support terrain and causing falls
+At the Phase 6D gameplay implementation checkpoint:
+- Server CI passed after the Nuke regression test was corrected to distinguish terrain-caused falling from knockback.
+- Frontend CI passed with the Phase 6D renderer/HUD wrappers.
+- GitHub Pages deployment passed for the Phase 6D renderer overlay commit.
 
-Exact beam geometry, Shield/self/friendly-fire behavior, pickup interaction and turn semantics must be finalized before implementation.
+Automated checks do not replace manual browser/gameplay QA.
 
 ## Development rules
 
