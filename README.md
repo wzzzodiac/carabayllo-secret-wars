@@ -1,67 +1,70 @@
 # Orbital Artillery
 
-Orbital Artillery is a browser-based 2D turn-based multiplayer artillery game for 2–8 players.
+Orbital Artillery is a browser/desktop 2D turn-based multiplayer artillery game for 2–8 players, inspired by Gunbound/Wild Ones.
 
-The game is split into two repositories:
+Frontend:
+- `wzzzodiac/orbital-artillery`
+- GitHub Pages: https://wzzzodiac.github.io/orbital-artillery/
 
-- `wzzzodiac/orbital-artillery` — browser client / frontend
-- `wzzzodiac/orbital-artillery-server` — authoritative Node.js + Socket.IO backend
+Backend:
+- `wzzzodiac/orbital-artillery-server`
+- Authoritative Node.js + Socket.IO server on Google Cloud Run
 
 ## Current status
 
 **Current development phase: Phase 6C.2 — Heal + Air Strike implemented.**
 
-The original Phase 0 networking scaffold has grown into a functional multiplayer gameplay loop with private rooms, game modes, turn-based movement, aiming, projectile physics, destructible terrain, health/death/victory rules, pickups, inventory, special weapons, AFK turn voting, regression tests and CI checks.
+Air Strike mechanics, warning HUD and barrage renderer are present in the current code. Manual deployed-browser QA is still pending for its visual sequence and multiplayer synchronization.
 
-The next planned gameplay feature is **Phase 6D — Nuke Laser**, followed by balance, QA, mobile UX and multiplayer polish.
+The next planned gameplay feature is **Phase 6D — Nuke Laser**, followed by final pickup/weapon balancing and broad desktop QA.
 
-For the persistent development history and exact resume point, read:
+Mobile/touch gameplay is not part of the current roadmap.
 
-- `ORBITAL_ARTILLERY_PROGRESS.txt`
-- `COBY_DEBUG.txt`
+For the canonical resume state, use the highest-numbered versions of:
+- `ORBITAL_ARTILLERY_PROGRESS_V*.txt`
+- `COBY_DEBUG_V*.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
+
+Current canonical snapshots:
+- `ORBITAL_ARTILLERY_PROGRESS_V3.txt`
+- `COBY_DEBUG_V3.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V3.txt`
 
 ## Architecture
 
-- Static frontend intended for GitHub Pages
+- Static frontend on GitHub Pages
 - Vanilla HTML/CSS/JavaScript + Canvas 2D
-- Temporary player names; no accounts in the MVP
+- Temporary player names; no accounts in MVP
 - Private room codes for 2–8 players
 - Authoritative Node.js + Socket.IO server
-- Google Cloud Run backend target
-- In-memory rooms for the MVP
-- No persistent database for the MVP
+- Google Cloud Run backend
+- In-memory rooms; no persistent database in MVP
+- Server connection begins on CREATE/JOIN rather than intentionally waking the backend on page load
 
 ## Implemented gameplay
 
-- Private room creation and joining
-- Host, ready state, teams and game modes
-- Server-authoritative turn system
-- Player movement and jumping
-- Aim angle, power and wind
-- Projectile trajectory preview and projectile simulation
-- Multiple terrain presets
+- Private room creation/joining
+- Host, READY, Team and Survival modes
+- Server-authoritative turns and game state
+- 5000×5000 world with overview/follow/manual camera
+- Movement, jumping, aim, power and wind
+- Projectile trajectory preview and simulation
+- Seven terrain presets
 - Destructible terrain and craters
-- Explosion knockback and void falls
-- HP, damage, deaths and victory conditions
-- Survival and team modes
-- Pickup spawning and expiration
-- Two-slot special-item inventory plus permanent basic weapon
-- Pickup collection by movement or explosion
+- Knockback, HP, falls, deaths and victory
+- Pickup spawning, lifetime and explosion/contact collection
+- Permanent Basic weapon + two special inventory slots
 - Heavy Bomb
 - Triple Shot
 - Cluster Bomb
 - Shield
 - Heal +30
 - Air Strike
-- Full friendly fire/self-damage where applicable
 - F1 AFK turn-skip voting
 - Disconnect/turn-order hardening
-- Frontend/server syntax CI
-- Regression tests for turn flow, AFK voting and special weapons
+- Frontend/server CI and regression tests
 
-## Terrain presets
-
-Current terrain families include:
+## Current terrain presets
 
 - Rolling Expanse
 - Terrace Line
@@ -71,48 +74,28 @@ Current terrain families include:
 - Drift Islands
 - Canyon Run
 
-## Current item rules
+## Current roadmap
 
-The basic weapon is always available in slot 1. Slots 2 and 3 are inventory slots for collected special items.
-
-Pickups currently spawn periodically during matches, expire after a limited number of turns and can be collected either by touching them or by hitting them with an explosion when inventory space is available.
-
-## Current Phase 6C.2 highlights
-
-### Heal
-
-- Restores up to 30 HP
-- Maximum HP: 100
-- Cannot be used at full HP
-- Does not consume the offensive turn
-
-### Air Strike
-
-- Seven-shell barrage
-- Warning before impacts
-- Staggered shell impacts
-- Terrain destruction
-- Damage to enemies, teammates and self
-- Can interact with shields, pickups and match-ending deaths
-
-## Roadmap summary
-
-- Phase 0 — project scaffold and architecture ✅
-- Phase 1 — private-room multiplayer networking ✅
-- Phase 2 — synchronized arena foundation ✅
-- Phase 3 — authoritative turn system ✅
-- Phase 4 — movement, aiming and artillery physics ✅
-- Phase 5A — terrain presets and destructible terrain ✅
-- Phase 5B — health, damage, deaths and victory ✅
-- Phase 6A — pickups, inventory and Heavy Bomb ✅
-- Phase 6B — Triple Shot, Cluster Bomb and Shield ✅
+- Phase 0 — scaffold / architecture ✅
+- Phase 1 — private-room networking ✅
+- Phase 2 — synchronized arena ✅
+- Phase 2.5 — world / camera ✅
+- Phase 3 — turns / wind ✅
+- Phase 4 — movement / aim / fire ✅
+- Phase 5A — destructible terrain ✅
+- Phase 5B — HP / damage / death / victory ✅
+- Phase 6A — pickups / inventory / Heavy Bomb ✅
+- Phase 6B — Triple Shot / Cluster Bomb / Shield ✅
+- Phase 6B.1 — AFK Skip Vote ✅
 - Phase 6C.1 — Heal ✅
-- Phase 6C.2 — Air Strike ✅
+- Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
 - Phase 6D — Nuke Laser ⏭ NEXT
-- Balance / QA / mobile UX / multiplayer polish ⏳
+- Final balance + broad desktop QA ⏳
 
-## Development rule
+## Development rules
 
-The server remains authoritative for gameplay state and resolution. New mechanics should not trust client-side state for damage, turns, inventory, victory or projectile outcomes.
+Gameplay-critical state remains server authoritative: turns, damage, inventory, projectile/special resolution, pickups, deaths and victory.
 
-Before continuing development from a new ChatGPT conversation, read `COBY_DEBUG.txt` and `ORBITAL_ARTILLERY_PROGRESS.txt` and verify the latest commits in both repositories.
+Starting-player weighting against the host is an intentional design decision and must not be "fixed" unless explicitly changed.
+
+When performing a Coby Debug, distinguish confirmed code bugs from manual visual/gameplay checks. Anything requiring actual play/visual inspection belongs in the highest-numbered TODO list and must not be marked complete without manual testing.
