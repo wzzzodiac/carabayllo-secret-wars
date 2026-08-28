@@ -1,0 +1,179 @@
+ORBITAL ARTILLERY — TODO LIST — VERSION 1
+Created: 2026-08-28
+Source: Coby Debug V2 audit
+Purpose: Human/manual checks + confirmed fixes before/around Phase 6D.
+
+==================================================
+A. CONFIRMED CODE FIXES
+==================================================
+[ ] P1 — Air Strike terrain-caused void death animation
+    Problem:
+    Air Strike can kill a player immediately when terrain disappears beneath them without creating a fall animation.
+    Expected fix:
+    Reuse normal void-fall motion/result timing semantics and add regression coverage.
+
+[ ] P2 — Decide initial-player fairness
+    Current behavior is weighted against host as player count increases.
+    Decision needed:
+    Should all players have equal starting probability?
+    Recommended: YES.
+    If yes, replace weighted selection with uniform random selection and add a deterministic/statistical unit test where practical.
+
+==================================================
+B. MANUAL VISUAL TESTS — AIR STRIKE
+==================================================
+[ ] Warning indicator appears clearly before first shell.
+[ ] Warning countdown/status is readable in HUD.
+[ ] Exactly seven shell visuals appear.
+[ ] Shell stagger/order looks intentional, not simultaneous or laggy.
+[ ] Camera frames the strike zone correctly.
+[ ] Camera does not violently snap during barrage.
+[ ] Visual shell locations match actual crater/damage locations.
+[ ] All expected craters appear.
+[ ] Air Strike self-damage visibly updates HP.
+[ ] Team friendly fire visibly works.
+[ ] Shield visibly reduces one applicable hit and is then consumed.
+[ ] Pickup collected by Air Strike disappears and enters inventory correctly.
+[ ] Pickup collection preserves the shooter's turn as intended.
+[ ] Strike without pickup advances turn once and only once.
+[ ] Match-ending Air Strike waits for relevant death presentation.
+[ ] Player standing over destroyed ground falls smoothly.
+[ ] Multiple shells hitting near a falling player do not restart/snap animation.
+
+==================================================
+C. MANUAL VISUAL TESTS — EXISTING WEAPONS
+==================================================
+BASIC
+[ ] Direct hit looks correct.
+[ ] Terrain hit/crater looks correct.
+[ ] Out-of-bounds shot ends cleanly.
+[ ] Self splash damage works.
+[ ] Knockback animation matches final server position.
+
+HEAVY BOMB
+[ ] Clearly feels/looks stronger than Basic.
+[ ] Larger crater is visually correct.
+[ ] Blast pickup collection works.
+
+TRIPLE SHOT
+[ ] Three projectiles visibly separate.
+[ ] No hidden extra basic explosion/damage.
+[ ] Turn resolves only once.
+[ ] Pickup interaction behaves correctly.
+
+CLUSTER BOMB
+[ ] Parent projectile presentation is clear.
+[ ] Secondary impacts appear in expected pattern.
+[ ] No hidden extra base damage.
+[ ] Craters correspond to secondary impacts.
+[ ] Miss/out-of-bounds behavior is sane.
+
+SHIELD
+[ ] Activating Shield consumes item.
+[ ] Turn remains active.
+[ ] Shield state is clearly visible in HUD.
+[ ] Damage reduction is visibly reflected in HP.
+[ ] Shield disappears after absorbing damage.
+
+HEAL
+[ ] Heal +30 at low HP.
+[ ] Heal clamps to 100.
+[ ] Heal blocked at 100 HP.
+[ ] Blocked use does NOT consume item.
+[ ] Successful use consumes item.
+[ ] Turn remains active after heal.
+[ ] Selected weapon returns to Basic.
+
+==================================================
+D. MULTIPLAYER / TURN MANUAL TESTS
+==================================================
+[ ] 2-player Survival full match from lobby to result.
+[ ] 3-player Survival turn order remains valid after one disconnects.
+[ ] Team mode with at least 2v2 completes correctly.
+[ ] Host disconnect in lobby transfers host and resets ready states appropriately.
+[ ] Active-player disconnect during turn advances correctly.
+[ ] Spectators see active aim trajectory.
+[ ] Spectators see same projectile/weapon event timing.
+[ ] AFK vote unavailable too early.
+[ ] AFK vote opens at intended threshold.
+[ ] Living spectator can vote.
+[ ] Active player cannot vote own skip.
+[ ] Majority vote skips turn.
+[ ] Active-player input cancels pending votes for all clients.
+[ ] Voter disconnect recalculates eligibility/majority correctly.
+
+==================================================
+E. TERRAIN / MAP MANUAL TESTS
+==================================================
+Test all seven current terrain families at least once:
+[ ] Rolling Expanse
+[ ] Terrace Line
+[ ] Twin Peaks
+[ ] Impact Basin
+[ ] Broken Ridge
+[ ] Drift Islands
+[ ] Canyon Run
+
+For each relevant map verify:
+[ ] Lobby preview matches actual match terrain.
+[ ] Spawn points do not start inside void/terrain.
+[ ] Movement near ledges behaves predictably.
+[ ] Jump near gaps behaves predictably.
+[ ] Crater destruction updates collision and rendering consistently.
+[ ] Tanks settle onto newly lowered terrain correctly.
+[ ] Void deaths animate and resolve correctly.
+
+==================================================
+F. FRONTEND / CACHE / BROWSER CHECKS
+==================================================
+[ ] Normal refresh shows current Phase 6C.2 UI.
+[ ] Hard refresh shows same current UI.
+[ ] No stale renderer after Air Strike changes.
+[ ] No stale combat-controls HUD.
+[ ] Open two browsers/tabs and confirm both show same state.
+[ ] Chrome/Chromium desktop sanity check.
+[ ] Safari/iPhone sanity check when convenient.
+[ ] Narrow-screen layout remains readable.
+[ ] HUD does not overlap arena unexpectedly.
+[ ] Canvas does not become unusably blurry under normal device pixel ratio/browser zoom.
+
+==================================================
+G. MOBILE UX — FUTURE WORK, NOT REQUIRED FOR CURRENT DESKTOP CORE
+==================================================
+[ ] Design touch movement controls.
+[ ] Design touch jump control.
+[ ] Design touch aim angle controls.
+[ ] Design touch power controls.
+[ ] Design touch fire/use control.
+[ ] Decide mobile equivalent of F1 AFK vote.
+[ ] Ensure controls do not cover critical battlefield view.
+[ ] Prevent unwanted page scroll/zoom gestures while controlling game.
+
+==================================================
+H. TECHNICAL DEBT / FUTURE REFACTOR
+==================================================
+[ ] Centralize terrain formulas currently duplicated across server/client Phase modules.
+[ ] Consider shared constants for weapon labels/rules to reduce drift.
+[ ] Expand visual/client-side automated tests if project complexity grows.
+[ ] Add explicit regression for Air Strike void-fall behavior after fix.
+[ ] Add regression for initial-player selection rule after fairness decision.
+
+==================================================
+I. NEXT FEATURE
+==================================================
+[ ] Phase 6D — Nuke Laser
+
+Before implementation:
+[ ] Complete/fix P1 Air Strike void death path.
+[ ] Decide P2 initial-player fairness.
+[ ] Run at minimum the critical Air Strike manual checks above.
+[ ] Define exact Nuke Laser mechanics before coding.
+
+==================================================
+VERSIONING
+==================================================
+Do not overwrite this file.
+Next manual/debug TODO snapshot must be:
+ORBITAL_ARTILLERY_TODOLIST_V2.txt
+
+END TODO V1
