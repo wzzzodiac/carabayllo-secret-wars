@@ -1,0 +1,49 @@
+COBY DEBUG — ORBITAL ARTILLERY — VERSION 12
+Date: 2026-08-28
+Purpose: quick pre-Phase 7A code gate after post-6F V11.
+
+AUDIT SCOPE
+- latest frontend/backend commits on main
+- current renderer6f.js and combat-controls6f.js
+- Phase 6F badge motion interpolation
+- exact inherited camera view
+- spectator telemetry / resolution ribbon composition
+- import-map/cache keys
+- current canonical docs
+- latest Frontend CI / Pages
+- latest Server CI
+
+RESULT
+No new confirmed code anomaly found in this quick pass.
+
+Verified:
+- renderer6f badge uses interpolated motion rather than raw spawn.
+- renderer6f still inherits the exact Phase 6D camera snapshot.
+- Phase 6F remains presentation-only; no gameplay authority moved client-side.
+- combat-controls6f only patches display state and delegates inputs/authority to the inherited stack.
+- renderer import map points to phase6f-spectator-polish-2 after the badge fix.
+- combat-controls6f remains on its unchanged phase6f-spectator-polish-1 cache key; no source change requires a bump.
+- latest frontend head 93c00d64815531f34158f9622187130fab17cf9a has Frontend CI SUCCESS and Pages SUCCESS.
+- authoritative server latest head 3ff74feb7003c421ec0a93d7acb9836b5d89e074 has Server CI SUCCESS.
+
+MANUAL-ONLY / NOT CLAIMED AS VALIDATED
+- real browser readability, overlap and flicker
+- real two-client latency/spectator sync
+- badge alignment during actual jump/void/camera transitions
+- Air Strike/Nuke visual composition
+- accumulated gameplay/manual QA in ORBITAL_ARTILLERY_TODOLIST_V10.txt
+
+CODE-ONLY GATE
+PASS — no currently known confirmed code blocker found in this quick pre-7A pass.
+
+MANUAL QA GATE
+PENDING.
+
+PHASE GATE
+APROBADO PARA AVANZAR from code-only perspective.
+
+VERSIONING
+Do not overwrite V12.
+Next Coby Debug snapshot: COBY_DEBUG_V13.txt
+
+END COBY DEBUG V12
