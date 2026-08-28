@@ -42,9 +42,9 @@ export function initCombatControls(gameCanvas) {
     }
 
     const note = panel.querySelector('.pickup-note');
-    if (note && !note.dataset.phase6dPatched) {
-      note.dataset.phase6dPatched = 'true';
-      note.textContent += ' Phase 6D movement is free across reachable terrain during your 40-second turn: there is no movement radius and no per-turn jump quota; the jump animation/cooldown is about half a second. All clients receive and render the active player aim, so spectators can watch angle, power and trajectory live. Nuke Laser uses that normal aim trajectory as a designator, then warns for 3 seconds and fires a sustained 3-second diagonal terrain-disintegration beam. It deals 20 direct damage, has no conventional knockback, destroys pickups in the beam, and always ends the turn.';
+    if (note && !note.dataset.phase6ePatched) {
+      note.dataset.phase6ePatched = 'true';
+      note.textContent += ' Current movement is free across reachable terrain during the 40-second turn: there is no movement radius and no per-turn jump quota; normal jump cadence is about half a second. All clients receive the active player aim so spectators can watch angle, power and trajectory live. Nuke Laser uses that trajectory as its designator, then warns for 3 seconds and fires a sustained 3-second terrain-disintegration beam. Phase 6E uses a 100-point pickup pool: Heavy 25, Triple 20, Cluster 20, Shield 12, Heal 12, Air Strike 8, Nuke 3.';
     }
   }
 
