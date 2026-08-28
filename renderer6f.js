@@ -54,19 +54,19 @@ export function createRenderer(canvas, config) {
     const voteWindow=Boolean(vote&&now>=Number(vote.eligibleAt??Infinity)&&remaining<=20000);
     const votes=vote?.votes?.length??0,required=vote?.requiredVotes??0;
     const myVote=Boolean(vote?.votes?.includes(localPlayerId));
-    const x=24,y=24,w=900,h=190,color=weaponColor(type),pulse=.65+.35*((Math.sin(now/170)+1)/2);
+    const x=24,y=24,w=480,h=122,color=weaponColor(type),pulse=.65+.35*((Math.sin(now/170)+1)/2);
     ctx.save();roundedPanel(x,y,w,h,voteWindow?`rgba(255,207,125,${.44+.22*pulse})`:`rgba(140,180,255,${.28+.18*pulse})`);
-    ctx.fillStyle='#8cb4ff';ctx.font='900 15px ui-monospace,monospace';ctx.fillText('LIVE SPECTATOR FEED',x+24,y+30);
-    ctx.fillStyle=color;ctx.font='900 24px ui-monospace,monospace';ctx.fillText(`${player.name} // ${weaponLabel(type)}`,x+24,y+66);
-    ctx.fillStyle='#e7edff';ctx.font='800 16px ui-monospace,monospace';ctx.fillText(`AIM ${angle}°   POWER ${power}%   WIND ${arrow} ${wind?.strength??0}`,x+24,y+96);
+    ctx.fillStyle='#8cb4ff';ctx.font='900 10px ui-monospace,monospace';ctx.fillText('LIVE SPECTATOR FEED',x+16,y+20);
+    ctx.fillStyle=color;ctx.font='900 17px ui-monospace,monospace';ctx.fillText(`${player.name} // ${weaponLabel(type)}`,x+16,y+45);
+    ctx.fillStyle='#e7edff';ctx.font='800 11px ui-monospace,monospace';ctx.fillText(`AIM ${angle}°   POWER ${power}%   WIND ${arrow} ${wind?.strength??0}`,x+16,y+66);
     if(voteWindow){
-      ctx.fillStyle='#ffcf7d';ctx.font='900 19px ui-monospace,monospace';ctx.fillText(`${player.name} AFK? // PRESS F1 TO SKIP TURN`,x+24,y+132);
-      ctx.fillStyle='#ffffff';ctx.font='900 18px ui-monospace,monospace';ctx.fillText(`VOTES TO SKIP: ${votes}/${required}`,x+24,y+162);
-      ctx.textAlign='right';ctx.fillStyle=myVote?'#a6ff87':'#b8c4dd';ctx.font='800 14px ui-monospace,monospace';ctx.fillText(myVote?'YOUR VOTE: ON // F1 TO WITHDRAW':'F1 TO VOTE',x+w-26,y+162);ctx.textAlign='left';
+      ctx.fillStyle='#ffcf7d';ctx.font='900 13px ui-monospace,monospace';ctx.fillText(`${player.name} AFK? // F1 TO SKIP TURN`,x+16,y+91);
+      ctx.fillStyle='#ffffff';ctx.font='900 12px ui-monospace,monospace';ctx.fillText(`VOTES: ${votes}/${required}`,x+16,y+111);
+      ctx.textAlign='right';ctx.fillStyle=myVote?'#a6ff87':'#b8c4dd';ctx.font='800 10px ui-monospace,monospace';ctx.fillText(myVote?'VOTED // F1 WITHDRAW':'F1 TO VOTE',x+w-16,y+111);ctx.textAlign='left';
     }else{
-      ctx.fillStyle='#8fa0bf';ctx.font='800 14px ui-monospace,monospace';ctx.fillText(`AFK SKIP UNLOCKS WITH 20s REMAINING // CURRENT: ${(remaining/1000).toFixed(0)}s`,x+24,y+138);
+      ctx.fillStyle='#8fa0bf';ctx.font='800 10px ui-monospace,monospace';ctx.fillText(`AFK SKIP OPENS AT 20s // ${(remaining/1000).toFixed(0)}s REMAINING`,x+16,y+96);
     }
-    ctx.fillStyle=voteWindow?'#ffcf7d':color;ctx.globalAlpha=pulse;ctx.beginPath();ctx.arc(x+w-26,y+26,6,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.fillStyle=voteWindow?'#ffcf7d':color;ctx.globalAlpha=pulse;ctx.beginPath();ctx.arc(x+w-17,y+17,4,0,Math.PI*2);ctx.fill();ctx.restore();
   }
   function drawWeaponBadge(activeRoom,view){
     if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;
