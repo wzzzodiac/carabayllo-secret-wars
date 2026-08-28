@@ -1,0 +1,83 @@
+ORBITAL ARTILLERY — PROJECT PROGRESS — VERSION 10
+Date: 2026-08-28
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V9.txt
+
+CURRENT PROJECT PHASE
+Phase 7A — Full Multiplayer QA: IN PROGRESS.
+
+IMPORTANT DISTINCTION
+Phase 7A is a QA phase, not a new gameplay feature layer.
+- Automated/server-contract QA can be executed through GitHub CI.
+- Browser/visual/two-client/game-feel QA still requires actual desktop testing and MUST NOT be marked complete from source review alone.
+- The live frontend identity remains Phase 6F because 6F is the latest gameplay/presentation implementation; 7A describes the current development/validation phase.
+
+PRE-7A GATE
+COBY_DEBUG_V12: PASS.
+No confirmed code anomaly was known before entering Phase 7A.
+
+PHASE 7A AUTOMATED QA ADDED
+Backend commit:
+- 2d24050b2f430e761b5d448e755c5d88331b1403 — Add Phase 7A multiplayer contract regressions
+
+New test file:
+- test/phase7a.test.js
+
+Automated contracts now covered:
+1. Eight-player Survival timeout cycle visits every living player exactly once before wrapping.
+2. Balanced Team 2v2 turn order alternates teams around the full cycle.
+3. Public spectatorAim mirrors authoritative active-player angle, power and selected special weapon.
+4. Free active-turn movement can exceed the historical 520-unit movement envelope.
+5. More than two jumps are allowed when normal movement/cooldown timing has elapsed.
+6. A projectile in flight locks active-player movement with shot_in_flight.
+
+CI RESULT
+Server CI run 39 executed the complete npm run check suite, including all historical tests and test/phase7a.test.js.
+Result: SUCCESS.
+
+WHAT THIS DOES NOT PROVE
+The automated suite does NOT prove:
+- visual synchronization between two real browsers
+- spectator feed readability or flicker
+- exact camera feel and composition
+- jump/badge visual attachment in a rendered browser
+- Air Strike/Nuke visual timing and impact feel
+- browser compatibility
+- real network latency behavior
+- music/audio duplication
+- balance/game feel
+- full end-to-end human-played Survival/Team matches.
+
+CURRENT AUTHORITATIVE GAMEPLAY BASELINE
+Backend remains Phase 6E authoritative:
+- 40 s turns
+- free movement
+- unlimited per-turn jumps with ~450 ms cooldown / ~500 ms normal visual
+- Heavy / Triple / Cluster / Shield / Heal / Air Strike / Nuke
+- pickup pool 25/20/20/12/12/8/3
+- AFK skip voting
+- destructible terrain and seven maps.
+
+Frontend remains Phase 6F presentation:
+- live spectator feed
+- active weapon badge
+- authoritative aim/power/wind telemetry
+- weapon-specific resolution ribbons
+- inherited Air Strike/Nuke world effects
+- exact inherited camera view.
+
+PHASE STATUS
+Phase 6F implementation: DONE IN CODE; manual visual QA pending.
+Phase 7A automated multiplayer contract QA: PASS.
+Phase 7A manual full multiplayer/browser QA: PENDING.
+Phase 7A overall: IN PROGRESS — NOT COMPLETE.
+
+NEXT WORK
+Use ORBITAL_ARTILLERY_TODOLIST_V11.txt as the manual Phase 7A execution checklist.
+Every reproduced issue should become Phase 7B bugfix/regression work where practical.
+Do not enter Phase 8 release-candidate status until the manual Phase 7A gate and subsequent Phase 7B fixes are complete.
+
+VERSIONING
+Do not overwrite V10.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V11.txt
+
+END PROGRESS V10
