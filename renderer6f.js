@@ -1,6 +1,13 @@
 import { createRenderer as createPhase6dRenderer } from './renderer6d.js?v=phase6f-view-api-1';
 
 export function createRenderer(canvas, config) {
+  const baseCtx=canvas.getContext('2d');
+  const originalFillText=baseCtx.fillText.bind(baseCtx);
+  baseCtx.fillText=(text,...args)=>{
+    const value=String(text??'');
+    if(value.includes('// HP ')&&(value.startsWith('SURVIVAL')||value.startsWith('TEAM ')||value.startsWith('OUT')))return;
+    originalFillText(text,...args);
+  };
   const base=createPhase6dRenderer(canvas,config);
   const overlay=document.createElement('canvas');
   overlay.width=canvas.width;
@@ -76,7 +83,6 @@ export function createRenderer(canvas, config) {
       const s=worldToScreen(pos.x,pos.y,view);if(s.x<-120||s.x>overlay.width+120||s.y<-140||s.y>overlay.height+140)continue;
       const active=activeRoom.match?.activePlayerId===player.id,local=player.id===localPlayerId;
       const w=clamp(56*pxX,16,104),h=clamp(30*pxY,10,60),wr=clamp(h*.28,3,13),cl=clamp(w*.48,12,44),ct=clamp(h*.16,3,10),angle=active?(activeRoom.match?.aimAngle??45):15;
-      ctx.save();ctx.fillStyle='rgba(3,7,15,.98)';ctx.fillRect(s.x-118,s.y-38,236,42);ctx.restore();
       if(player.shield&&player.alive!==false){ctx.save();ctx.strokeStyle='rgba(166,255,135,.88)';ctx.fillStyle='rgba(166,255,135,.09)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(s.x,s.y-h*.25,Math.max(24,w*.78),0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();}
       ctx.save();ctx.translate(s.x,s.y);ctx.scale(pos.facing||1,1);ctx.globalAlpha=player.alive===false?.48:1;ctx.fillStyle=activeRoom.mode==='survival'?'#d6b4ff':player.team==='A'?'#8cb4ff':'#ff9aa8';ctx.strokeStyle=active?'#ffe89a':local?'#fff':'rgba(231,237,255,.72)';ctx.lineWidth=active?4:local?3.5:2.5;ctx.beginPath();ctx.roundRect(-w/2,-h*.62,w,h,Math.max(3,h*.25));ctx.fill();ctx.stroke();ctx.fillStyle='#08101d';ctx.beginPath();ctx.arc(-w*.27,h*.24,wr,0,Math.PI*2);ctx.arc(w*.27,h*.24,wr,0,Math.PI*2);ctx.fill();ctx.save();ctx.translate(w*.08,-h*.72);ctx.rotate(-angle*Math.PI/180);ctx.fillRect(0,-ct/2,cl,ct);ctx.restore();ctx.restore();
       const hp=clamp(player.hp??100,0,player.maxHp??100),maxHp=player.maxHp??100,label=local?`YOU // HP ${hp}`:`${player.name} // HP ${hp}`,barW=clamp(w*2.6,72,180),barH=clamp(h*.24,9,14),labelY=s.y-Math.max(54,h*1.55);
@@ -126,6 +132,6 @@ export function createRenderer(canvas, config) {
     drawScaffold(){room=null;ctx.clearRect(0,0,overlay.width,overlay.height);base.drawScaffold();},
     drawArena(nextRoom,nextLocalPlayerId=null){room=nextRoom;localPlayerId=nextLocalPlayerId;base.drawArena(nextRoom,nextLocalPlayerId);},
     getViewSnapshot(){return base.getViewSnapshot?.()??null;},
-    destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlay.remove();base.destroy?.();}
+    destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlay.remove();baseCtx.fillText=originalFillText;base.destroy?.();}
   });
 }
