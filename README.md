@@ -14,7 +14,7 @@ Backend:
 
 **Current development phase: Phase 6C.2 — Heal + Air Strike implemented.**
 
-Air Strike mechanics, warning HUD and barrage renderer are present in the current code. Manual deployed-browser QA is still pending for its visual sequence and multiplayer synchronization.
+Air Strike mechanics, warning HUD and barrage renderer are present in the current code. Manual deployed-browser QA is still pending for its visual sequence, camera behavior and multiplayer synchronization.
 
 The next planned gameplay feature is **Phase 6D — Nuke Laser**, followed by final pickup/weapon balancing and broad desktop QA.
 
@@ -26,28 +26,36 @@ For the canonical resume state, use the highest-numbered versions of:
 - `ORBITAL_ARTILLERY_TODOLIST_V*.txt`
 
 Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V3.txt`
-- `COBY_DEBUG_V3.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V3.txt`
+- `ORBITAL_ARTILLERY_PROGRESS_V4.txt`
+- `COBY_DEBUG_V4.txt`
+- `ORBITAL_ARTILLERY_TODOLIST_V4.txt`
 
 ## Architecture
 
 - Static frontend on GitHub Pages
-- Vanilla HTML/CSS/JavaScript + Canvas 2D
+- Vanilla HTML/CSS/JavaScript ES modules + Canvas 2D
 - Temporary player names; no accounts in MVP
 - Private room codes for 2–8 players
 - Authoritative Node.js + Socket.IO server
-- Google Cloud Run backend
+- Google Cloud Run backend in `us-east1`
 - In-memory rooms; no persistent database in MVP
+- Active rooms may be lost if the Cloud Run instance restarts; accepted for MVP
 - Server connection begins on CREATE/JOIN rather than intentionally waking the backend on page load
+- Intended Cloud Run behavior: min instances 0, expected max 1
+
+Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 connection attempts/min/IP, 30 packets/s and 30-minute idle disconnect outside active/countdown matches.
 
 ## Implemented gameplay
 
 - Private room creation/joining
 - Host, READY, Team and Survival modes
 - Server-authoritative turns and game state
-- 5000×5000 world with overview/follow/manual camera
-- Movement, jumping, aim, power and wind
+- 5000×5000 world
+- Countdown overview, active-player follow, projectile follow, manual camera drag, wheel zoom and double-click return-to-follow
+- 40-second turns and per-turn wind
+- Weighted first-player selection that intentionally favors non-hosts
+- Randomized physical spawn positions
+- Movement, jumping, aim and power
 - Projectile trajectory preview and simulation
 - Seven terrain presets
 - Destructible terrain and craters
@@ -63,6 +71,26 @@ Current canonical snapshots:
 - F1 AFK turn-skip voting
 - Disconnect/turn-order hardening
 - Frontend/server CI and regression tests
+
+## Key current constants
+
+- HP: 100
+- Turn: 40 s
+- Movement radius: ±520
+- Move step: 15
+- Max walk surface delta: 42
+- Jump: 180, max 2/turn
+- Aim: 5–85°, default 45°
+- Power: 10–100, default 55
+- Basic: 45 max damage, radius 260, crater 135/165
+- Heavy: 60, radius 320, crater 190/90
+- Triple: 3 shots ±6°, 20 each, radius 175, crater 78/78
+- Cluster: 5 subimpacts, 14 each, radius 150, crater 70/70
+- Shield: next applicable damage ×0.5
+- Heal: +30, cap 100
+- Air Strike: 7 shells, 1200 ms warning, 120 ms stagger, 105 spacing, 16 max damage/shell, radius 165, crater 72/62
+- Pickups: every 3 turns, lifetime 4 turns, max 2, contact radius 64
+- AFK vote: opens at 20 s remaining, strict majority of other living players
 
 ## Current terrain presets
 
@@ -92,10 +120,23 @@ Current canonical snapshots:
 - Phase 6D — Nuke Laser ⏭ NEXT
 - Final balance + broad desktop QA ⏳
 
+## Phase 6D concept
+
+Nuke Laser is an approved future concept, not yet implemented:
+- very rare
+- diagonal terrain-disintegration beam
+- direct player damage around 20 HP
+- little or no conventional knockback
+- main danger is destroying support terrain and causing falls
+
+Exact beam geometry, Shield/self/friendly-fire behavior, pickup interaction and turn semantics must be finalized before implementation.
+
 ## Development rules
 
 Gameplay-critical state remains server authoritative: turns, damage, inventory, projectile/special resolution, pickups, deaths and victory.
 
-Starting-player weighting against the host is an intentional design decision and must not be "fixed" unless explicitly changed.
+Starting-player weighting against the host is intentional and must not be "fixed" unless explicitly changed.
 
 When performing a Coby Debug, distinguish confirmed code bugs from manual visual/gameplay checks. Anything requiring actual play/visual inspection belongs in the highest-numbered TODO list and must not be marked complete without manual testing.
+
+Older summaries may describe a feature as pending even when later commits implemented it. In conflicts, current executable code and later commits win.
