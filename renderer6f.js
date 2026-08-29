@@ -6,20 +6,13 @@ export function createRenderer(canvas, config) {
   const originalFillRect=baseCtx.fillRect.bind(baseCtx);
   const originalStrokeRect=baseCtx.strokeRect.bind(baseCtx);
   let legacyPlayerNames=new Set();
-  baseCtx.fillText=(text,...args)=>{
-    const value=String(text??'');
-    const legacyStatus=value.includes('// HP ')&&(value.startsWith('SURVIVAL')||value.startsWith('TEAM ')||value.startsWith('OUT'));
-    if(legacyStatus||legacyPlayerNames.has(value))return;
-    originalFillText(text,...args);
-  };
+  baseCtx.fillText=(text,...args)=>{const value=String(text??'');const legacyStatus=value.includes('// HP ')&&(value.startsWith('SURVIVAL')||value.startsWith('TEAM ')||value.startsWith('OUT'));if(legacyStatus||legacyPlayerNames.has(value))return;originalFillText(text,...args);};
   const legacyHealthBar=(w,h)=>Number(h)===7&&Number(w)>=40&&Number(w)<=90;
   baseCtx.fillRect=(x,y,w,h)=>{if(legacyHealthBar(w,h))return;originalFillRect(x,y,w,h);};
   baseCtx.strokeRect=(x,y,w,h)=>{if(legacyHealthBar(w,h))return;originalStrokeRect(x,y,w,h);};
   const base=createPhase6dRenderer(canvas,config);
   const overlay=document.createElement('canvas');
-  overlay.width=canvas.width;
-  overlay.height=canvas.height;
-  overlay.setAttribute('aria-hidden','true');
+  overlay.width=canvas.width;overlay.height=canvas.height;overlay.setAttribute('aria-hidden','true');
   Object.assign(overlay.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',zIndex:'3'});
   canvas.parentElement?.appendChild(overlay);
   const ctx=overlay.getContext('2d');
@@ -61,14 +54,10 @@ export function createRenderer(canvas, config) {
       ctx.save();ctx.font='900 16px ui-monospace,monospace';const boxW=Math.max(137,Math.min(247,ctx.measureText(label).width+33));ctx.fillStyle='rgba(3,7,15,.96)';ctx.beginPath();ctx.roundRect(s.x-boxW/2,labelY-23,boxW,49,7);ctx.fill();ctx.textAlign='center';ctx.fillStyle=local?'#ffffff':active?'#ffe89a':'#e7edff';ctx.fillText(label,s.x,labelY-6);ctx.fillStyle='rgba(4,8,16,.95)';ctx.fillRect(s.x-barW/2,labelY+7,barW,barH);ctx.fillStyle=hp>50?'#9be7b0':hp>25?'#ffe89a':'#ff9aa8';ctx.fillRect(s.x-barW/2,labelY+7,barW*(hp/maxHp),barH);ctx.strokeStyle='rgba(231,237,255,.72)';ctx.lineWidth=1.6;ctx.strokeRect(s.x-barW/2,labelY+7,barW,barH);ctx.restore();
     }
   }
-  function drawWeaponBadge(activeRoom,view){
-    if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;const id=activeRoom.match?.activePlayerId,player=activeRoom.players?.find(p=>p.id===id);if(!player?.spawn)return;const pos=visualPlayerPosition(player);if(!pos)return;
-    const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-169,view);if(p.x<-220||p.x>overlay.width+220||p.y<-140||p.y>overlay.height+140)return;
-    const zoom=clamp(5000/Math.max(1,view.width),1,5),scale=clamp((.58+zoom*.19)*VEHICLE_SCALE,.50,.995),label=weaponLabel(type),color=weaponColor(type),width=clamp((label.length*10+44)*scale,57,169),height=36*scale;ctx.save();roundedPanel(p.x-width/2,p.y-height*.62,width,height,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font=`900 ${Math.max(9,Math.round(14*scale))}px ui-monospace,monospace`;ctx.fillText(label,p.x,p.y+Math.round(2*scale));ctx.restore();
-  }
+  function drawWeaponBadge(activeRoom,view){if(activeRoom?.status!=='started'||activeRoom.match?.projectile)return;const id=activeRoom.match?.activePlayerId,player=activeRoom.players?.find(p=>p.id===id);if(!player?.spawn)return;const pos=visualPlayerPosition(player);if(!pos)return;const type=selectedType(activeRoom),p=worldToScreen(pos.x,pos.y-169,view);if(p.x<-220||p.x>overlay.width+220||p.y<-140||p.y>overlay.height+140)return;const zoom=clamp(5000/Math.max(1,view.width),1,5),scale=clamp((.58+zoom*.19)*VEHICLE_SCALE,.50,.995),label=weaponLabel(type),color=weaponColor(type),width=clamp((label.length*10+44)*scale,57,169),height=36*scale;ctx.save();roundedPanel(p.x-width/2,p.y-height*.62,width,height,`${color}88`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font=`900 ${Math.max(9,Math.round(14*scale))}px ui-monospace,monospace`;ctx.fillText(label,p.x,p.y+Math.round(2*scale));ctx.restore();}
   function resolutionText(q,now){const type=q?.weaponType??'basic';if(type==='nuke'){if(now<(q.targetLockedAt??q.impactAt??0))return['NUKE DESIGNATOR','IN FLIGHT'];if(now<(q.beamAt??0))return['NUKE LASER',`CHARGING ${Math.max(0,((q.beamAt-now)/1000)).toFixed(1)}s`];if(now<=(q.beamUntil??0))return['NUKE LASER','WORLD-ENDER FIRING'];return['NUKE LASER','TERRAIN COLLAPSE'];}if(type==='airstrike')return['AIR STRIKE',now<(q.warningUntil??0)?`INBOUND ${Math.max(0,((q.warningUntil-now)/1000)).toFixed(1)}s`:'SHELL IMPACTS'];if(type==='triple')return['TRIPLE SHOT','VOLLEY IN FLIGHT'];if(type==='cluster')return['CLUSTER BOMB','DISPERSAL IN PROGRESS'];if(type==='heavy')return['HEAVY BOMB','PROJECTILE IN FLIGHT'];return['BASIC SHOT','PROJECTILE IN FLIGHT'];}
   function drawResolutionRibbon(activeRoom){const q=activeRoom?.match?.projectile;if(activeRoom?.status!=='started'||!q)return;const now=Date.now(),[title,state]=resolutionText(q,now),type=q.weaponType??'basic',color=weaponColor(type),w=540,h=68,x=(overlay.width-w)/2,y=20;ctx.save();roundedPanel(x,y,w,h,`${color}99`);ctx.textAlign='center';ctx.fillStyle=color;ctx.font='900 18px ui-monospace,monospace';ctx.fillText(title,overlay.width/2,y+28);ctx.fillStyle='#e7edff';ctx.font='800 14px ui-monospace,monospace';ctx.fillText(state,overlay.width/2,y+52);ctx.restore();}
-  function drawCountdown(activeRoom){if(activeRoom?.status!=='countdown')return;const x=overlay.width/2,y=overlay.height/2+88;ctx.save();ctx.textAlign='center';ctx.fillStyle='rgba(2,4,10,.98)';ctx.fillRect(x-360,y-22,720,40);ctx.fillStyle='#8cb4ff';ctx.font='800 15px ui-monospace,monospace';ctx.fillText('VERSION 0.9.1 BETA // MATCH STARTING',x,y+5);ctx.restore();}
+  function drawCountdown(activeRoom){if(activeRoom?.status!=='countdown')return;const x=overlay.width/2,y=overlay.height/2+88;ctx.save();ctx.textAlign='center';ctx.fillStyle='rgba(2,4,10,.98)';ctx.fillRect(x-360,y-22,720,40);ctx.fillStyle='#8cb4ff';ctx.font='800 15px ui-monospace,monospace';ctx.fillText('VERSION 0.9.2 BETA // MATCH STARTING',x,y+5);ctx.restore();}
   function loop(){ctx.clearRect(0,0,overlay.width,overlay.height);if(room?.arena){const view=base.getViewSnapshot?.();if(view){drawEnhancedVehicles(room,view);drawWeaponBadge(room,view);}drawLiveSpectator(room);drawResolutionRibbon(room);drawCountdown(room);}frameId=requestAnimationFrame(loop);}
   frameId=requestAnimationFrame(loop);
   return Object.freeze({drawScaffold(){room=null;legacyPlayerNames=new Set();ctx.clearRect(0,0,overlay.width,overlay.height);base.drawScaffold();},drawArena(nextRoom,nextLocalPlayerId=null){room=nextRoom;localPlayerId=nextLocalPlayerId;legacyPlayerNames=new Set((nextRoom?.players??[]).map(player=>String(player.name??'')));base.drawArena(nextRoom,nextLocalPlayerId);},getViewSnapshot(){return base.getViewSnapshot?.()??null;},destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlay.remove();baseCtx.fillText=originalFillText;baseCtx.fillRect=originalFillRect;baseCtx.strokeRect=originalStrokeRect;base.destroy?.();}});
