@@ -10,288 +10,165 @@ Backend:
 - `wzzzodiac/orbital-artillery-server`
 - Authoritative Node.js + Socket.IO server on Google Cloud Run
 
-## Current status
+## Current release
 
-**Current development phase: Phase 7A — Full Multiplayer QA, in progress.**
+**Orbital Artillery v0.9 Beta — functional gameplay build.**
 
-The planned v1 gameplay/core feature scope is now effectively feature-complete in code, including two new Phase 7A subphases:
-- **Phase 7A.1 — Match Stats & Event Tracking** ✅ implementation
-- **Phase 7A.2 — Rematch & Match Loop** ✅ implementation
+Phase 9 is closed for the current mechanical/gameplay scope. The game can be played from lobby to result/rematch with the planned v0.9 mechanics implemented and regression-covered.
 
-This does **not** mean Phase 7A or the game is release-ready. Two-client browser sync, visual behavior, full human-played matches, balance/game feel and the complete manual QA list are still pending.
+The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Phase 10 is intentionally parked for now and will focus on the large visual identity pass: characters/animal riders, vehicles, map art, backgrounds, terrain redesign and later vertical/dynamic map experimentation.
 
-Current code gate: **COBY_DEBUG_V13.txt — PASS** after finding and fixing two real post-feature issues:
-1. stale frontend cache for the updated match-stats module;
-2. legitimate projectile damage could be lost from telemetry when the same resolution also sent the target into the void.
-
-Current canonical snapshots:
-- `ORBITAL_ARTILLERY_PROGRESS_V11.txt`
-- `COBY_DEBUG_V13.txt`
-- `ORBITAL_ARTILLERY_TODOLIST_V12.txt`
-
-Mobile/touch gameplay is not part of the current roadmap.
+Mobile/touch gameplay is not part of this project roadmap.
 
 ## Architecture
 
 - Static frontend on GitHub Pages
 - Vanilla HTML/CSS/JavaScript ES modules + Canvas 2D
-- Temporary player names; no accounts in MVP
 - Private room codes for 2–8 players
+- Team and Survival modes
 - Authoritative Node.js + Socket.IO server
 - Google Cloud Run backend in `us-east1`
-- In-memory rooms; no persistent database in MVP
-- Active rooms may be lost if the Cloud Run instance restarts; accepted for MVP
-- Server connection begins on CREATE/JOIN rather than intentionally waking the backend on page load
-- Intended Cloud Run behavior: min instances 0, expected max 1
+- In-memory rooms; no persistent database in v0.9
+- Socket connection begins on CREATE/JOIN rather than intentionally waking the backend on page load
+- Connection-state recovery protects active matches from brief transport cuts
 
-Current server limits/defaults include 20 rooms, 64 concurrent sockets, 20 connection attempts/min/IP, 30 packets/s and 30-minute idle disconnect outside active/countdown matches.
+GitHub source/CI does not by itself prove the latest backend commit is already deployed to Cloud Run; deployed runtime parity is checked separately when needed.
 
-The current backend source routes gameplay through `phase7a1.js`, which wraps the hardened Phase 6E gameplay contract with authoritative match telemetry and the rematch loop. Source `/health` reports Phase 7A.1. GitHub source/CI does not by itself prove the Cloud Run revision is already deployed; deployed runtime parity should be checked separately before release.
+## v0.9 gameplay baseline
 
-## Implemented gameplay
-
-- Private room creation/joining
-- Host, READY, Team and Survival modes
-- Server-authoritative turns and game state
+- 2–8 players
+- Team / Survival
+- private rooms
+- server-authoritative turns and combat
 - 5000×5000 world
-- Countdown overview, active-player follow, projectile follow, manual camera drag, wheel zoom and double-click return-to-follow
-- 40-second turns and per-turn wind
-- Weighted first-player selection that intentionally favors non-hosts
-- Randomized physical spawn positions
-- Free active-turn movement across reachable terrain
-- Unlimited per-turn jumping with short normal-jump cadence
-- Long natural fall/death timing for jumps into void
-- Live spectator aim: active angle, power and trajectory visible to all clients
-- Phase 6F live spectator telemetry and active-weapon identity
-- Weapon-specific attack-resolution status presentation
-- Projectile trajectory preview and simulation
-- Seven terrain presets
-- RANDOM terrain selection in lobby
-- Destructible terrain and craters
-- Knockback, HP, falls, deaths and victory
-- Pickup spawning, lifetime and explosion/contact collection
-- Permanent Basic weapon + two special inventory slots
-- Heavy Bomb
-- Triple Shot
-- Cluster Bomb
-- Shield
-- Heal +30
-- Air Strike
-- Nuke Laser
-- F1 AFK turn-skip voting
-- Disconnect/turn-order hardening
-- Phase 6E 100-point balanced pickup pool
-- Authoritative live match scoreboard
-- Damage dealt / damage received
-- Kills / assists / deaths / self-KOs / void deaths
-- Pickups collected / biggest hit
-- Weapon-use counts and most-used-weapon summary
-- Server-generated match event feed
-- Death attribution: player / self-KO / void / shooter-caused terrain collapse
-- End-of-match summary
-- Host SAME MAP rematch
-- Host RANDOM MAP rematch
-- Frontend/server CI and regression tests
-
-## Phase 6E balance baseline
-
-The current pickup distribution is exactly 100 weight points:
-- Heavy Bomb: 25
-- Triple Shot: 20
-- Cluster Bomb: 20
-- Shield: 12
-- Heal +30: 12
-- Air Strike: 8
-- Nuke Laser: 3
-
-Gameplay baseline remains:
-- 40 s turns
-- pickup every 3 turns
-- pickup lifetime 4 turns
-- max 2 pickups
+- 40-second turns
+- wind, angle and power
 - free active-turn movement
-- jump cooldown ~450 ms
-- normal jump visual ~500 ms.
+- unlimited jumps with cooldown
+- destructible terrain
+- seven terrain presets + RANDOM selector
+- randomized physical spawns
+- camera overview / follow / projectile follow / drag / zoom / reset
+- live spectator aim and weapon telemetry
+- AFK F1 skip vote
+- disconnect/recovery hardening
+- match scoreboard and event feed
+- damage / kills / assists / damage taken / pickups / biggest hit
+- death attribution
+- end-of-match summary
+- same-map and random-map rematch
 
-Final feel/balance remains subject to manual play.
+## Weapons / utilities
 
-## Phase 6F presentation layer
+Permanent slot:
+- Basic
 
-`renderer6f.js` wraps the previous renderer stack and adds presentation only:
-- LIVE spectator feed with active player, selected weapon, angle, power and wind
-- active weapon badge anchored to the animated vehicle
-- weapon-specific resolution ribbons
-- inherited Air Strike and Nuke world-space effects
-- exact inherited camera view.
+Special pickup pool:
+- Heavy Bomb — 25
+- Triple Shot — 20
+- Cluster Bomb — 20
+- Shield — 12
+- Heal +30 — 12
+- Air Strike — 8
+- Nuke Laser — 3
 
-`combat-controls6f.js` adds active weapon / spectator telemetry to the battle HUD without changing input authority.
+Pool total: 100.
 
-Current renderer cache key: `phase6f-spectator-polish-2`.
+Current notable behavior:
+- Basic, Heavy, Triple and Cluster use long readable projectile flights.
+- Air Strike shells visibly descend from the top of the battle view.
+- Nuke uses a designator, 5-second warning and 5-second beam.
+- Nuke deals 20 direct damage and creates a survivable diagonal terrain scar rather than a vertical void.
+- Shield halves the next applicable damage.
+- Heal restores +30 up to 100 HP.
 
-## Phase 7A.1 — Match Stats & Event Tracking
+## v0.9 pickup pacing
 
-`phase7a1.js` observes the actual authoritative server state before/after gameplay resolutions instead of duplicating the historical combat resolvers.
+The final v0.9 pickup rules are designed to make late matches increasingly chaotic:
 
-Per-player authoritative stats:
-- damage dealt
-- damage received
-- kills
-- assists
-- deaths
-- self-KOs
-- void deaths
-- pickups
-- biggest hit
-- successful weapon/utility uses
-- per-weapon use counts.
+- turns 1–9: baseline pickup cadence every 3 turns
+- from turn 10 onward: one pickup spawn opportunity every turn
+- pickup lifetime: 4 turns
+- maximum live pickups on the map: 4
+- permanent Basic + 2 special inventory slots
+- each player may collect at most 1 pickup during their own turn
+- touching a pickup does not end the turn
+- after collecting a pickup, the player may still move and fire normally
+- explosions/projectiles do **not** collect pickups
+- Nuke may still destroy pickups intersected by the beam
 
-Important invariants:
-- self-damage increases damage received but does not increase damage dealt or biggest hit;
-- pure environmental void death does not convert remaining HP into fake damage;
-- if an actual impact deals damage and that same resolution also causes a void death, only the real `lastDamage` amount is credited;
-- kills are credited to a non-self source when applicable;
-- assist rule for v1: every other prior non-self contributor to that victim in the current match gets one assist when another player gets the kill.
+This creates an early positioning phase followed by a more frantic late-game item economy without allowing one player to vacuum multiple boxes during a single free-movement turn.
 
-The server also publishes a capped match event feed and death-attribution metadata.
+## Current vehicle/combat readability baseline
 
-`match-stats7a1.js` displays the live scoreboard as a DOM panel separate from the Canvas renderer. It shows damage, kills, assists, damage taken, pickups, uses and biggest hit plus recent events.
+The v0.9 placeholder vehicles remain temporary assets for Phase 10, but their gameplay scale is now established:
 
-The final summary includes:
-- result/winner
-- duration
-- turns
-- top damage
-- top kills in authoritative state
-- most-used weapon.
+- enlarged vehicle presentation
+- matching enlarged projectile hitbox
+- one large HP bar per vehicle
+- readable `YOU // HP` / player-name labels
+- active weapon badge
+- larger spectator/AFK panel
 
-## Phase 7A.2 — Rematch & Match Loop
+The current tank/cart art is explicitly placeholder material and is expected to be replaced in Phase 10.
 
-At match end, the host can choose:
-- `REMATCH // SAME MAP`
-- `REMATCH // RANDOM MAP`
+## Automated coverage
 
-A rematch preserves:
-- private room code
-- connected players
-- game mode
-- teams.
+Regression coverage includes, among other cases:
 
-It resets:
-- HP / alive state
-- arena/craters
-- pickups
-- inventories
-- selected weapon
-- Shield
-- previous telemetry/results.
-
-The retained players are readied automatically and exactly one fresh countdown is started. RANDOM rematch intentionally selects a different concrete terrain from the previous match.
-
-The lobby terrain selector also includes `RANDOM MAP`; selecting it resolves immediately to a concrete terrain and resets READY states.
-
-## Phase 7A automated QA
-
-`test/phase7a.test.js` covers core multiplayer contracts:
-- 8-player Survival turn-cycle wrap
+- 8-player Survival turn cycle
 - balanced Team 2v2 alternation
-- spectator aim/weapon parity
-- free movement beyond the old ±520 envelope
-- more than two jumps after normal cooldown/motion timing
-- shot-in-flight movement lock.
+- spectator aim parity
+- free movement beyond the historical movement envelope
+- more than two jumps per turn
+- projectile movement lock
+- projectile/terrain face collision
+- long visible projectile pacing
+- Air Strike descent pacing
+- Nuke timing/damage/terrain behavior
+- large vehicle hitbox behavior
+- 100 turn timeouts without false victory
+- disconnect turn-order handling
+- stats / damage attribution / assists
+- rematch reset and RANDOM rematch
+- v0.9 pickup frenzy from turn 10
+- maximum 4 live pickups
+- one pickup per player per turn
+- touch-only pickup contract in public v0.9 state
 
-`test/phase7a1.test.js` additionally covers:
-- zeroed public telemetry
-- weapon/utility usage tracking
-- self-damage leaderboard invariant
-- real impact damage + void-death attribution
-- same-map rematch reset
-- random rematch
-- RANDOM lobby terrain
-- non-host rematch rejection.
+Historical Phase 6/7 tests remain in the suite as regressions even though the public game is now identified by release version rather than internal development phases.
 
-These automated tests are evidence for server contracts only; they do not replace browser/network/game-feel QA.
+## Version roadmap
 
-## Key current constants
+- Phases 0–6 — core gameplay systems ✅
+- Phase 7 — multiplayer QA, stats, match loop and hardening ✅
+- Phase 8 — minor functional/readability polish ✅
+- **Phase 9 — v0.9 Beta functional release ✅**
+- **Phase 10 — Major Visual Overhaul → v1.0 ⏳ PARKED**
 
-- HP: 100
-- Turn: 40 s
-- Move step: 15
-- Movement radius: none during active turn
-- Max walk surface delta: 42
-- Jump distance: 180
-- Jump quota: none during active turn
-- Normal jump visual: ~500 ms
-- Jump cooldown: ~450 ms
-- Aim: 5–85°, default 45°
-- Power: 10–100, default 55
-- Basic: 45 max damage, radius 260, crater 135/165
-- Heavy: 60, radius 320, crater 190/90
-- Triple: 3 shots ±6°, 20 each, radius 175, crater 78/78
-- Cluster: 5 subimpacts, 14 each, radius 150, crater 70/70
-- Shield: next applicable damage ×0.5
-- Heal: +30, cap 100
-- Air Strike: 7 shells, 1200 ms warning, 120 ms stagger, 105 spacing, 16 max damage/shell, radius 165, crater 72/62
-- Nuke Laser: 20 direct damage, 3000 ms warning after designator lock, 3000 ms sustained beam, large diagonal terrain cut, no conventional knockback
-- Pickups: every 3 turns, lifetime 4 turns, max 2, contact radius 64
-- Phase 6E pool: 25/20/20/12/12/8/3 = 100
-- AFK vote: opens at 20 s remaining, strict majority of other living players
-- Match event feed server cap: 36 recent events
+Phase 10 is expected to cover the major identity pass rather than reopening the v0.9 mechanical foundation unnecessarily.
 
-## Current terrain presets
+## Phase 10 parking lot
 
-- Rolling Expanse
-- Terrace Line
-- Twin Peaks
-- Impact Basin
-- Broken Ridge
-- Drift Islands
-- Canyon Run
-- RANDOM MAP selector resolves to one of the concrete presets.
+Ideas intentionally saved for later evaluation:
 
-## Current roadmap
+- replace placeholder tanks with animal characters riding small artillery vehicles
+- selectable character/vehicle roster
+- unique visual identity per map
+- distinct backgrounds / sky / ground themes
+- moon/space-rock style maps
+- terrain masses above the main ground rather than a simple second floor
+- cliffs, floating rocks, canyon structures and other vertical tactical terrain
+- evaluate access to elevated terrain through map design first
+- teleport/reposition utility only if vertical-map play demonstrates a real need
+- evaluate higher HP only after testing the new Phase 10 map geometry and match pacing
 
-- Phase 0 — scaffold / architecture ✅
-- Phase 1 — private-room networking ✅
-- Phase 2 — synchronized arena ✅
-- Phase 2.5 — world / camera ✅
-- Phase 3 — turns / wind ✅
-- Phase 4 — movement / aim / fire ✅
-- Phase 5A — destructible terrain ✅
-- Phase 5B — HP / damage / death / victory ✅
-- Phase 6A — pickups / inventory / Heavy Bomb ✅
-- Phase 6B — Triple Shot / Cluster Bomb / Shield ✅
-- Phase 6B.1 — AFK Skip Vote ✅
-- Phase 6C.1 — Heal ✅
-- Phase 6C.2 — Air Strike ✅ implementation; manual PC QA pending
-- Phase 6D — Nuke + free movement + live spectator aim ✅ implementation; manual PC QA pending
-- Phase 6E — Balance & Gameplay Tuning ✅ baseline implementation; manual balance QA pending
-- Phase 6F — Visual & Spectator Polish ✅ implementation; manual visual QA pending
-- Phase 7A — Full Multiplayer QA 🔄 automated contracts passed; manual full QA pending
-- Phase 7A.1 — Match Stats & Event Tracking ✅ implementation; manual validation pending
-- Phase 7A.2 — Rematch & Match Loop ✅ implementation; manual validation pending
-- Phase 7B — Bugfix & Regression Hardening ⏳
-- Later presentation block — map edits/new maps/vehicle visual redesign/polish ⏳
-- Phase 8 — Release Candidate / Final Polish ⏳
-- Phase 9 — v1.0 Release ⏳
-
-## Automated baseline
-
-Current post-feature gate:
-- `COBY_DEBUG_V13.txt`: PASS after two confirmed fixes
-- latest Phase 7A telemetry Server CI: SUCCESS
-- corrected Phase 7A frontend CI: SUCCESS
-- corrected Phase 7A GitHub Pages deployment: SUCCESS.
-
-Automated checks do not replace manual desktop QA.
+These are Phase 10 ideas, not part of the v0.9 mechanical contract.
 
 ## Development rules
 
-Gameplay-critical state remains server authoritative: turns, damage, inventory, projectile/special resolution, pickups, deaths, stats attribution, rematch state and victory.
+Gameplay-critical state remains server authoritative: turns, projectile resolution, damage, inventory, pickups, deaths, stats attribution, match result and rematch state.
 
-Starting-player weighting against the host is intentional and must not be "fixed" unless explicitly changed.
+Starting-player weighting against the host is intentional and should not be changed unless explicitly redesigned.
 
-The Phase 6E 100-point pool remains the baseline, not a guarantee that manual play will never justify tuning.
-
-When performing a Coby Debug, distinguish confirmed code bugs from manual visual/gameplay checks. Anything requiring actual play/visual inspection belongs in the highest-numbered TODO list and must not be marked complete without manual testing.
-
-Older summaries may describe a feature as pending even when later commits implemented it. In conflicts, current executable code and later commits win.
+When code and old documents disagree, current executable source and later versioned snapshots win.
