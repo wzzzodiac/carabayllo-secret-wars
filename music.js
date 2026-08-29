@@ -22,6 +22,22 @@ function ramp(audio,from,to,duration,onDone){
   ramps.set(audio,timer);
 }
 function stopAudio(audio){if(!audio)return;cancelRamp(audio);audio.pause();try{audio.currentTime=0;}catch{}}
+async function restartCurrentLoop(audio){
+  if(!audio||audio!==state.current)return;
+  cancelRamp(audio);state.loopFadeStarted=true;
+  try{
+    audio.currentTime=0;audio.volume=0;await audio.play();
+    if(audio!==state.current)return;
+    ramp(audio,0,targetGain(),FADE_IN_MS,()=>{if(audio===state.current)state.loopFadeStarted=false;});
+  }catch{if(audio===state.current)state.loopFadeStarted=false;}
+}
+function beginLoopFade(audio){
+  if(!audio||audio!==state.current||state.loopFadeStarted)return;
+  const remaining=Number.isFinite(audio.duration)?Math.max(0,audio.duration-audio.currentTime):LOOP_FADE_SECONDS;
+  state.loopFadeStarted=true;
+  const fadeMs=Math.max(500,remaining*1000-120);
+  ramp(audio,audio.volume,0,fadeMs,()=>restartCurrentLoop(audio));
+}
 function createTrack(key){
   const meta=TRACKS[key];if(!meta)return null;
   const audio=new Audio(meta.src);audio.preload='auto';audio.loop=false;audio.volume=0;audio.dataset.orbitalTrack=key;
@@ -31,21 +47,22 @@ function createTrack(key){
   });
   audio.addEventListener('timeupdate',()=>{
     if(audio!==state.current||!Number.isFinite(audio.duration)||audio.duration<=0||state.loopFadeStarted)return;
-    const remaining=audio.duration-audio.currentTime;
-    if(remaining>LOOP_FADE_SECONDS)return;
-    state.loopFadeStarted=true;
-    const fadeMs=Math.max(500,remaining*1000-120);
-    ramp(audio,audio.volume,0,fadeMs,async()=>{
-      if(audio!==state.current)return;
-      try{audio.currentTime=0;await audio.play();ramp(audio,0,targetGain(),FADE_IN_MS,()=>{if(audio===state.current)state.loopFadeStarted=false;});}
-      catch{state.loopFadeStarted=false;}
-    });
+    if(audio.duration-audio.currentTime<=LOOP_FADE_SECONDS)beginLoopFade(audio);
+  });
+  audio.addEventListener('ended',()=>{
+    if(audio!==state.current)return;
+    restartCurrentLoop(audio);
   });
   return audio;
 }
 async function playKey(key,{fadeIn=FADE_IN_MS,fadeOut=FADE_OUT_MS}={}){
   if(!state.unlocked)return;
-  if(key===state.currentKey&&state.current){if(Math.abs(state.current.volume-targetGain())>.02)ramp(state.current,state.current.volume,targetGain(),450);return;}
+  if(key===state.currentKey&&state.current){
+    if(state.loopFadeStarted)return;
+    if(state.current.ended||state.current.paused){restartCurrentLoop(state.current);return;}
+    if(Math.abs(state.current.volume-targetGain())>.02)ramp(state.current,state.current.volume,targetGain(),450);
+    return;
+  }
   const previous=state.current;
   if(!key){
     state.currentKey=null;state.current=null;state.loopFadeStarted=false;
@@ -79,7 +96,7 @@ function syncMusic(room){
 function setVolume(value){
   state.volume=clamp(Math.round(Number(value)||0),0,100);localStorage.setItem(STORAGE_KEY,String(state.volume));
   volumeValue.textContent=`${state.volume}%`;slider.value=String(state.volume);speaker.textContent=state.volume===0?'🔇':state.volume<35?'🔈':state.volume<70?'🔉':'🔊';
-  if(state.current)ramp(state.current,state.current.volume,targetGain(),180);
+  if(state.current&&!state.loopFadeStarted)ramp(state.current,state.current.volume,targetGain(),180);
 }
 
 const control=document.createElement('div');
