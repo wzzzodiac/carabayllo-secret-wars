@@ -1,0 +1,60 @@
+ORBITAL ARTILLERY — TODOLIST V16
+Date: 2026-08-29
+Release baseline: v0.9.6 Beta
+
+CURRENT STATUS
+- Phase 9 / v0.9 functional release: CLOSED.
+- v0.9.6 Beta traversal/audio/pickup hotfixes: IMPLEMENTED.
+- Automated source/CI gate: PASS.
+- Phase 10 / major visual overhaul toward v1.0: PARKED.
+
+V0.9.6 BETA WATCH — MANUAL BROWSER CHECKS
+[ ] Pickup edge-graze: a pickup is collected when the 51-unit vehicle hitbox only touches/grazes the visible pickup body; effective center threshold is 74 world units.
+[ ] Pickup terrain accessibility: crater/ledge placements similar to the reported screenshot should no longer require pixel-perfect overlap.
+[ ] Natural ledge drop: walking toward a lower solid surface should produce a short fall without requiring SPACE.
+[ ] Natural ledge drop must not create fake landings over void.
+[ ] Existing high-structure jump mechanic should still feel correct: normal 180 jump plus adaptive vault only when genuinely blocked.
+[ ] Lobby Sports Opener repeats indefinitely with fade-out/restart/fade-in.
+[ ] Dark repeats correctly during turns 1–8.
+[ ] Turn 9 fades Dark to silence cleanly.
+[ ] Adrenaline fades in at turn 10 and repeats with fades until match end.
+[ ] Match end returns/crossfades to lobby music.
+[ ] Basic launch + basic explosion audible once and synchronized.
+[ ] Heavy launch + loud explosion audible once and synchronized.
+[ ] Triple produces three distinguishable launch cues and individual impact explosions.
+[ ] Cluster main Heavy/loud cues plus individual child shot/explosion cues are correct.
+[ ] Air Strike begin cue, individual shell cues and individual impact explosions are correct.
+[ ] Nuke warning starts after target lock, stops at beam start, then Nuke activation/explosion plays clearly without harmful volume.
+[ ] Shield and Heal cues play once when their authoritative utility state changes.
+[ ] START GAME overlay visibly shows only START + map + mode; no version/phase/arsenal text leaks through.
+[ ] Live Cloud Run backend parity with latest v0.9.6 server head when deployment/runtime verification is explicitly performed.
+
+AUTOMATED CONTRACT ALREADY COVERED
+[x] Pickup edge-touch regression beyond old 64-unit threshold.
+[x] One pickup per player per turn remains enforced.
+[x] Explosion/projectile pickup collection remains disabled.
+[x] Natural downward solid ledge converts steep walk rejection into fall.
+[x] Upward/void terrain is not converted into natural drop.
+[x] Adaptive ledge vault regression remains green.
+[x] Full historical server regression suite green at v0.9.6 source head.
+[x] Frontend syntax checks green for music/audio/countdown code.
+[x] GitHub Pages deployment green for executable/documented v0.9.6 frontend head before snapshots.
+
+DO NOT REOPEN WITHOUT REPRODUCTION
+- Phase 9 itself.
+- Historical projectile timing/terrain-face fixes.
+- Disconnect/false-victory hardening.
+- Nuke diagonal terrain behavior.
+- Damage balance finalized for current beta.
+- Pickup fair midpoint placement.
+
+PHASE 10 PARKING LOT
+[ ] Animal characters mounted on artillery vehicles.
+[ ] Selectable roster / vehicle identity.
+[ ] Distinct map backgrounds, ground, terrain art and themes.
+[ ] Vertical/dynamic terrain masses such as moon rocks, canyon structures and floating formations.
+[ ] Evaluate natural map access before adding teleport utility.
+[ ] Evaluate HP/pacing again only after Phase 10 map geometry exists.
+
+RULE
+Manual visual/audio/game-feel items remain pending until actually tested in the browser. Automated CI/source review must not be used to claim subjective audio timing, fade quality, traversal feel or deployed Cloud Run parity.
