@@ -1,0 +1,92 @@
+ORBITAL ARTILLERY — v0.9 BETA HOTFIX / MANUAL QA — VERSION 14
+Date: 2026-08-29
+Supersedes for current use: ORBITAL_ARTILLERY_TODOLIST_V13.txt
+
+STATUS
+- Phase 9 / v0.9 Beta remains CLOSED.
+- This list tracks manual validation of the post-release balance/readability hotfix.
+- Phase 10 remains PARKED / NOT STARTED.
+- Automated backend/frontend gates passed before this snapshot.
+
+RULE
+Do NOT mark visual, browser, network, balance-feel or perceived-hitbox checks complete without actual gameplay testing.
+
+A. VEHICLE SCALE
+[ ] Vehicle body looks approximately 65% of the previous placeholder size.
+[ ] Wheels scale naturally with the body.
+[ ] Cannon dimensions scale naturally with the body.
+[ ] Shield ring fits the smaller vehicle.
+[ ] Player name / YOU // HP text is readable at the new smaller size.
+[ ] HP bar is readable and does not dominate the vehicle.
+[ ] Active weapon badge is appropriately smaller and positioned correctly.
+[ ] Vehicle labels remain attached during jump/fall/knockback/camera motion.
+[ ] Global spectator/HUD panels remain comfortably readable.
+
+B. HITBOX
+[x] Automated contract: projectile vehicle hit radius = 51 world units.
+[ ] Basic direct projectile visually matches the smaller vehicle hitbox.
+[ ] Heavy direct projectile visually matches the smaller vehicle hitbox.
+[ ] Triple child projectile visually matches the smaller vehicle hitbox.
+[ ] No obvious invisible oversized hit region remains.
+[ ] No obvious shots passing visibly through the tank without registering.
+
+C. DAMAGE / HP
+[x] Automated: HP cap = 100.
+[x] Automated: Basic direct max damage = 10.
+[x] Automated: Heavy direct max damage = 20.
+[x] Automated: Triple = 10 per directly hitting projectile only.
+[x] Automated: Air Strike = 5 per directly hitting shell only.
+[x] Automated: Heal = +20, cap100.
+[x] Automated: Nuke direct damage remains20.
+[ ] Basic 10 feels appropriate in a real match.
+[ ] Heavy20 feels meaningfully stronger than Basic without being excessive.
+[ ] Triple: 0/1/2/3 direct hits produce visually understandable 0/10/20/30 damage outcomes.
+[ ] Air Strike direct shell hits produce understandable 5-damage increments.
+[ ] Revised damage extends match duration to a desirable level rather than becoming too slow.
+
+D. CLUSTER
+[x] Source contract: Cluster remains at existing 14 max damage per subimpact because no replacement value was specified.
+[ ] Playtest whether Cluster14 is still balanced against Basic10 / Heavy20 / Triple10x3.
+[ ] If Cluster is too strong or weak, choose a new value in a later v0.9 balance hotfix.
+
+E. SHIELD
+[x] Automated: Shield factor remains 0.5.
+[x] Automated: Shield covers the complete Triple attack and consumes once.
+[ ] Basic hit with Shield gives roughly half damage and consumes Shield.
+[ ] Heavy hit with Shield gives roughly half damage and consumes Shield.
+[ ] Triple Shield stays active through the whole volley, halves the total applicable volley damage, then disappears.
+[ ] Air Strike Shield stays active through the complete attack sequence and then disappears only if the attack hit.
+[ ] Air Strike that completely misses does not waste Shield.
+[ ] Cluster behaves as one protected attack rather than consuming Shield on only the first child impact.
+[ ] Nuke remains one protected attack:20 ->10 with Shield, then Shield consumed.
+[ ] Shield visual feedback makes the whole-attack behavior understandable.
+
+F. NUKE TERRAIN
+[x] Automated: direct damage remains20.
+[x] Automated: diagonal scar depth =330.
+[x] Automated: scar remains under current survivable-scar threshold (<500).
+[ ] Terrain damage looks only slightly stronger than before.
+[ ] Diagonal geometry remains visually aligned with beam.
+[ ] No unexpected vertical void behavior introduced.
+[ ] Terrain collapse/falls still resolve naturally.
+
+G. REGRESSION
+[ ] Pickups still use v0.9 frenzy pacing and max4.
+[ ] One pickup/player/turn rule still works.
+[ ] Explosions still cannot collect pickups.
+[ ] Nuke can still destroy intersected pickups.
+[ ] Stats scoreboard reports corrected damage values rather than historical values.
+[ ] Event feed reports corrected damage values.
+[ ] Rematch resets correctly after balance hotfix.
+[ ] Two-client state stays synchronized.
+
+AUTOMATED GATE AT CREATION
+Backend Server CI: SUCCESS on 0825e88adcef659df5ef20204b9205b26e5f1620.
+Frontend CI: SUCCESS on c1f602e623e94612db0b4aa98e24ef351a5f563c.
+GitHub Pages: SUCCESS on c1f602e623e94612db0b4aa98e24ef351a5f563c.
+
+VERSIONING
+Do not overwrite V14.
+Next TODO snapshot: ORBITAL_ARTILLERY_TODOLIST_V15.txt
+
+END TODO V14
