@@ -30,3 +30,4 @@ jobs:
       - run: node --check wind-gusts.js
       - run: node --check projectile-renderer.js
       - run: node --check terrain-renderer.js
+      - run: node test/frontend-source-regressions.mjs
