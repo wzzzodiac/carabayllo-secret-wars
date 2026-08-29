@@ -1,0 +1,63 @@
+COBY DEBUG V19 — ORBITAL ARTILLERY
+Date: 2026-08-29
+Target: current v0.9.7 PRE-RELEASE main after radial-damage, traversal recovery and visual-SFX synchronization fixes.
+
+HEADS REVIEWED
+Frontend: 21d0a2d6319103d91a35c0fce44359ef61e945c7
+Backend: 22b1732eae6e73c8e9dac539c54b1cc0338a15de
+Protected rollback branch in both repos: v0.9.7-pre-release (historical known-good snapshot before these final candidate fixes).
+
+1. SOURCE / ARCHITECTURE REVIEW
+PASS — frontend remains vanilla ES modules + Canvas2D; backend remains authoritative Node/Socket.IO.
+PASS — no Phase 10 visual overhaul started.
+PASS — v0.9.7 PRE-RELEASE identity preserved.
+
+2. TRAVERSAL / TERRAIN TRAPS
+PASS (source/static/tests) — phase9-traversal.js now reconciles an alive vehicle that is embedded below the authoritative heightmap surface before move or jump.
+PASS — terrain recovery is conservative: only a player deeper than the valid surface by EMBED_TOLERANCE is moved; valid/on-surface or airborne positions are not lifted.
+PASS — existing natural ledge drop remains in place for steep downward walk edges.
+PASS — adaptive ledge vault remains in place with normal jump distance 180, adaptive distance cap 420 and adaptive apex cap 1050.
+PASS — regression added for embedded vehicle recovery.
+PASS — Server CI run 128 completed SUCCESS on backend head 22b1732eae6e73c8e9dac539c54b1cc0338a15de.
+MANUAL REQUIRED — reproduce crater/terrace traps like the supplied screenshot and confirm move/jump now escapes naturally without visible teleport that feels wrong.
+
+3. CLUSTER / AIR STRIKE RADIAL DAMAGE
+PASS (source/tests) — Cluster subexplosions use individual radial falloff, max 5 each, radius 150.
+PASS — Air Strike shells use individual radial falloff, max 5 each, radius 165.
+PASS — multiple explosions that overlap one vehicle accumulate independently.
+PASS — Basic/Heavy/Triple/Nuke/Heal/Shield balance was not intentionally changed by this traversal/audio pass.
+PASS — prior Server CI for radial-damage regression completed SUCCESS.
+MANUAL REQUIRED — gameplay feel/balance still needs real match confirmation.
+
+4. AUDIO / VISUAL SYNCHRONIZATION
+PASS (source/static) — Basic/Heavy/Triple/Cluster/Air Strike launch and impact SFX no longer run from a separate absolute-timestamp scheduler in audio.js.
+PASS — renderer7a-visual.js emits orbital-visual-sfx on the same render timeline that decides when projectile launch/muzzle/child/shell/impact visuals appear.
+PASS — audio.js consumes those visual events and uses existing preloaded voice pools.
+PASS — launch events are limited to the renderer launch-visibility window, preventing stale reconnect states from producing late shot sounds.
+PASS — impact events use the renderer impact-pulse window, preventing old projectiles from producing delayed explosions.
+PASS — Nuke warning/beam sequence remains separately scheduled because its warning/beam presentation uses a different visual path.
+PASS — Shield and Heal remain state-change SFX.
+PASS — Frontend CI run 194 completed SUCCESS on frontend head 21d0a2d6319103d91a35c0fce44359ef61e945c7, including renderer7a-visual.js and audio.js syntax checks.
+PASS — GitHub Pages run 275 completed SUCCESS on the same frontend head.
+MANUAL REQUIRED — listen in a real match and verify every launch sound visually coincides with projectile appearance and every explosion sound coincides with the impact/destruction presentation. Browser decode/output latency and subjective game feel cannot be proven by CI.
+
+5. DEPLOYMENT ASSUMPTIONS
+PASS — GitHub Pages deployment succeeded for the current frontend head.
+LIMITATION — GitHub backend CI proves repository tests only. It does not prove Cloud Run currently serves this exact backend head because no GitHub deploy workflow establishes that parity.
+
+6. REGRESSION RISK / ROLLBACK
+PASS — protected branch v0.9.7-pre-release remains available in frontend and backend as rollback baseline.
+PASS — no Phase 10 work was mixed into these fixes.
+
+COBY RESULT
+APROBADO — SOURCE / STATIC / CI GATE.
+
+RUNTIME RELEASE GATE STILL OPEN:
+A) reproduce formerly trapped terrain positions;
+B) verify normal drop + jump/vault feel;
+C) verify Basic/Heavy/Triple/Cluster/Air Strike launch SFX timing;
+D) verify explosion SFX timing at terrain/player impacts;
+E) verify Cluster/Air radial multi-hit behavior;
+F) verify music remains stable.
+
+Only after manual gameplay confirms A–F should this state be promoted to the next release-candidate milestone or used as the clean starting gate for Phase 10.
