@@ -1,0 +1,92 @@
+ORBITAL ARTILLERY — PROJECT PROGRESS — VERSION 12
+Date: 2026-08-29
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V11.txt
+
+CURRENT RELEASE
+Orbital Artillery v0.9 Beta — FUNCTIONAL GAMEPLAY BUILD.
+
+PHASE STATUS
+Phase 9 — v0.9 Beta: CLOSED.
+Phase 10 — Major Visual Overhaul → v1.0: PARKED / NOT STARTED.
+
+PUBLIC IDENTITY
+The player-facing page no longer advertises internal development phases.
+Current visible version label: VERSION 0.9 BETA.
+Internal historical Phase 6/7 layer names remain in source where useful for regression/history, but they are no longer the public release identity.
+
+V0.9 CLOSING GAMEPLAY RULE — PICKUP FRENZY
+Early game:
+- turns 1–9 retain the baseline pickup cadence: every 3 turns.
+
+Late game:
+- from turn 10 onward there is one pickup spawn opportunity every turn.
+- maximum 4 live pickups on the map.
+- pickup lifetime remains 4 turns.
+- Phase 6E weighted pool remains 25 / 20 / 20 / 12 / 12 / 8 / 3.
+
+Collection:
+- each player may collect at most 1 pickup during their own turn.
+- pickup collection is contact-only.
+- collecting a pickup does not end the turn.
+- a player may still move and fire after collecting it.
+- explosions/projectiles no longer collect pickups.
+- Nuke may still destroy pickups intersected by its beam.
+- inventory remains Permanent Basic + 2 special slots.
+
+IMPLEMENTATION
+New backend wrapper: phase9.js.
+server.js now routes gameplay/public state through Phase 9 wrappers.
+Source /health identity: phase 9-v0.9-beta, version 0.9-beta.
+
+PUBLIC STATE
+- version: 0.9-beta
+- phase: 9 (internal compatibility field)
+- pickupRules expose early cadence, frenzy start, 4-box cap, one collection per player turn and explosion collection disabled.
+
+AUTOMATED REGRESSIONS
+New test/phase9.test.js verifies:
+- frenzy begins at turn 10.
+- only one spawn attempt per turn.
+- live pickup population never exceeds 4 while expired boxes are replaced normally.
+- a player cannot collect two overlapping boxes in the same turn.
+- the collection allowance resets on a later turn.
+- public v0.9 state advertises touch-only pickup collection and the final pacing contract.
+
+All historical server regressions remain active, including multiplayer cycle, Team alternation, AFK, disconnects, false-victory protection, projectile pacing, terrain collision, large vehicle hitbox, Air Strike, Nuke, stats and rematch behavior.
+
+V0.9 VISUAL/READABILITY BASELINE
+The current graphics are still placeholder-level by design, but the functional beta includes:
+- large readable vehicles and matching enlarged projectile hitbox.
+- one large HP bar per vehicle.
+- readable player/HP labels.
+- active weapon badge.
+- live spectator/AFK panel.
+- readable full-flight projectile visuals.
+- Air Strike shells visible from the top of the battle view.
+- Nuke designator + 5 s warning + 5 s beam.
+- simplified page title: Orbital Artillery Multiplayer.
+- visible VERSION 0.9 BETA instead of internal Phase labels.
+
+PHASE 10 — SAVED BUT NOT STARTED
+The large visual direction is intentionally preserved for later:
+- animal characters mounted on small artillery vehicles as the preferred starting direction.
+- current tank/cart placeholders will be replaced.
+- selectable characters/vehicles can be explored.
+- every map should gain a distinct visual identity, background and terrain theme.
+- maps may gain upper/secondary terrain masses: cliffs, floating rocks, lunar formations, canyon structures, etc., not merely a flat second floor.
+- access to elevated terrain should first be solved through map design.
+- teleport/reposition utility remains an idea to evaluate only if vertical gameplay needs it.
+- higher HP (150/175/200) remains a future balance experiment, not part of v0.9.
+
+RELEASE INTERPRETATION
+v0.9 Beta means the intended functional/mechanical game exists and is playable end-to-end. It does NOT mean final art or v1.0 visual identity.
+
+NEXT MAJOR MILESTONE
+Phase 10 — Major Visual Overhaul.
+Target outcome: Orbital Artillery v1.0.
+
+VERSIONING
+Do not overwrite V12.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V13.txt
+
+END PROGRESS V12
