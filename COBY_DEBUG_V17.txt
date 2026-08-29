@@ -1,0 +1,44 @@
+COBY DEBUG V17 — ORBITAL ARTILLERY v0.9.1 BETA
+Date: 2026-08-29
+
+SCOPE
+Close the Cluster Bomb rebalance and public release identity as v0.9.1 Beta without reopening Phase 9.
+
+REVIEWED
+- Frontend latest v0.9.1 identity/cache commits.
+- Backend v0.9.1 combat wrapper and regression tests.
+- Current README/version snapshots.
+- GitHub Actions server/frontend and Pages results.
+
+CONFIRMED CONTRACT
+- 100 HP.
+- Basic direct max 10.
+- Heavy direct max 20.
+- Triple: 10 only for each projectile that directly hits vehicle.
+- Cluster: main projectile direct hit = 10; each child/subimpact that directly reaches vehicle hitbox = 5; non-touching child terrain impacts do not damage player.
+- Air Strike: 5 per direct shell hit.
+- Nuke: 20 direct; diagonal survivable terrain scar retained.
+- Heal: +20 cap 100.
+- Shield: 50% mitigation across one complete incoming attack sequence, then consumed if hit.
+- Vehicle hit radius: 51 world units.
+
+REGRESSION EVENT
+- Initial v0.9.1 head had one red Server CI because a historical Phase 9 test still expected version `0.9-beta` while the public state correctly returned `0.9.1-beta`.
+- Updated only the stale version expectation.
+- Final Server CI run after correction: SUCCESS.
+- Explicit Cluster regression passed before and after correction.
+
+FRONTEND
+- Public UI identifies VERSION 0.9.1 BETA.
+- Frontend CI on v0.9.1 executable/cache head: SUCCESS.
+- Pages deployment on v0.9.1 executable/cache head: SUCCESS.
+
+CLASSIFICATION
+- Cluster rebalance: intended balance change — IMPLEMENTED.
+- Historical version expectation failure: stale regression expectation — FIXED.
+- Manual gameplay feel: MANUAL/BETA WATCH, not automatically proven.
+- Cloud Run deployed parity: not asserted by source/CI alone.
+
+GATE
+APROBADO — v0.9.1 Beta source/regression gate passes.
+Phase 9 remains closed. Phase 10 remains parked until explicitly started.
