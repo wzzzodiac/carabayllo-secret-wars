@@ -5,7 +5,10 @@ const SFX=Object.freeze({
   nuke:'assets/music/nuke.mp3',
   warning:'assets/music/warning.mp3',
   shield:'assets/music/shield.mp3',
-  health:'assets/music/health.mp3'
+  health:'assets/music/health.mp3',
+  basicExplosion:'assets/music/basic_explosion.mp3',
+  loudExplosion:'assets/music/loud_explosion.mp3',
+  nukeExplosion:'assets/music/nuke_explosion.mp3'
 });
 const MASTER_VOLUME=.9;
 const state={unlocked:false,previousRoom:null,seen:new Set(),timers:new Map(),warningAudio:null,warningKey:null};
@@ -30,20 +33,35 @@ function schedule(key,at,fn){
 }
 function projectileKey(q){return String(q?.id??`${q?.ownerPlayerId??'x'}:${q?.weaponType??'basic'}:${q?.startedAt??q?.impactAt??0}`);}
 function stopWarning(){stop(state.warningAudio);state.warningAudio=null;state.warningKey=null;}
+function validImpact(p){return p&&Number.isFinite(Number(p.impactAt));}
 
 function scheduleProjectile(q){
   if(!q)return;
   const root=projectileKey(q),type=q.weaponType??'basic';
-  if(type==='basic')schedule(`${root}:basic`,q.startedAt,()=>play('basic'));
-  else if(type==='heavy')schedule(`${root}:heavy`,q.startedAt,()=>play('heavy'));
-  else if(type==='triple'){
-    for(const [index,v] of (q.volley??[]).entries())schedule(`${root}:triple:${index}`,v.startedAt,()=>play('basic'));
+  if(type==='basic'){
+    schedule(`${root}:basic`,q.startedAt,()=>play('basic'));
+    if(validImpact(q))schedule(`${root}:basic-explosion`,q.impactAt,()=>play('basicExplosion'));
+  }else if(type==='heavy'){
+    schedule(`${root}:heavy`,q.startedAt,()=>play('heavy'));
+    if(validImpact(q))schedule(`${root}:heavy-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}));
+  }else if(type==='triple'){
+    for(const [index,v] of (q.volley??[]).entries()){
+      schedule(`${root}:triple:${index}`,v.startedAt,()=>play('basic'));
+      if(validImpact(v))schedule(`${root}:triple-explosion:${index}`,v.impactAt,()=>play('basicExplosion',{volume:.92}));
+    }
   }else if(type==='cluster'){
     schedule(`${root}:cluster-main`,q.startedAt,()=>play('heavy'));
-    for(const [index,child] of (q.clusterImpacts??[]).entries())schedule(`${root}:cluster-child:${index}`,child.visualStartAt??child.impactAt,()=>play('basic', {volume:.9}));
+    if(validImpact(q))schedule(`${root}:cluster-main-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}));
+    for(const [index,child] of (q.clusterImpacts??[]).entries()){
+      schedule(`${root}:cluster-child:${index}`,child.visualStartAt??child.impactAt,()=>play('basic',{volume:.9}));
+      if(validImpact(child))schedule(`${root}:cluster-child-explosion:${index}`,child.impactAt,()=>play('basicExplosion',{volume:.88}));
+    }
   }else if(type==='airstrike'){
     schedule(`${root}:air-begin`,q.startedAt??Date.now(),()=>play('airBegin'));
-    for(const [index,shell] of (q.airStrikeShells??[]).entries())schedule(`${root}:air-impact:${index}`,shell.impactAt,()=>play('basic',{volume:.86}));
+    for(const [index,shell] of (q.airStrikeShells??[]).entries()){
+      schedule(`${root}:air-impact-shot:${index}`,shell.impactAt,()=>play('basic',{volume:.82}));
+      if(validImpact(shell))schedule(`${root}:air-impact-explosion:${index}`,shell.impactAt,()=>play('basicExplosion',{volume:.9}));
+    }
   }else if(type==='nuke'){
     once(`${root}:warning`,()=>{
       stopWarning();
@@ -51,7 +69,11 @@ function scheduleProjectile(q){
       state.warningAudio=play('warning',{volume:.92,loop:true});
     });
     const beamAt=q.beamAt??q.warningUntil??q.impactAt??Date.now();
-    schedule(`${root}:nuke`,beamAt,()=>{if(state.warningKey===root)stopWarning();play('nuke');});
+    schedule(`${root}:nuke`,beamAt,()=>{
+      if(state.warningKey===root)stopWarning();
+      play('nuke',{volume:.72});
+      play('nukeExplosion',{volume:.98});
+    });
   }
 }
 
