@@ -1,0 +1,103 @@
+ORBITAL ARTILLERY — COBY DEBUG — VERSION 15
+Date: 2026-08-29
+Purpose: Phase 9 / v0.9 Beta closure gate.
+Previous Coby: COBY_DEBUG_V14.txt
+
+SCOPE REVIEWED
+- frontend release identity and cache chain
+- backend Phase 9 wrapper and server wiring
+- final pickup frenzy contract
+- pickup touch-only collection behavior
+- historical regression suite
+- frontend syntax checks
+- GitHub Pages build status
+- documentation/versioning state
+
+CURRENT RELEASE DECISION
+Orbital Artillery v0.9 Beta — Phase 9 CLOSED for the functional/mechanical scope.
+Phase 10 Major Visual Overhaul is PARKED and NOT STARTED.
+
+FRONTEND PUBLIC IDENTITY
+PASS.
+Player-facing identity is now release-oriented rather than development-phase-oriented:
+- title: Orbital Artillery Multiplayer
+- status: VERSION 0.9 BETA
+- match stats: VERSION 0.9 BETA // MATCH STATS
+- footer: ORBITAL ARTILLERY // VERSION 0.9 BETA
+- countdown: VERSION 0.9 BETA // MATCH STARTING
+Internal historical phase names remain in source/module filenames where they are useful implementation history, but are not intended as player-facing release labels.
+
+BACKEND V0.9 WIRING
+PASS.
+server.js routes current gameplay/public state through phase9.js.
+Source /health identifies:
+- phase: 9-v0.9-beta
+- version: 0.9-beta
+
+FINAL PICKUP CONTRACT
+PASS IN SOURCE / AUTOMATED REGRESSIONS.
+- turns 1–9: existing pickup cadence every 3 turns.
+- turn 10 onward: one pickup spawn opportunity every turn.
+- live map cap: 4 pickups.
+- lifetime: 4 turns.
+- inventory: Basic + 2 special slots.
+- each player may collect at most 1 pickup during their own turn.
+- touching a pickup does not end the turn.
+- player may still fire after collection.
+- projectile/explosion collection disabled.
+- Nuke beam may still destroy intersected pickups.
+- Phase 6E weighted item pool retained: 25/20/20/12/12/8/3.
+
+NEW V0.9 REGRESSIONS
+PASS.
+test/phase9.test.js covers:
+1. frenzy begins at turn 10.
+2. only one spawn attempt per turn.
+3. live box population never exceeds four while expired boxes are replenished.
+4. one player cannot collect two overlapping pickups in the same turn.
+5. collection allowance resets on a later turn.
+6. public state exposes touch-only collection and final pacing.
+7. a real projectile resolution over a pickup does not add the box to shooter inventory and leaves the box available for physical collection.
+
+SERVER CI
+PASS.
+Final backend regression run for the explosion-collection contract completed successfully, including npm run check and the historical suite.
+No known code blocker remains for the v0.9 mechanical closure.
+
+FRONTEND CI
+PASS FOR EXECUTABLE CHECKS.
+The final v0.9 renderer/header/cache-chain source passed the complete frontend node --check set, including renderer6f.js, renderer7a-visual.js, combat-controls6f.js and match-stats7a1.js.
+
+GITHUB PAGES
+The previous v0.9 documentation/build head completed Pages successfully.
+The final cache-bust/identity head triggered a fresh Pages deployment which was still waiting/in progress at the time this snapshot was written. This is a deployment-status check, not a source-code blocker.
+Do not infer the latest Cloud Run backend revision is deployed from GitHub CI alone.
+
+MANUAL STATUS — IMPORTANT
+NOT falsely marked complete.
+The user has already manually exercised substantial v0.9 gameplay, including a Team match of approximately 41 turns / 10 minutes and multiple visual/gameplay fixes derived from real testing.
+However, the newly added final pickup-frenzy rules have not yet been manually browser-validated after this exact final commit.
+They are tracked in ORBITAL_ARTILLERY_TODOLIST_V13.txt as post-close beta watch items.
+Any reproduced defect becomes a v0.9 Beta hotfix/regression and does not automatically reopen Phase 9.
+
+CLASSIFICATION
+A — CONFIRMED BUGS: none remaining from this closure review.
+B — MANUAL CHECKS: final pickup-frenzy live behavior; deployed Cloud Run parity; final Pages propagation.
+C — INTENTIONAL: Phase 10 visual redesign deferred; internal legacy module names retained; Phase 6E item weights retained.
+D — TECH DEBT: layered historical wrappers/renderers remain, acceptable for v0.9 and candidates for later consolidation.
+
+CANONICAL SNAPSHOTS AFTER CLOSURE
+- ORBITAL_ARTILLERY_PROGRESS_V12.txt
+- ORBITAL_ARTILLERY_TODOLIST_V13.txt
+- COBY_DEBUG_V15.txt
+
+PHASE GATE
+PHASE 9 / ORBITAL ARTILLERY v0.9 BETA: APROBADO PARA CERRAR.
+Code/automated gate: PASS.
+Manual final-pickup smoke: beta watch, pending.
+Phase 10: PARKED / NOT STARTED.
+
+NEXT COBY VERSION
+COBY_DEBUG_V16.txt
+
+END COBY DEBUG V15
