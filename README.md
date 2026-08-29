@@ -12,9 +12,9 @@ Backend:
 
 ## Current release
 
-**Orbital Artillery v0.9 Beta — functional gameplay build.**
+**Orbital Artillery v0.9.1 Beta — functional gameplay build.**
 
-Phase 9 is closed for the current mechanical/gameplay scope. Subsequent changes to this frozen beta are treated as v0.9 hotfixes rather than reopening Phase 9 automatically.
+Phase 9 is closed for the current mechanical/gameplay scope. v0.9.1 is a balance/readability hotfix release on top of the frozen v0.9 Beta foundation rather than a reopening of Phase 9.
 
 The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Phase 10 is intentionally parked for now and will focus on the large visual identity pass: characters/animal riders, vehicles, map art, backgrounds, terrain redesign and later vertical/dynamic map experimentation.
 
@@ -28,13 +28,13 @@ Mobile/touch gameplay is not part of this project roadmap.
 - Team and Survival modes
 - Authoritative Node.js + Socket.IO server
 - Google Cloud Run backend in `us-east1`
-- In-memory rooms; no persistent database in v0.9
+- In-memory rooms; no persistent database in v0.9.1
 - Socket connection begins on CREATE/JOIN rather than intentionally waking the backend on page load
 - Connection-state recovery protects active matches from brief transport cuts
 
 GitHub source/CI does not by itself prove the latest backend commit is already deployed to Cloud Run; deployed runtime parity is checked separately when needed.
 
-## v0.9 gameplay baseline
+## v0.9.1 gameplay baseline
 
 - 2–8 players
 - Team / Survival
@@ -67,7 +67,7 @@ Permanent slot:
 Special pickup pool:
 - Heavy Bomb — weight 25; maximum 20 direct damage
 - Triple Shot — weight 20; 3 projectiles, 10 damage for each projectile that directly hits a vehicle
-- Cluster Bomb — weight 20; current 14 max damage per subimpact baseline retained
+- Cluster Bomb — weight 20; main projectile direct hit = 10 damage, plus 5 damage for each cluster subimpact that directly reaches the vehicle hitbox
 - Shield — weight 12; halves one complete incoming attack and is then consumed if that attack hits
 - Heal +20 — weight 12; restores up to 20 HP, capped at 100
 - Air Strike — weight 8; 7 shells, 5 damage for each shell that directly reaches the vehicle hitbox
@@ -77,16 +77,17 @@ Pool total: 100.
 
 Current notable behavior:
 - Basic, Heavy, Triple and Cluster use long readable projectile flights.
-- Triple does not award damage merely because a nearby projectile hits terrain: only the individual projectiles that directly hit the vehicle count for its 10-damage hits.
+- Triple only deals damage for the individual projectiles that directly hit the vehicle: 0/1/2/3 hits = 0/10/20/30 damage before Shield.
+- Cluster follows the same direct-contact philosophy: the main projectile deals 10 only on a direct vehicle hit, while each child impact deals 5 only if that child reaches the vehicle hitbox. Nearby terrain impacts can still deform terrain without automatically damaging a player.
 - Air Strike shells visibly descend from the top of the battle view; only shells that directly reach the vehicle hitbox deal their 5 damage to that vehicle.
 - Nuke uses a designator, 5-second warning and 5-second beam.
-- Nuke remains at 20 direct damage and keeps the diagonal terrain-scar behavior; the current v0.9 hotfix slightly strengthens that scar without changing its basic geometry or turning it into a vertical void.
-- Shield retains the 50% mitigation baseline but now protects against one entire incoming attack sequence, including multi-projectile attacks, rather than being consumed by the first child hit alone.
+- Nuke remains at 20 direct damage and keeps the diagonal terrain-scar behavior; the current hotfix slightly strengthens that scar without changing its basic geometry or turning it into a vertical void.
+- Shield retains the 50% mitigation baseline but protects against one entire incoming attack sequence, including multi-projectile attacks, rather than being consumed by the first child hit alone.
 - Heal restores +20 up to 100 HP.
 
-## v0.9 pickup pacing
+## v0.9.1 pickup pacing
 
-The final v0.9 pickup rules are designed to make late matches increasingly chaotic:
+The late-match pickup rules are designed to make matches increasingly chaotic:
 
 - turns 1–9: baseline pickup cadence every 3 turns
 - from turn 10 onward: one pickup spawn opportunity every turn
@@ -99,16 +100,14 @@ The final v0.9 pickup rules are designed to make late matches increasingly chaot
 - explosions/projectiles do **not** collect pickups
 - Nuke may still destroy pickups intersected by the beam
 
-This creates an early positioning phase followed by a more frantic late-game item economy without allowing one player to vacuum multiple boxes during a single free-movement turn.
-
 ## Current vehicle/combat readability baseline
 
-The v0.9 placeholder vehicles remain temporary assets for Phase 10, but their current gameplay scale is now established:
+The placeholder vehicles remain temporary assets for Phase 10, but their current gameplay scale is established:
 
-- vehicle presentation reduced to **65%** of the previous v0.9 placeholder size
+- vehicle presentation at 65% of the previous large placeholder size
 - wheels, cannon, Shield ring, attached HP/name text and weapon badge scale with the vehicle
-- authoritative projectile hit radius reduced from 78 to **51 world units** to match the smaller vehicle footprint
-- vehicle-attached HP/name text is correspondingly smaller; global spectator/HUD panels keep their normal readable size
+- authoritative projectile hit radius = 51 world units
+- one large HP bar per vehicle
 
 The current tank/cart art is explicitly placeholder material and is expected to be replaced in Phase 10.
 
@@ -119,30 +118,29 @@ Regression coverage includes, among other cases:
 - 8-player Survival turn cycle
 - balanced Team 2v2 alternation
 - spectator aim parity
-- free movement beyond the historical movement envelope
-- more than two jumps per turn
-- projectile movement lock
+- free movement and jump behavior
 - projectile/terrain face collision
 - long visible projectile pacing
 - Air Strike descent pacing
 - Nuke timing/damage/terrain behavior
-- 51-unit v0.9 vehicle hitbox behavior
+- 51-unit vehicle hitbox behavior
 - Basic direct damage = 10
 - Heavy direct damage = 20
-- Triple damage only from directly hitting child projectiles
-- Shield covering a complete Triple volley once
+- Triple direct projectile damage = 10 each
+- Cluster main direct hit = 10 and cluster child direct hit = 5 each
+- Shield covering a complete multi-hit attack once
 - Air Strike direct shell damage = 5
 - Heal = +20 with 100 HP cap
 - 100 turn timeouts without false victory
 - disconnect turn-order handling
 - stats / damage attribution / assists
 - rematch reset and RANDOM rematch
-- v0.9 pickup frenzy from turn 10
+- pickup frenzy from turn 10
 - maximum 4 live pickups
 - one pickup per player per turn
-- touch-only pickup contract in public v0.9 state
+- touch-only pickup collection
 
-Historical Phase 6/7 tests remain in the suite as regressions even though the public game is now identified by release version rather than internal development phases.
+Historical Phase 6/7 tests remain in the suite as regressions even though the public game is identified by release version rather than internal development phases.
 
 ## Version roadmap
 
@@ -150,10 +148,8 @@ Historical Phase 6/7 tests remain in the suite as regressions even though the pu
 - Phase 7 — multiplayer QA, stats, match loop and hardening ✅
 - Phase 8 — minor functional/readability polish ✅
 - **Phase 9 — v0.9 Beta functional release ✅**
-- **v0.9 Beta hotfixes — balance/readability corrections as needed**
+- **v0.9.1 Beta — balance/readability hotfix ✅**
 - **Phase 10 — Major Visual Overhaul → v1.0 ⏳ PARKED**
-
-Phase 10 is expected to cover the major identity pass rather than reopening the v0.9 mechanical foundation unnecessarily.
 
 ## Phase 10 parking lot
 
@@ -170,7 +166,7 @@ Ideas intentionally saved for later evaluation:
 - teleport/reposition utility only if vertical-map play demonstrates a real need
 - evaluate higher HP only after testing the new Phase 10 map geometry and match pacing
 
-These are Phase 10 ideas, not part of the v0.9 mechanical contract.
+These are Phase 10 ideas, not part of the v0.9.1 mechanical contract.
 
 ## Development rules
 
