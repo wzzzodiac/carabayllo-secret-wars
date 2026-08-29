@@ -11,29 +11,38 @@ const SFX=Object.freeze({
   nukeExplosion:'assets/music/nuke_explosion.mp3'
 });
 const MASTER_VOLUME=.9;
-const MAX_LATE_LAUNCH_MS=350;
-const MAX_LATE_IMPACT_MS=650;
+const MAX_LATE_LAUNCH_MS=2500;
+const MAX_LATE_IMPACT_MS=2500;
+const DEFAULT_POOL_SIZE=4;
+const BUSY_POOL_SIZE=9;
 const state={unlocked:false,previousRoom:null,seen:new Set(),timers:new Map(),warningAudio:null,warningKey:null};
-const preload=new Map();
-for(const [key,src] of Object.entries(SFX)){const audio=new Audio(src);audio.preload='auto';preload.set(key,audio);}
+const pools=new Map();
 
-function play(name,{volume=1,loop=false}={}){
-  if(!state.unlocked)return null;
-  const src=SFX[name];if(!src)return null;
-  const template=preload.get(name);
-  const audio=template?.cloneNode?.(true)??new Audio(src);
-  audio.preload='auto';audio.volume=Math.max(0,Math.min(1,MASTER_VOLUME*volume));audio.loop=loop;
-  try{audio.currentTime=0;}catch{}
-  audio.play().catch(()=>{});
+function poolSize(name){return ['basic','basicExplosion'].includes(name)?BUSY_POOL_SIZE:DEFAULT_POOL_SIZE;}
+function makeVoice(src){const audio=new Audio(src);audio.preload='auto';return audio;}
+for(const [name,src] of Object.entries(SFX))pools.set(name,Array.from({length:poolSize(name)},()=>makeVoice(src)));
+
+function acquireVoice(name){
+  const pool=pools.get(name);if(!pool)return null;
+  let audio=pool.find(voice=>voice.paused||voice.ended);
+  if(!audio){audio=makeVoice(SFX[name]);pool.push(audio);}
   return audio;
 }
-function stop(audio){if(!audio)return;audio.pause();try{audio.currentTime=0;}catch{}}
+function play(name,{volume=1,loop=false}={}){
+  if(!state.unlocked)return null;
+  const audio=acquireVoice(name);if(!audio)return null;
+  audio.volume=Math.max(0,Math.min(1,MASTER_VOLUME*volume));audio.loop=loop;
+  try{audio.currentTime=0;}catch{}
+  audio.play().catch(error=>console.warn(`[Orbital Artillery] SFX playback failed: ${name}`,error));
+  return audio;
+}
+function stop(audio){if(!audio)return;audio.pause();audio.loop=false;try{audio.currentTime=0;}catch{}}
 function once(key,fn){if(state.seen.has(key))return false;state.seen.add(key);fn();return true;}
 function schedule(key,at,fn,{maxLateMs=Infinity}={}){
   if(state.seen.has(key))return false;
-  state.seen.add(key);
   const target=Number(at??Date.now()),now=Date.now(),lateness=Number.isFinite(target)?now-target:0;
-  if(Number.isFinite(maxLateMs)&&lateness>maxLateMs)return false;
+  if(Number.isFinite(maxLateMs)&&lateness>maxLateMs){state.seen.add(key);return false;}
+  state.seen.add(key);
   const delay=Math.max(0,(Number.isFinite(target)?target:now)-now);
   const timer=setTimeout(()=>{state.timers.delete(key);fn();},delay);
   state.timers.set(key,timer);
@@ -54,7 +63,7 @@ function scheduleProjectile(q){
     if(validImpact(q))schedule(`${root}:heavy-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
   }else if(type==='triple'){
     for(const [index,v] of (q.volley??[]).entries()){
-      schedule(`${root}:triple:${index}`,v.startedAt,()=>play('basic'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+      schedule(`${root}:triple:${index}`,Number(v.startedAt??q.startedAt)+index*45,()=>play('basic'),{maxLateMs:MAX_LATE_LAUNCH_MS});
       if(validImpact(v))schedule(`${root}:triple-explosion:${index}`,v.impactAt,()=>play('basicExplosion',{volume:.92}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='cluster'){
@@ -72,11 +81,12 @@ function scheduleProjectile(q){
       if(validImpact(shell))schedule(`${root}:air-impact-explosion:${index}`,shell.impactAt,()=>play('basicExplosion',{volume:.9}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='nuke'){
-    once(`${root}:warning`,()=>{
+    const warningAt=q.targetLockedAt??q.impactAt??Date.now();
+    schedule(`${root}:warning`,warningAt,()=>{
       stopWarning();
       state.warningKey=root;
       state.warningAudio=play('warning',{volume:.92,loop:true});
-    });
+    },{maxLateMs:MAX_LATE_LAUNCH_MS});
     const beamAt=q.beamAt??q.warningUntil??q.impactAt??Date.now();
     schedule(`${root}:nuke`,beamAt,()=>{
       if(state.warningKey===root)stopWarning();
@@ -103,7 +113,10 @@ function update(room){
   if(!currentQ&&previousQ?.weaponType==='nuke')stopWarning();
   state.previousRoom=room;
 }
-function unlock(){if(state.unlocked)return;state.unlocked=true;for(const audio of preload.values())audio.load();}
+function unlock(){
+  if(state.unlocked)return;state.unlocked=true;
+  for(const pool of pools.values())for(const audio of pool)audio.load();
+}
 
 export function createAudioSystem(){
   window.addEventListener('orbital-room-state',event=>update(event.detail));
