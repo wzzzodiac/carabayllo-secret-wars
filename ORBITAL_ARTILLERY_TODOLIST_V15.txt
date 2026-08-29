@@ -1,0 +1,32 @@
+ORBITAL ARTILLERY — TODOLIST V15
+Date: 2026-08-29
+Release baseline: v0.9.1 Beta
+
+CURRENT STATUS
+- Phase 9 / v0.9 functional release: CLOSED.
+- v0.9.1 Beta balance/readability hotfix: IMPLEMENTED.
+- Phase 10 / major visual overhaul toward v1.0: PARKED.
+
+BETA WATCH — ONLY FIX IF REPRODUCED
+[ ] Manual feel check: 65% placeholder vehicle scale and 51-unit hitbox alignment.
+[ ] Manual balance check: Basic 10 / Heavy 20 / Triple 10 per direct hit.
+[ ] Manual balance check: Cluster 10 main direct + 5 per direct child hit.
+[ ] Manual balance check: Air Strike 5 per direct shell.
+[ ] Manual check: Shield mitigates the full multi-hit attack once.
+[ ] Manual check: Heal +20 / 100 HP cap.
+[ ] Manual check: late-game pickup frenzy remains fun with 4-box cap.
+[ ] Live Cloud Run parity check when deployment/runtime verification is explicitly needed.
+
+DO NOT REOPEN WITHOUT REPRODUCTION
+- Previously fixed projectile timing, terrain face collision, false-victory/disconnect, jump geometry, Nuke vertical-void, legacy vehicle labels/bars, and pickup explosion collection.
+
+PHASE 10 PARKING LOT
+[ ] Animal characters mounted on artillery vehicles.
+[ ] Selectable roster / vehicle identity.
+[ ] Distinct map backgrounds, ground, terrain art and themes.
+[ ] Vertical/dynamic terrain masses such as moon rocks, canyon structures, floating formations.
+[ ] Evaluate natural map access before adding teleport utility.
+[ ] Evaluate HP/pacing again only after Phase 10 map geometry exists.
+
+RULE
+Manual visual/game-feel items remain pending until manually tested. Automated CI does not prove subjective feel or deployed Cloud Run parity.
