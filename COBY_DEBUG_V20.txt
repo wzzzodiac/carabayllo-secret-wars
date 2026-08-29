@@ -1,0 +1,118 @@
+COBY DEBUG V20 — ORBITAL ARTILLERY
+Date: 2026-08-29
+Target: v0.9.8 RELEASE CANDIDATE clean pre-Phase-10 baseline.
+
+CODE HEADS REVIEWED
+Frontend runtime code/docs head before this Coby snapshot: 636c743092089e0ef16f9f770d5dd58c30ee745b
+Backend: 8163728003dc6b00206ad8512008dd588eacbaa3
+Historical rollback branch retained in both repos: v0.9.7-pre-release.
+
+1. RELEASE IDENTITY / ACTIVE PATH
+PASS — public frontend identity is 0.9.8 RELEASE CANDIDATE.
+PASS — backend public state wrapper exposes 0.9.8-release-candidate.
+PASS — backend /health source exposes 0.9.8-release-candidate.
+PASS — match stats identity is 0.9.8 RELEASE CANDIDATE.
+PASS — active import/cache keys for renderer, controls, stats, music and SFX were refreshed to v0.9.8 RC keys so Pages does not intentionally request the prior audio modules.
+PASS — README was updated from the stale v0.9.6 description to the current v0.9.8 RC contract.
+PASS — README now documents radial Cluster/Air Strike damage instead of the obsolete direct-hit-only description.
+
+2. MUSIC CONTROLLER
+PASS (source/static) — one active music.js owns soundtrack playback.
+PASS — lobby/countdown/finished/non-started states resolve to Sports Opener.
+PASS — started turns 1–8 resolve to Dark.
+PASS — turn 9 resolves to silence with the long 5000 ms fade-out.
+PASS — turn 10+ resolves to Adrenaline.
+PASS — all three tracks are reusable Audio instances; transitions do not create an unbounded chain of competing music objects.
+PASS — asynchronous play transitions use transitionToken so completion of an older audio.play() cannot overwrite a newer desired lobby/game state.
+PASS — normal transitions use fade-out/fade-in.
+PASS — loop monitor begins fade-out during the final 2.8 seconds, resets the same track and fades it back in.
+PASS — ended event remains a fallback loop restart.
+PASS — repeated room_state updates for the already-correct current track do not replace it.
+PASS — music volume remains persisted locally from 0–100.
+MANUAL REQUIRED — browser runtime must confirm Sports Opener/Dark/Adrenaline audible selection, full-track loop fade-out/restart/fade-in and turn-9 transition. Static source cannot prove actual audio decode/output behavior.
+
+3. WEAPON LAUNCH SFX
+PASS (source/static) — Basic/Heavy/Triple/Cluster/Air Strike launch SFX are emitted only by renderer7a-visual.js for the active visual path.
+PASS — audio.js no longer carries the old independent scheduler for those normal projectile launches.
+PASS — each visual SFX has a stable unique key and is consumed once.
+PASS — launch SFX fires on the first rendered frame at or after that projectile/child/shell visual start time; it is no longer discarded because a 350/550 ms network lateness window expired.
+PASS — Triple uses an individual Basic voice for each projectile.
+PASS — Cluster uses Heavy for the main launch plus individual Basic voices for children.
+PASS — Air Strike uses its begin cue plus individual Basic voices for shells.
+PASS — audio voice pools permit concurrent multi-projectile SFX without intentionally cutting the previous voice.
+PASS — visual SFX received before browser audio unlock are held briefly and flushed only while fresh; stale queued sounds are dropped.
+MANUAL REQUIRED — real browser test must confirm the audible launch occurs at the perceived projectile appearance. CI can verify syntax but not speaker timing.
+
+4. IMPACT / EXPLOSION SFX
+PASS (source/static) — Basic impact -> basic_explosion.
+PASS — Heavy impact -> loud_explosion.
+PASS — Triple -> individual basic_explosion per projectile.
+PASS — Cluster main -> loud_explosion; each child -> individual basic_explosion.
+PASS — Air Strike -> individual basic_explosion per shell.
+PASS — impact sounds are emitted by the same active renderer timeline at the first frame at or after authoritative impactAt.
+PASS — the previous 900 ms discard window was removed: if network state arrives late, impact sound occurs when the client can finally present that impact/destruction state instead of disappearing silently.
+PASS — Nuke retains its dedicated warning -> activation -> nuclear explosion sequence because it uses the separate warning/beam presentation.
+PASS — Shield and Heal remain state-change SFX.
+MANUAL REQUIRED — confirm terrain destruction/player impact presentation and explosion audio feel simultaneous in a real match. Network/render/audio-device latency cannot be certified statically.
+
+5. COMBAT / DAMAGE
+PASS (source/tests) — Basic max 10; radial radius 260.
+PASS — Heavy max 20; radial radius 320.
+PASS — Triple 10 for each projectile direct hit, maximum 30.
+PASS — Cluster main direct hit 10.
+PASS — each Cluster child independently applies up to 5 radial damage inside radius 150 with distance falloff; overlapping qualifying child explosions accumulate.
+PASS — Air Strike has 7 independent shells, each up to 5 radial damage inside radius 165 with distance falloff; qualifying shell damage accumulates.
+PASS — Nuke damage remains 20.
+PASS — Heal remains +20 capped at 100.
+PASS — Shield remains 50% for one complete incoming attack sequence.
+PASS — Server CI run 131 completed SUCCESS on backend head 8163728003dc6b00206ad8512008dd588eacbaa3, including the current Phase 9 identity and regression suite.
+
+6. PICKUPS
+PASS — permanent Basic + 2 special slots.
+PASS — turns 1–9 baseline spawn every 3 turns; turn 10+ one spawn opportunity each turn; maximum 4 live; lifetime 4 turns.
+PASS — fair midpoint/gap placement remains active.
+PASS — one pickup per player turn.
+PASS — touch collection does not end turn.
+PASS — explosion collection remains disabled.
+PASS — pickup touch threshold remains 74 world units for edge-graze collection.
+
+7. TRAVERSAL / TERRAIN
+PASS (source/tests) — normal jump remains 180.
+PASS — adaptive ledge vault remains capped at 420 distance and 1050 apex.
+PASS — natural ledge drop remains active.
+PASS — embedded-terrain reconciliation runs before move/jump to recover a vehicle left below the authoritative heightmap after terrain deformation.
+PASS — Server CI includes the embedded-terrain regression and traversal regressions.
+MANUAL REQUIRED — extreme crater/vertical-wall game feel should still be watched during normal play; source/tests cannot exhaust every generated crater arrangement.
+
+8. START / UI
+PASS — match-start overlay contract remains START + map + mode, without internal version/phase/arsenal text.
+PASS — no Phase 10 character/map-art overhaul is mixed into this RC.
+
+9. FRONTEND AUTOMATED GATE
+PASS — Frontend CI for the v0.9.8 RC active modules completed syntax checks successfully before the final documentation-only snapshot.
+PASS — active CI checks include renderer7a-visual.js, music.js and audio.js.
+PAGES — final Pages deployment must be checked after the last v0.9.8 RC documentation commit; do not infer runtime deployment from source alone.
+
+10. BACKEND DEPLOYMENT LIMITATION
+PASS — backend repository CI is green.
+LIMITATION — there is no GitHub workflow proving that Google Cloud Run currently runs backend head 8163728003dc6b00206ad8512008dd588eacbaa3. Repository source/CI and deployed Cloud Run parity remain separate facts.
+
+11. LEGACY / CLEANLINESS REVIEW
+PASS — legacy oscillator/synth music is not part of the active music controller.
+PASS — normal Basic/Heavy/Triple/Cluster/Air launch/impact scheduling was removed from audio.js; renderer visual events are the active source of those cues.
+PASS — no external Pixabay runtime download dependency is used; committed local MP3 assets remain the source.
+PASS — historical renderer/backend wrapper files remain in the repository for regression/layer compatibility but are not newly reactivated by this RC cleanup.
+
+COBY RESULT
+APROBADO — SOURCE / STATIC / AUTOMATED CI GATE FOR v0.9.8 RELEASE CANDIDATE.
+
+MANUAL RC WATCHLIST
+A) lobby Sports Opener and game Dark/Adrenaline select correctly;
+B) every music track completes repeated fade-out -> restart -> fade-in loops;
+C) turn 9 fades to silence and turn 10 fades Adrenaline in;
+D) Basic/Heavy/Triple/Cluster/Air launch sounds align with visible projectile starts;
+E) explosion sounds align with visible impacts/terrain destruction;
+F) Cluster and Air radial multi-hit damage behaves naturally;
+G) no vehicle remains permanently trapped by crater/vertical terrain.
+
+The RC may be used as the protected pre-Phase-10 baseline, but the items above remain manual runtime observations rather than claims proven by CI.
