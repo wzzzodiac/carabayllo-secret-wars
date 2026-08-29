@@ -1,0 +1,84 @@
+ORBITAL ARTILLERY — TODO / BETA WATCH — VERSION 13
+Date: 2026-08-29
+Supersedes for current use: ORBITAL_ARTILLERY_TODOLIST_V12.txt
+
+CURRENT RELEASE STATE
+Orbital Artillery v0.9 Beta — Phase 9 CLOSED.
+Phase 10 — Major Visual Overhaul → v1.0 — PARKED / NOT STARTED.
+
+RULE
+The v0.9 mechanical scope is frozen.
+New functional problems found while playing v0.9 are handled as beta hotfixes/regressions; they do not automatically reopen Phase 9.
+Do not mark a manual/browser item passed unless it was actually observed.
+
+==================================================
+A. V0.9 BETA — POST-CLOSE SMOKE WATCH
+==================================================
+These are not blockers to the Phase 9 code closure; they are the first things to observe naturally in the beta build after the final pickup pacing change.
+
+[ ] Turns 3 / 6 / 9 still produce the intended early-game pickup cadence.
+[ ] Turn 10 starts the late-game pickup frenzy.
+[ ] From turn 10 onward, at most one new pickup appears per turn.
+[ ] No more than 4 live pickups are visible at once.
+[ ] Expired pickups disappear normally and later turns can refill the map.
+[ ] A player can touch/collect only 1 pickup during their own turn.
+[ ] After collecting one, touching another during the same turn does nothing.
+[ ] The same player can collect again on their next own turn.
+[ ] Collecting a pickup does not end the turn.
+[ ] Player can still fire after collecting a pickup.
+[ ] A projectile/explosion hitting a pickup does not collect it.
+[ ] Nuke still destroys pickups intersected by the beam.
+[ ] PICKUPS stat/event feed increments exactly once for a valid touch collection.
+[ ] Two clients see the same pickup population.
+
+If any item fails:
+- reproduce;
+- record exact turn/map/weapon/client;
+- fix as v0.9 beta hotfix;
+- add regression where practical.
+
+==================================================
+B. V0.9 BETA — GENERAL WATCH
+==================================================
+Only act if reproduced during normal play:
+
+[ ] false victory / unexpected match end.
+[ ] disconnect/recovery freezes.
+[ ] double turn advance.
+[ ] projectile visual and authoritative impact diverge.
+[ ] enlarged vehicle visual/hitbox mismatch.
+[ ] duplicate HP bars/legacy labels return through cache.
+[ ] spectator/AFK panel layout regressions.
+[ ] stats/event feed duplicate attribution.
+[ ] rematch state leak.
+
+==================================================
+C. PHASE 10 PARKING LOT — DO NOT START YET
+==================================================
+Preferred visual direction currently saved:
+
+[ ] Replace placeholder tanks with animal characters riding small artillery vehicles.
+[ ] Keep animal animation light by letting the vehicle carry movement/fire animation.
+[ ] Explore selectable animal/vehicle roster.
+[ ] Give every map a distinct visual identity/background/ground theme.
+[ ] Rebuild terrain art rather than merely reskinning the current silhouettes.
+[ ] Explore lunar/space-rock, canyon, mountain/cliff and other themed maps.
+[ ] Add irregular upper terrain masses / floating rocks / structures as real ground.
+[ ] Avoid a simplistic flat second floor.
+[ ] Solve access to upper terrain through map geometry first.
+[ ] Evaluate teleport/reposition pickup only if vertical gameplay actually needs it.
+[ ] If teleport is added, keep it strategic and prevent multi-pickup vacuum behavior.
+[ ] Re-evaluate match HP only after vertical maps exist; candidates discussed: 150 / 175 / 200.
+[ ] Large website/lobby/HUD identity redesign belongs here.
+[ ] Final particles, backgrounds, vehicles, terrain, character art, SFX and visual consistency pass belong here.
+
+TARGET
+Phase 10 completion → Orbital Artillery v1.0.
+
+==================================================
+D. VERSIONING
+==================================================
+Do not overwrite V13.
+Next TODO snapshot: ORBITAL_ARTILLERY_TODOLIST_V14.txt
+
+END TODO V13
