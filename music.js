@@ -1,7 +1,7 @@
 const TRACKS=Object.freeze({
-  lobby:{src:'assets/music/sports-opener-590001.mp3',label:'SPORTS OPENER'},
-  early:{src:'assets/music/dark-571483.mp3',label:'DARK'},
-  late:{src:'assets/music/adrenaline-576557.mp3',label:'ADRENALINE'}
+  lobby:{src:'assets/music/sports opener.mp3',label:'SPORTS OPENER'},
+  early:{src:'assets/music/dark.mp3',label:'DARK'},
+  late:{src:'assets/music/adrenaline.mp3',label:'ADRENALINE'}
 });
 const FADE_IN_MS=1800;
 const FADE_OUT_MS=2200;
