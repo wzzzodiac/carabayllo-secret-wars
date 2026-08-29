@@ -22,7 +22,7 @@ export function initCombatControls(gameCanvas) {
       syncCell.querySelector('strong').textContent=room.status==='started'?'LIVE':'—';
     }
     const note=panel.querySelector('.pickup-note');
-    if(note&&!note.dataset.phase6fPatched){note.dataset.phase6fPatched='true';note.textContent+=' Phase 6F adds spectator telemetry, active-weapon identification and weapon-specific resolution status so waiting players can follow each turn without changing authoritative gameplay.';}
+    if(note&&!note.dataset.phase6fPatched){note.dataset.phase6fPatched='true';note.textContent+=' Spectators receive live aim, power and weapon information while waiting for the active turn.';}
   }
   const timer=setInterval(patch,100);
   return Object.freeze({
