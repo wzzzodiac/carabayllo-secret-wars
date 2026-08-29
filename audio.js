@@ -11,7 +11,6 @@ const SFX=Object.freeze({
   nukeExplosion:'assets/music/nuke_explosion.mp3'
 });
 const MASTER_VOLUME=.9;
-const MAX_LATE_LAUNCH_MS=2500;
 const MAX_LATE_IMPACT_MS=2500;
 const DEFAULT_POOL_SIZE=4;
 const BUSY_POOL_SIZE=9;
@@ -48,6 +47,19 @@ function schedule(key,at,fn,{maxLateMs=Infinity}={}){
   state.timers.set(key,timer);
   return true;
 }
+function scheduleLocal(key,delayMs,fn){
+  if(state.seen.has(key))return false;
+  state.seen.add(key);
+  const delay=Math.max(0,Number(delayMs)||0);
+  const timer=setTimeout(()=>{state.timers.delete(key);fn();},delay);
+  state.timers.set(key,timer);
+  return true;
+}
+function relativeDelay(targetAt,anchorAt,extra=0){
+  const target=Number(targetAt),anchor=Number(anchorAt);
+  if(!Number.isFinite(target)||!Number.isFinite(anchor))return Math.max(0,Number(extra)||0);
+  return Math.max(0,target-anchor+(Number(extra)||0));
+}
 function projectileKey(q){return String(q?.id??`${q?.ownerPlayerId??'x'}:${q?.weaponType??'basic'}:${q?.startedAt??q?.impactAt??0}`);}
 function stopWarning(){stop(state.warningAudio);state.warningAudio=null;state.warningKey=null;}
 function validImpact(p){return p&&Number.isFinite(Number(p.impactAt));}
@@ -56,43 +68,47 @@ function scheduleProjectile(q){
   if(!q)return;
   const root=projectileKey(q),type=q.weaponType??'basic';
   if(type==='basic'){
-    schedule(`${root}:basic`,q.startedAt,()=>play('basic'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    once(`${root}:basic-launch`,()=>play('basic'));
     if(validImpact(q))schedule(`${root}:basic-explosion`,q.impactAt,()=>play('basicExplosion'),{maxLateMs:MAX_LATE_IMPACT_MS});
   }else if(type==='heavy'){
-    schedule(`${root}:heavy`,q.startedAt,()=>play('heavy'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    once(`${root}:heavy-launch`,()=>play('heavy'));
     if(validImpact(q))schedule(`${root}:heavy-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
   }else if(type==='triple'){
-    for(const [index,v] of (q.volley??[]).entries()){
-      schedule(`${root}:triple:${index}`,Number(v.startedAt??q.startedAt)+index*45,()=>play('basic'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    const volley=q.volley?.length?q.volley:[q,q,q];
+    for(const [index,v] of volley.entries()){
+      scheduleLocal(`${root}:triple-launch:${index}`,index*65,()=>play('basic'));
       if(validImpact(v))schedule(`${root}:triple-explosion:${index}`,v.impactAt,()=>play('basicExplosion',{volume:.92}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='cluster'){
-    schedule(`${root}:cluster-main`,q.startedAt,()=>play('heavy'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    once(`${root}:cluster-main-launch`,()=>play('heavy'));
     if(validImpact(q))schedule(`${root}:cluster-main-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
+    const launchHold=Number(q.authoritativeVisualDelay7A)||0;
     for(const [index,child] of (q.clusterImpacts??[]).entries()){
-      schedule(`${root}:cluster-child:${index}`,child.visualStartAt??child.impactAt,()=>play('basic',{volume:.9}),{maxLateMs:MAX_LATE_LAUNCH_MS});
+      const childStart=child.visualStartAt??child.impactAt;
+      scheduleLocal(`${root}:cluster-child-launch:${index}`,relativeDelay(childStart,q.startedAt,launchHold),()=>play('basic',{volume:.9}));
       if(validImpact(child))schedule(`${root}:cluster-child-explosion:${index}`,child.impactAt,()=>play('basicExplosion',{volume:.88}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='airstrike'){
-    schedule(`${root}:air-begin`,q.startedAt??Date.now(),()=>play('airBegin'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    once(`${root}:air-begin-launch`,()=>play('airBegin'));
     for(const [index,shell] of (q.airStrikeShells??[]).entries()){
       const visualStart=shell.visualStartAt??shell.startedAt??shell.impactAt;
-      schedule(`${root}:air-shell:${index}`,visualStart,()=>play('basic',{volume:.68}),{maxLateMs:MAX_LATE_LAUNCH_MS});
+      scheduleLocal(`${root}:air-shell-launch:${index}`,relativeDelay(visualStart,q.startedAt),()=>play('basic',{volume:.68}));
       if(validImpact(shell))schedule(`${root}:air-impact-explosion:${index}`,shell.impactAt,()=>play('basicExplosion',{volume:.9}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='nuke'){
-    const warningAt=q.targetLockedAt??q.impactAt??Date.now();
-    schedule(`${root}:warning`,warningAt,()=>{
+    const warningAt=q.targetLockedAt??q.impactAt??q.startedAt;
+    const beamAt=q.beamAt??q.warningUntil??q.impactAt??q.startedAt;
+    const launchHold=Number(q.authoritativeVisualDelay7A)||0;
+    scheduleLocal(`${root}:warning`,relativeDelay(warningAt,q.startedAt,launchHold),()=>{
       stopWarning();
       state.warningKey=root;
       state.warningAudio=play('warning',{volume:.92,loop:true});
-    },{maxLateMs:MAX_LATE_LAUNCH_MS});
-    const beamAt=q.beamAt??q.warningUntil??q.impactAt??Date.now();
-    schedule(`${root}:nuke`,beamAt,()=>{
+    });
+    scheduleLocal(`${root}:nuke`,relativeDelay(beamAt,q.startedAt,launchHold),()=>{
       if(state.warningKey===root)stopWarning();
       play('nuke',{volume:.72});
       play('nukeExplosion',{volume:.98});
-    },{maxLateMs:MAX_LATE_IMPACT_MS});
+    });
   }
 }
 
