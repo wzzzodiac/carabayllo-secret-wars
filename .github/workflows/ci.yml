@@ -30,3 +30,23 @@ jobs:
       - run: node --check wind-gusts.js
       - run: node --check projectile-renderer.js
       - run: node --check terrain-renderer.js
+      - name: Verify Pixabay music endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          urls=(
+            "https://pixabay.com/music/download/id-590001.mp3"
+            "https://pixabay.com/music/download/id-571483.mp3"
+            "https://pixabay.com/music/download/id-576557.mp3"
+          )
+          i=0
+          for url in "${urls[@]}"; do
+            i=$((i+1))
+            file="/tmp/orbital-track-${i}.mp3"
+            curl -L --fail --silent --show-error --retry 2 -A "Mozilla/5.0" "$url" -o "$file"
+            bytes=$(stat -c%s "$file")
+            kind=$(file -b "$file")
+            echo "track $i: $bytes bytes // $kind"
+            test "$bytes" -gt 100000
+            echo "$kind" | grep -Eqi 'audio|mpeg|mp3'
+          done
