@@ -23,6 +23,10 @@ export function createRenderer(canvas, config) {
     visualSfxSeen.add(key);
     window.dispatchEvent(new CustomEvent('orbital-visual-sfx',{detail:{key,name,volume}}));
   }
+  function emitLaunchWhenVisible(key,name,at,now,volume=1){
+    const time=Number(at);if(!Number.isFinite(time)||now<time)return;
+    emitVisualSfx(key,name,volume);
+  }
   function emitWithin(key,name,at,now,windowMs,volume=1){
     const time=Number(at);if(!Number.isFinite(time)||now<time||now-time>windowMs)return;
     emitVisualSfx(key,name,volume);
@@ -31,27 +35,27 @@ export function createRenderer(canvas, config) {
     if(!q)return;
     const root=String(q.id??`${q.ownerPlayerId??'x'}:${q.weaponType??'basic'}:${q.startedAt??0}`),type=q.weaponType??'basic';
     if(type==='basic'){
-      emitWithin(`${root}:launch`,'basic',q.startedAt,now,550);
+      emitLaunchWhenVisible(`${root}:launch`,'basic',q.startedAt,now);
       emitWithin(`${root}:impact`,'basicExplosion',q.impactAt,now,900);
     }else if(type==='heavy'){
-      emitWithin(`${root}:launch`,'heavy',q.startedAt,now,550);
+      emitLaunchWhenVisible(`${root}:launch`,'heavy',q.startedAt,now);
       emitWithin(`${root}:impact`,'loudExplosion',q.impactAt,now,900,.96);
     }else if(type==='triple'){
       for(const [index,v] of (q.volley??[]).entries()){
-        emitWithin(`${root}:triple-launch:${index}`,'basic',v.startedAt,now,550);
+        emitLaunchWhenVisible(`${root}:triple-launch:${index}`,'basic',v.startedAt,now);
         emitWithin(`${root}:triple-impact:${index}`,'basicExplosion',v.impactAt,now,900,.92);
       }
     }else if(type==='cluster'){
-      emitWithin(`${root}:cluster-main-launch`,'heavy',q.startedAt,now,550);
+      emitLaunchWhenVisible(`${root}:cluster-main-launch`,'heavy',q.startedAt,now);
       emitWithin(`${root}:cluster-main-impact`,'loudExplosion',q.impactAt,now,900,.96);
       for(const [index,child] of (q.clusterImpacts??[]).entries()){
-        emitWithin(`${root}:cluster-child-launch:${index}`,'basic',child.visualStartAt??child.impactAt,now,260,.9);
+        emitLaunchWhenVisible(`${root}:cluster-child-launch:${index}`,'basic',child.visualStartAt??child.impactAt,now,.9);
         emitWithin(`${root}:cluster-child-impact:${index}`,'basicExplosion',child.impactAt,now,900,.88);
       }
     }else if(type==='airstrike'){
-      emitWithin(`${root}:air-begin`,'airBegin',q.startedAt,now,900);
+      emitLaunchWhenVisible(`${root}:air-begin`,'airBegin',q.startedAt,now);
       for(const [index,shell] of (q.airStrikeShells??[]).entries()){
-        emitWithin(`${root}:air-shell-launch:${index}`,'basic',shell.visualStartAt??shell.startedAt??shell.impactAt,now,260,.68);
+        emitLaunchWhenVisible(`${root}:air-shell-launch:${index}`,'basic',shell.visualStartAt??shell.startedAt??shell.impactAt,now,.68);
         emitWithin(`${root}:air-shell-impact:${index}`,'basicExplosion',shell.impactAt,now,900,.9);
       }
     }
