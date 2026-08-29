@@ -48,13 +48,13 @@ function getTrack(key){
   if(tracks.has(key))return tracks.get(key);
   const meta=TRACKS[key];if(!meta)return null;
   const audio=new Audio(meta.src);audio.preload='auto';audio.loop=false;audio.volume=0;audio.dataset.orbitalTrack=key;
-  audio.addEventListener('error',()=>console.error(`[Orbital Artillery] Could not load music asset: ${meta.src}`));
+  audio.addEventListener('error',()=>console.error(`[Carabayllo Secret Wars] Could not load music asset: ${meta.src}`));
   audio.addEventListener('ended',()=>{if(audio===state.current&&key===state.desiredKey)restartLoop(audio,key);});
   tracks.set(key,audio);return audio;
 }
 for(const key of Object.keys(TRACKS))getTrack(key);
 
-async function safePlay(audio){try{await audio.play();return true;}catch(error){console.warn('[Orbital Artillery] Music playback blocked/failed',error);return false;}}
+async function safePlay(audio){try{await audio.play();return true;}catch(error){console.warn('[Carabayllo Secret Wars] Music playback blocked/failed',error);return false;}}
 async function restartLoop(audio,key){
   if(!state.unlocked||audio!==state.current||key!==state.desiredKey)return;
   state.loopFading=true;cancelRamp(audio);
