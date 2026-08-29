@@ -10,21 +10,30 @@ const SFX=Object.freeze({
   loudExplosion:'assets/music/loud_explosion.mp3',
   nukeExplosion:'assets/music/nuke_explosion.mp3'
 });
-const MASTER_VOLUME=.9;
+const SFX_HEADROOM=.9;
+const STORAGE_KEY='orbital-artillery-master-volume';
+const LEGACY_STORAGE_KEY='orbital-artillery-music-volume';
+const VOLUME_EVENT='orbital-master-volume';
 const DEFAULT_POOL_SIZE=4;
 const BUSY_POOL_SIZE=10;
 const PENDING_MAX_AGE_MS=1200;
 const pools=new Map();
-const state={unlocked:false,previousRoom:null,seen:new Set(),pendingVisual:new Map(),warningAudio:null,warningKey:null,nukeTimers:new Map()};
+const voiceGain=new WeakMap();
+const initialMaster=Math.max(0,Math.min(100,Number(localStorage.getItem(STORAGE_KEY)??localStorage.getItem(LEGACY_STORAGE_KEY)??72)));
+const state={unlocked:false,previousRoom:null,seen:new Set(),pendingVisual:new Map(),warningAudio:null,warningKey:null,nukeTimers:new Map(),masterVolume:initialMaster};
 
 function poolSize(name){return ['basic','basicExplosion'].includes(name)?BUSY_POOL_SIZE:DEFAULT_POOL_SIZE;}
-function makeVoice(src){const audio=new Audio(src);audio.preload='auto';return audio;}
+function makeVoice(src){const audio=new Audio(src);audio.preload='auto';voiceGain.set(audio,1);return audio;}
 for(const [name,src] of Object.entries(SFX))pools.set(name,Array.from({length:poolSize(name)},()=>makeVoice(src)));
 function acquireVoice(name){const pool=pools.get(name);if(!pool)return null;let audio=pool.find(v=>v.paused||v.ended);if(!audio){audio=makeVoice(SFX[name]);pool.push(audio);}return audio;}
+function effectiveVolume(audio){return Math.max(0,Math.min(1,SFX_HEADROOM*(state.masterVolume/100)*(voiceGain.get(audio)??1)));}
+function applyMasterVolume(){for(const pool of pools.values())for(const audio of pool)audio.volume=effectiveVolume(audio);}
+function setMasterVolume(value){state.masterVolume=Math.max(0,Math.min(100,Math.round(Number(value)||0)));localStorage.setItem(STORAGE_KEY,String(state.masterVolume));applyMasterVolume();}
 function play(name,{volume=1,loop=false}={}){
   if(!state.unlocked)return null;
   const audio=acquireVoice(name);if(!audio)return null;
-  audio.volume=Math.max(0,Math.min(1,MASTER_VOLUME*volume));audio.loop=loop;
+  voiceGain.set(audio,Math.max(0,Math.min(1,Number(volume)||0)));
+  audio.volume=effectiveVolume(audio);audio.loop=loop;
   try{audio.currentTime=0;}catch{}
   audio.play().catch(error=>console.warn(`[Orbital Artillery] SFX playback failed: ${name}`,error));
   return audio;
@@ -72,12 +81,14 @@ function unlock(){
   if(state.unlocked)return;
   state.unlocked=true;
   for(const pool of pools.values())for(const audio of pool)audio.load();
+  applyMasterVolume();
   flushPendingVisual();
 }
 
 window.addEventListener('orbital-room-state',event=>update(event.detail));
 window.addEventListener('orbital-visual-sfx',handleVisualSfx);
+window.addEventListener(VOLUME_EVENT,event=>setMasterVolume(event.detail?.value));
 window.addEventListener('pointerdown',unlock,{once:true,capture:true});
 window.addEventListener('keydown',unlock,{once:true,capture:true});
 
-export function createAudioSystem(){return Object.freeze({enabled:true,play,update});}
+export function createAudioSystem(){return Object.freeze({enabled:true,play,update,setMasterVolume});}
