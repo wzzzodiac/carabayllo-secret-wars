@@ -1,0 +1,81 @@
+ORBITAL ARTILLERY — PROJECT PROGRESS — VERSION 13
+Date: 2026-08-29
+Supersedes for current use: ORBITAL_ARTILLERY_PROGRESS_V12.txt
+
+CURRENT RELEASE
+Orbital Artillery v0.9 Beta remains the public release identity.
+Phase 9 remains CLOSED.
+This snapshot records a post-Phase-9 v0.9 Beta balance/readability hotfix; it does not start Phase 10.
+
+HOTFIX — VEHICLE SCALE
+- Placeholder vehicle presentation reduced to 65% of the previous v0.9 size.
+- Wheels, cannon, Shield ring and vehicle-attached text/badge scale with the vehicle.
+- Global spectator/HUD panels are intentionally not reduced.
+- Projectile vehicle hit radius reduced from 78 to 51 world units to match the smaller visual footprint.
+
+HOTFIX — COMBAT BALANCE
+HP cap remains 100.
+- Basic: maximum direct damage 10.
+- Heavy Bomb: maximum direct damage 20.
+- Triple Shot: 3 projectiles; each projectile deals 10 only when that individual projectile directly hits a vehicle. Misses/terrain-only child impacts do not deal that 10 to the vehicle.
+- Cluster Bomb: existing 14 max damage per subimpact retained because no new value was requested.
+- Air Strike: 7 shells; each shell deals 5 only when that shell directly reaches the vehicle hitbox.
+- Nuke Laser: direct damage remains 20.
+- Heal: +20, capped at 100 HP.
+- Shield: existing 50% mitigation retained, but it now protects against one complete incoming attack sequence and is consumed if that attack actually hits. This prevents Triple/Air/Cluster from consuming the Shield on only the first child impact.
+
+NUKE TERRAIN
+- Existing diagonal scar geometry remains.
+- Direct damage remains 20.
+- Current safe diagonal scar depth increased slightly from 299 to 330.
+- Radius/step/margin behavior remains unchanged.
+- Scar remains below the vertical-void threshold used by the current regression contract.
+
+BACKEND IMPLEMENTATION
+New wrapper: phase6d-v09.js.
+Stack now includes:
+rooms -> Phase6A -> Phase6C -> Phase6D -> v0.9 combat balance -> Phase6E -> later telemetry/hardening -> Phase9.
+Phase6E now imports the v0.9 combat wrappers so telemetry above the layer observes the corrected combat result.
+
+AUTOMATED REGRESSIONS
+New v0.9 combat tests cover:
+- public balance contract
+- Heal +20 / cap100
+- Basic direct damage10
+- Heavy direct damage20
+- Triple direct-child-hit counting
+- Shield protecting the complete Triple attack
+- Air Strike direct-shell damage5
+
+Existing visual regressions were updated for:
+- vehicle hit radius51
+- Nuke scar depth330 while keeping damage20.
+
+CI FINDING AND FIX
+The first Air Strike regression exposed one confirmed implementation bug: direct-hit detection used the vehicle position after crater settling, allowing a shell that had actually reached the tank to be treated as a miss after the terrain moved it slightly.
+Fixed by evaluating Air Strike direct hits against the authoritative pre-attack position snapshot.
+
+CURRENT GATES
+- Latest backend Server CI on corrected combat head 0825e88adcef659df5ef20204b9205b26e5f1620: SUCCESS.
+- Frontend CI on vehicle/cache head c1f602e623e94612db0b4aa98e24ef351a5f563c: SUCCESS.
+- GitHub Pages deployment for c1f602e623e94612db0b4aa98e24ef351a5f563c: SUCCESS.
+- Manual visual/game-feel validation of the smaller vehicle and revised damage pacing: PENDING.
+
+IMPORTANT MANUAL ITEMS
+Source/CI cannot prove:
+- that 65% vehicle/text size feels visually correct in the browser
+- that hit radius51 feels aligned during real shots
+- that the lower damage values produce the desired match duration
+- that Shield feedback clearly communicates whole-attack protection
+- that Nuke scar depth330 feels only slightly stronger visually.
+
+PHASE STATUS
+Phase 9 — v0.9 Beta: CLOSED.
+v0.9 Beta balance/readability hotfix: IMPLEMENTED + AUTOMATED GATE PASS.
+Phase 10 — Major Visual Overhaul -> v1.0: PARKED / NOT STARTED.
+
+VERSIONING
+Do not overwrite V13.
+Next progress snapshot: ORBITAL_ARTILLERY_PROGRESS_V14.txt
+
+END PROGRESS V13
