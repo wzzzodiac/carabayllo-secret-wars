@@ -11,7 +11,6 @@ const SFX=Object.freeze({
   nukeExplosion:'assets/music/nuke_explosion.mp3'
 });
 const MASTER_VOLUME=.9;
-const MAX_LATE_IMPACT_MS=2500;
 const DEFAULT_POOL_SIZE=4;
 const BUSY_POOL_SIZE=9;
 const state={unlocked:false,previousRoom:null,seen:new Set(),timers:new Map(),warningAudio:null,warningKey:null};
@@ -37,16 +36,6 @@ function play(name,{volume=1,loop=false}={}){
 }
 function stop(audio){if(!audio)return;audio.pause();audio.loop=false;try{audio.currentTime=0;}catch{}}
 function once(key,fn){if(state.seen.has(key))return false;state.seen.add(key);fn();return true;}
-function schedule(key,at,fn,{maxLateMs=Infinity}={}){
-  if(state.seen.has(key))return false;
-  const target=Number(at??Date.now()),now=Date.now(),lateness=Number.isFinite(target)?now-target:0;
-  if(Number.isFinite(maxLateMs)&&lateness>maxLateMs){state.seen.add(key);return false;}
-  state.seen.add(key);
-  const delay=Math.max(0,(Number.isFinite(target)?target:now)-now);
-  const timer=setTimeout(()=>{state.timers.delete(key);fn();},delay);
-  state.timers.set(key,timer);
-  return true;
-}
 function scheduleLocal(key,delayMs,fn){
   if(state.seen.has(key))return false;
   state.seen.add(key);
@@ -62,54 +51,20 @@ function relativeDelay(targetAt,anchorAt,extra=0){
 }
 function projectileKey(q){return String(q?.id??`${q?.ownerPlayerId??'x'}:${q?.weaponType??'basic'}:${q?.startedAt??q?.impactAt??0}`);}
 function stopWarning(){stop(state.warningAudio);state.warningAudio=null;state.warningKey=null;}
-function validImpact(p){return p&&Number.isFinite(Number(p.impactAt));}
 
-function scheduleProjectile(q){
-  if(!q)return;
-  const root=projectileKey(q),type=q.weaponType??'basic';
-  if(type==='basic'){
-    once(`${root}:basic-launch`,()=>play('basic'));
-    if(validImpact(q))schedule(`${root}:basic-explosion`,q.impactAt,()=>play('basicExplosion'),{maxLateMs:MAX_LATE_IMPACT_MS});
-  }else if(type==='heavy'){
-    once(`${root}:heavy-launch`,()=>play('heavy'));
-    if(validImpact(q))schedule(`${root}:heavy-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
-  }else if(type==='triple'){
-    const volley=q.volley?.length?q.volley:[q,q,q];
-    for(const [index,v] of volley.entries()){
-      scheduleLocal(`${root}:triple-launch:${index}`,index*65,()=>play('basic'));
-      if(validImpact(v))schedule(`${root}:triple-explosion:${index}`,v.impactAt,()=>play('basicExplosion',{volume:.92}),{maxLateMs:MAX_LATE_IMPACT_MS});
-    }
-  }else if(type==='cluster'){
-    once(`${root}:cluster-main-launch`,()=>play('heavy'));
-    if(validImpact(q))schedule(`${root}:cluster-main-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
-    const launchHold=Number(q.authoritativeVisualDelay7A)||0;
-    for(const [index,child] of (q.clusterImpacts??[]).entries()){
-      const childStart=child.visualStartAt??child.impactAt;
-      scheduleLocal(`${root}:cluster-child-launch:${index}`,relativeDelay(childStart,q.startedAt,launchHold),()=>play('basic',{volume:.9}));
-      if(validImpact(child))schedule(`${root}:cluster-child-explosion:${index}`,child.impactAt,()=>play('basicExplosion',{volume:.88}),{maxLateMs:MAX_LATE_IMPACT_MS});
-    }
-  }else if(type==='airstrike'){
-    once(`${root}:air-begin-launch`,()=>play('airBegin'));
-    for(const [index,shell] of (q.airStrikeShells??[]).entries()){
-      const visualStart=shell.visualStartAt??shell.startedAt??shell.impactAt;
-      scheduleLocal(`${root}:air-shell-launch:${index}`,relativeDelay(visualStart,q.startedAt),()=>play('basic',{volume:.68}));
-      if(validImpact(shell))schedule(`${root}:air-impact-explosion:${index}`,shell.impactAt,()=>play('basicExplosion',{volume:.9}),{maxLateMs:MAX_LATE_IMPACT_MS});
-    }
-  }else if(type==='nuke'){
-    const warningAt=q.targetLockedAt??q.impactAt??q.startedAt;
-    const beamAt=q.beamAt??q.warningUntil??q.impactAt??q.startedAt;
-    const launchHold=Number(q.authoritativeVisualDelay7A)||0;
-    scheduleLocal(`${root}:warning`,relativeDelay(warningAt,q.startedAt,launchHold),()=>{
-      stopWarning();
-      state.warningKey=root;
-      state.warningAudio=play('warning',{volume:.92,loop:true});
-    });
-    scheduleLocal(`${root}:nuke`,relativeDelay(beamAt,q.startedAt,launchHold),()=>{
-      if(state.warningKey===root)stopWarning();
-      play('nuke',{volume:.72});
-      play('nukeExplosion',{volume:.98});
-    });
-  }
+function scheduleNuke(q){
+  if(!q||q.weaponType!=='nuke')return;
+  const root=projectileKey(q),warningAt=q.targetLockedAt??q.impactAt??q.startedAt,beamAt=q.beamAt??q.warningUntil??q.impactAt??q.startedAt,launchHold=Number(q.authoritativeVisualDelay7A)||0;
+  scheduleLocal(`${root}:warning`,relativeDelay(warningAt,q.startedAt,launchHold),()=>{
+    stopWarning();
+    state.warningKey=root;
+    state.warningAudio=play('warning',{volume:.92,loop:true});
+  });
+  scheduleLocal(`${root}:nuke`,relativeDelay(beamAt,q.startedAt,launchHold),()=>{
+    if(state.warningKey===root)stopWarning();
+    play('nuke',{volume:.72});
+    play('nukeExplosion',{volume:.98});
+  });
 }
 
 function detectInstantUtilities(previous,room){
@@ -125,9 +80,13 @@ function detectInstantUtilities(previous,room){
 function update(room){
   detectInstantUtilities(state.previousRoom,room);
   const previousQ=state.previousRoom?.match?.projectile,currentQ=room?.match?.projectile;
-  if(currentQ&&projectileKey(currentQ)!==projectileKey(previousQ))scheduleProjectile(currentQ);
+  if(currentQ?.weaponType==='nuke'&&projectileKey(currentQ)!==projectileKey(previousQ))scheduleNuke(currentQ);
   if(!currentQ&&previousQ?.weaponType==='nuke')stopWarning();
   state.previousRoom=room;
+}
+function handleVisualSfx(event){
+  const detail=event?.detail;if(!detail?.key||!SFX[detail.name])return;
+  once(`visual:${detail.key}`,()=>play(detail.name,{volume:Number.isFinite(Number(detail.volume))?Number(detail.volume):1}));
 }
 function unlock(){
   if(state.unlocked)return;state.unlocked=true;
@@ -136,6 +95,7 @@ function unlock(){
 
 export function createAudioSystem(){
   window.addEventListener('orbital-room-state',event=>update(event.detail));
+  window.addEventListener('orbital-visual-sfx',handleVisualSfx);
   window.addEventListener('pointerdown',unlock,{once:true,capture:true});
   window.addEventListener('keydown',unlock,{once:true,capture:true});
   return Object.freeze({enabled:true,play,update});
