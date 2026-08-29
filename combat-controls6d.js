@@ -1,4 +1,4 @@
-import { initCombatControls as initBaseControls } from './combat-controls.js?v=phase6c-airstrike-visual-1';
+import { initCombatControls as initBaseControls } from './combat-controls.js?v=v098-csw-afk-1';
 
 export function initCombatControls(gameCanvas) {
   const base = initBaseControls(gameCanvas);
@@ -44,7 +44,7 @@ export function initCombatControls(gameCanvas) {
     const note = panel.querySelector('.pickup-note');
     if (note && !note.dataset.phase6ePatched) {
       note.dataset.phase6ePatched = 'true';
-      note.textContent += ' Current movement is free across reachable terrain during the 40-second turn: there is no movement radius and no per-turn jump quota; normal jump cadence is about half a second. All clients receive the active player aim so spectators can watch angle, power and trajectory live. Nuke Laser uses that trajectory as its designator, then warns for 3 seconds and fires a sustained 3-second terrain-disintegration beam. Phase 6E uses a 100-point pickup pool: Heavy 25, Triple 20, Cluster 20, Shield 12, Heal 12, Air Strike 8, Nuke 3.';
+      note.textContent += ' Current movement is free across reachable terrain during the 40-second turn: there is no movement radius and no per-turn jump quota; normal jump cadence is about half a second. All clients receive the active player aim so spectators can watch angle, power and trajectory live. Nuke Laser uses that trajectory as its designator, then warns visually for 5 seconds and fires a sustained 5-second terrain-disintegration beam. Phase 6E uses a 100-point pickup pool: Heavy 25, Triple 20, Cluster 20, Shield 12, Heal 12, Air Strike 8, Nuke 3.';
     }
   }
 
