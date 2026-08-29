@@ -1,0 +1,105 @@
+COBY DEBUG V18 — ORBITAL ARTILLERY v0.9.6 BETA
+Date: 2026-08-29
+Gate scope: pickup edge-touch + traversal descent + music/SFX reliability + match-start cleanup + v0.9.6 identity
+
+1. REPOSITORY HEADS REVIEWED
+Frontend executable/documented head before this snapshot series:
+- ec508d032232b836927e1411932485d4fba7a35d — Document Orbital Artillery v0.9.6 beta
+Backend head:
+- 82703fe5062c431d38731832e7fdb40b1b78e66f — Update v0.9.6 public state regression
+
+2. HIGHEST VERSIONED PROJECT DOCS BEFORE THIS COBY
+- ORBITAL_ARTILLERY_PROGRESS_V15.txt
+- ORBITAL_ARTILLERY_TODOLIST_V16.txt
+- previous Coby: COBY_DEBUG_V17.txt
+This file is COBY_DEBUG_V18.txt and does not overwrite historical snapshots.
+
+3. SOURCE REVIEW — BACKEND
+PASS
+- phase9-core.js pickup touch threshold = 74 world units, derived from 51 vehicle hit radius + 22 visible pickup allowance + 1 tolerance.
+- Existing one-pickup-per-player-turn and two-slot inventory rules remain.
+- Explosion/projectile collection remains disabled.
+- Fair midpoint pickup placement remains.
+- phase9-traversal.js preserves normal 180 jump and existing adaptive vault.
+- New natural ledge drop only intercepts terrain_too_steep when the immediate destination is a lower solid surface with drop >42.
+- Upward walls and void are not converted into natural drops.
+- Public movement contract advertises adaptiveLedgeVault and naturalLedgeDrop.
+- Public room state version = 0.9.6-beta.
+- server.js /health source identity = 0.9.6-beta.
+
+4. SOURCE REVIEW — FRONTEND MUSIC
+PASS FOR CODE CONTRACT / MANUAL FOR AUDIBLE RESULT
+- Sports Opener lobby/countdown/post-match, Dark turns 1–8, silence transition on turn 9, Adrenaline turn 10+.
+- Loop fade cannot be raised/cancelled by routine same-track room-state synchronization while loopFadeStarted is true.
+- ended event provides explicit loop restart fallback.
+- paused/ended same-track recovery exists.
+- track transitions retain independent outgoing/incoming ramps.
+- local 0–100 persisted music volume remains.
+- No legacy procedural/synth fallback remains.
+
+5. SOURCE REVIEW — FRONTEND SFX
+PASS FOR CODE CONTRACT / MANUAL FOR AUDIBLE RESULT
+- Local SFX assets are wired for Basic, Heavy, Triple, Cluster, Air Strike, Nuke, Shield and Heal.
+- Launch and explosion sounds are distinct where required.
+- Small preloaded voice pools allow rapid/multi-projectile overlap.
+- Launch/impact authoritative events tolerate up to 2500ms normal network lateness and play immediately when late within that window instead of being silently discarded.
+- Triple launches use slight 45ms staggering.
+- Air Strike shell cue uses visualStartAt and explosion uses impactAt.
+- Nuke warning is scheduled at target lock and stopped at beam start before activation/explosion.
+
+6. SOURCE REVIEW — MATCH START
+PASS
+- Final renderer6f overlay covers the legacy technical countdown layer.
+- Player-facing content is START + terrain/map + TEAM MODE or SURVIVAL MODE.
+- No release version, internal phase or arsenal-development text is intentionally shown in the final overlay.
+
+7. REGRESSION / CI
+BACKEND PASS
+- Server CI run 121, ID 33258988747, head 82703fe5062c431d38731832e7fdb40b1b78e66f: SUCCESS.
+- Includes new pickup edge-graze and natural ledge-drop regressions plus historical suite.
+- Earlier run 120 failed only because the version expectation still said the old release; expectation was corrected and run 121 passed.
+
+FRONTEND PASS
+- Frontend CI run 184, ID 33259062970, head ec508d032232b836927e1411932485d4fba7a35d: SUCCESS.
+- music.js, audio.js, renderer6f.js and all other checked modules passed node --check.
+- GitHub Pages run 265, ID 33259062090, same head: SUCCESS.
+
+8. CONFIRMED BUGS FIXED IN THIS GATE
+FIXED — Pickup touch threshold too strict relative to current vehicle + visible box dimensions.
+FIXED — Downward steep terrain required a forward jump instead of allowing a natural descent.
+FIXED — SFX late-event threshold was too aggressive (350ms launch / 650ms impact) for normal live-network latency and could suppress sounds.
+FIXED — Match-start overlay leaked technical/version presentation not wanted by the player.
+RECONFIRMED — Music loop/fade implementation includes protection against previous room-state fade cancellation bug.
+
+9. INTENDED / UNCHANGED
+- Normal jump = 180.
+- Adaptive ledge vault is retained for high/wide structures.
+- Current weapon damage/balance remains unchanged.
+- Pickup spawn midpoint fairness remains unchanged.
+- Phase 9 remains CLOSED.
+- Phase 10 remains PARKED.
+
+10. MANUAL BETA WATCH — NOT AUTOMATICALLY PROVEN
+PENDING MANUAL
+- Pickup edge-graze feel in crater/ledge geometry like the reported screenshot.
+- Natural ledge drop visual/game-feel and whether it solves the reported descent case naturally.
+- Existing high-structure jump mechanic still feels correct after coexistence with natural drop.
+- Sports Opener and Dark/Adrenaline full-length loops audibly perform fade-out -> restart -> fade-in.
+- Lobby -> early -> turn 9 -> late -> post-match transitions sound clean.
+- Every launch/explosion utility cue is audible exactly once and synchronized in a live match.
+- Nuke perceived volume is strong but safe/comfortable.
+- START + map + mode overlay visually hides all old technical countdown text in browser.
+
+11. DEPLOYMENT ASSUMPTIONS
+- Frontend GitHub Pages deployment for executable/documented v0.9.6 head is proven SUCCESS by Pages run 265.
+- GitHub CI proves backend source/tests only.
+- Latest backend v0.9.6 Cloud Run deployment/runtime parity has NOT been proven in this Coby and must not be inferred from CI.
+
+12. GATE
+AUTOMATED / SOURCE GATE: APROBADO
+V0.9.6 BETA CODE RELEASE: APROBADO
+MANUAL AUDIO / VISUAL / GAME-FEEL WATCH: PENDING, NON-BLOCKING BETA WATCH
+PHASE 10: NOT STARTED / PARKED
+
+Conclusion:
+No confirmed source/CI blocker remains for v0.9.6 Beta. The reported pickup, downward traversal, SFX reliability and match-start presentation issues have code-level fixes with green automated gates. Browser listening/feel and live Cloud Run backend parity remain explicitly manual checks rather than falsely marked complete.
