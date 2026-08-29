@@ -1,0 +1,106 @@
+COBY DEBUG V21 — CARABAYLLO SECRET WARS
+Date: 2026-08-29
+Target: v0.9.8 RELEASE CANDIDATE after frontend repository rename and full pre-Phase-10 microscope review.
+
+CODE HEADS REVIEWED BEFORE THIS SNAPSHOT
+Frontend: 0678d786ba0750d1adb699828504d5c408721594
+Backend: 59370a15e55c5debfc82f3139d410aa845cf450d
+Hub: b15f0d87bc90fcd39504a74f052609fb8d9b1209
+Frontend repository: wzzzodiac/carabayllo-secret-wars
+Frontend Pages target: https://wzzzodiac.github.io/carabayllo-secret-wars/
+Backend repository intentionally remains: wzzzodiac/orbital-artillery-server
+Cloud Run endpoint intentionally remains the existing orbital-artillery-server service URL.
+
+1. REPOSITORY RENAME / PUBLIC IDENTITY
+PASS — GitHub repository metadata resolves the frontend as wzzzodiac/carabayllo-secret-wars.
+PASS — index.html title, metadata, H1 and footer identify the game as Carabayllo Secret Wars.
+PASS — public version remains 0.9.8 RELEASE CANDIDATE.
+PASS — frontend README now points to wzzzodiac/carabayllo-secret-wars and https://wzzzodiac.github.io/carabayllo-secret-wars/.
+PASS — backend README now points to the renamed frontend repository.
+PASS — main wzzzodiac.github.io hub card is named Carabayllo Secret Wars and now links to /carabayllo-secret-wars/ instead of /orbital-artillery/.
+PASS — hub Pages deployment for the corrected link completed successfully.
+PASS — historical versioned ORBITAL_ARTILLERY_* and older COBY_DEBUG_* documents remain untouched as historical records by design.
+
+2. BACKEND / CORS SAFETY AFTER URL CHANGE
+PASS — frontend config still targets the existing Cloud Run endpoint; no backend URL migration was required.
+PASS — backend CORS defaults to origin https://wzzzodiac.github.io rather than a path-specific /orbital-artillery route, so changing the GitHub Pages subpath does not invalidate the configured browser origin.
+PASS — backend source/gameplay was not changed for the frontend repository rename.
+PASS — backend Server CI run 140 completed SUCCESS on head 59370a15e55c5debfc82f3139d410aa845cf450d.
+LIMITATION — GitHub CI still does not prove that live Cloud Run currently runs the exact latest backend source. Runtime deployment parity remains a separate check.
+
+3. MICRO-REVIEW FINDING: AIR STRIKE RUNTIME RENDERER BUG
+FOUND — renderer7a-visual.js contained ctx.moveTo(tail.x,t.y) inside drawAirStrike(). Variable t does not exist in that function. This is syntactically valid JavaScript, so the previous node --check gate could not detect it, but it could throw ReferenceError at runtime while drawing an Air Strike shell.
+FIXED — the Air Strike trail now uses ctx.moveTo(tail.x,tail.y).
+PASS — the second trail line also uses tail.x/tail.y consistently.
+PASS — no weapon damage/timing/audio mapping was changed by this correction.
+
+4. MICRO-REVIEW FINDING: SPECTATOR F1 VISIBILITY STILL USED OLD RULE
+FOUND — renderer6f.js still required both AFK eligibility and remaining<=20000 before showing the spectator F1 vote UI.
+IMPACT — backend and main combat controls already used the new 20-seconds-of-inactivity rule, but the canvas spectator feed could stay visually locked until the final 20 seconds of the turn.
+FIXED — spectator voteWindow now depends only on authoritative vote.eligibleAt.
+FIXED — pre-unlock spectator copy now shows AFK SKIP AFTER 20s INACTIVITY and counts down to eligibleAt rather than describing remaining turn time.
+PASS — backend remains authoritative and already resets eligibleAt after valid active-player activity.
+PASS — active-player activity still clears votes and postpones F1 by another 20 seconds.
+
+5. CACHE / DEPLOY PATH CLEANUP
+FOUND — the active renderer cache keys had not been changed after the renderer fixes, so a browser could theoretically reuse an older cached renderer even after Pages deployed the source correction.
+FIXED — renderer7a-visual.js now imports renderer6f.js through v098-csw-afk-spectator-1.
+FIXED — index.html now requests renderer7a-visual.js through v098-csw-runtime-clean-1.
+PASS — current executable path therefore requests the corrected Air Strike and F1 renderer sources under fresh module URLs.
+
+6. NEW FRONTEND REGRESSION GATE
+PASS — test/frontend-source-regressions.mjs was added.
+PASS — it rejects the former Air Strike undefined-variable expression.
+PASS — it requires the corrected tail.x/tail.y expression.
+PASS — it rejects the historical remaining<=20000 spectator F1 condition.
+PASS — it requires inactivity-only voteWindow logic and inactivity wording.
+PASS — it verifies public Carabayllo Secret Wars title/footer identity.
+PASS — it verifies the active cleaned renderer cache key.
+PASS — it verifies the renamed frontend repository and Pages URL in README and rejects the obsolete /orbital-artillery/ Pages URL there.
+PASS — .github/workflows/ci.yml now runs this regression test after all existing syntax checks.
+PASS — Frontend CI run 226 completed SUCCESS on head 0678d786ba0750d1adb699828504d5c408721594, including the new regression step.
+PASS — GitHub Pages run 308 completed SUCCESS on the same head.
+
+7. ACTIVE FRONTEND CHAIN REVIEW
+PASS — index.html loads the Carabayllo Secret Wars RC identity and current music/audio/client modules.
+PASS — client config still points to the intended existing Cloud Run endpoint.
+PASS — socket.js does not contain a path-specific GitHub Pages dependency.
+PASS — music.js retains lobby/early/turn9/late routing, fade/loop logic and the envelope x master-volume separation used by the lobby slider fix.
+PASS — audio.js retains the shared master-volume event, renderer-driven projectile/impact SFX and dedicated Nuke warning/beam sequence.
+PASS — main combat-controls AFK logic uses eligibleAt without a remaining-turn condition.
+PASS — spectator canvas AFK logic now matches that same rule.
+PASS — renderer7a active Air Strike path no longer contains the confirmed undefined variable.
+
+8. TECHNICAL IDENTIFIERS INTENTIONALLY RETAINED
+PASS / INTENTIONAL — backend repository remains orbital-artillery-server.
+PASS / INTENTIONAL — Cloud Run service URL remains orbital-artillery-server-git-...run.app.
+PASS / INTENTIONAL — internal browser event/localStorage identifiers such as orbital-room-state, orbital-visual-sfx and orbital-artillery-master-volume remain for compatibility; they are implementation identifiers, not public branding.
+PASS / INTENTIONAL — historical versioned documents retain their old project-name filenames/content rather than being rewritten.
+
+9. GAMEPLAY REGRESSION SCOPE
+PASS — no damage constants, turn rules, pickup pacing, traversal distances, match stats, disconnect logic or weapon timing were modified by this rename cleanup except the visual Air Strike runtime bug and spectator AFK presentation bug described above.
+PASS — latest backend CI remains green with the airborne pickup, inactivity AFK, damage and traversal regression suite.
+PASS — v0.9.8 Release Candidate remains the functional/mechanical baseline before Phase 10.
+
+10. HUB
+PASS — wzzzodiac.github.io project card uses Carabayllo Secret Wars.
+PASS — project card points to https://wzzzodiac.github.io/carabayllo-secret-wars/.
+PASS — hub Pages run 123 completed SUCCESS on head b15f0d87bc90fcd39504a74f052609fb8d9b1209.
+
+11. MANUAL / RUNTIME LIMITATIONS
+MANUAL — CI cannot certify audible music/SFX perception, fade quality, browser autoplay behavior or game feel.
+MANUAL — CI cannot certify every generated terrain/crater traversal situation.
+MANUAL — live Cloud Run source parity is not proven by repository CI.
+These are limitations of automated verification, not confirmed source bugs.
+
+COBY RESULT
+APROBADO — NO CONFIRMED SOURCE / STATIC / CI ERRORS REMAIN AFTER THE RENAME MICRO-REVIEW.
+
+CONFIRMED BUGS FOUND DURING THIS COBY AND FIXED
+1) Air Strike renderer undefined t.y reference.
+2) Spectator F1 overlay still constrained by the historical <=20-seconds-remaining rule.
+3) Stale active renderer cache keys after those fixes.
+4) Obsolete frontend repo/Pages references in frontend README, backend README and main hub link.
+
+FINAL RULE
+Do not infer browser audio/game-feel or Cloud Run deployment parity from CI. For source/static/automated coverage, this v0.9.8 RC state is approved as the clean pre-Phase-10 baseline.
