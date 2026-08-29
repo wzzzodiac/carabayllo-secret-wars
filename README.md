@@ -2,9 +2,9 @@
 
 Carabayllo Secret Wars is a browser/desktop 2D turn-based multiplayer artillery game for 2–8 players, inspired by Gunbound/Wild Ones.
 
-Frontend repository (repository name intentionally unchanged):
-- `wzzzodiac/orbital-artillery`
-- GitHub Pages: https://wzzzodiac.github.io/orbital-artillery/
+Frontend:
+- `wzzzodiac/carabayllo-secret-wars`
+- GitHub Pages: https://wzzzodiac.github.io/carabayllo-secret-wars/
 
 Backend repository (repository name intentionally unchanged):
 - `wzzzodiac/orbital-artillery-server`
@@ -103,7 +103,7 @@ Adaptive soundtrack:
 - track changes use fade-out/fade-in transitions
 - stale asynchronous playback cannot restore an outdated track
 
-The 0–100 speaker slider is a **master game volume** and controls both soundtrack and SFX while preserving the relative loudness of each effect.
+The 0–100 speaker slider is a **master game volume** and controls both soundtrack and SFX while preserving the relative loudness of each effect. The master value remains responsive in the initial page/lobby, during fades and loops, and during active gameplay.
 
 Weapon/utility audio:
 - Basic: `basic_shot.mp3` launch + `basic_explosion.mp3` impact
