@@ -2,9 +2,9 @@ name: Frontend CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase10-development]
   pull_request:
-    branches: [main]
+    branches: [main, phase10-development]
 
 jobs:
   syntax-check:
@@ -19,6 +19,7 @@ jobs:
       - run: node --check renderer6d.js
       - run: node --check renderer6f.js
       - run: node --check renderer7a-visual.js
+      - run: node --check renderer10-huancavelica.js
       - run: node --check combat-controls.js
       - run: node --check combat-controls6d.js
       - run: node --check combat-controls6f.js
