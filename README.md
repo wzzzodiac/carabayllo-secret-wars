@@ -12,11 +12,11 @@ Backend:
 
 ## Current release
 
-**Orbital Artillery v0.9.6 Beta — functional gameplay/audio build.**
+**Orbital Artillery v0.9.8 Release Candidate — final pre-Phase-10 functional/mechanical baseline.**
 
-Phase 9 remains closed for the current mechanical/gameplay scope. v0.9.6 is a post-Phase-9 beta hotfix release that consolidates combat balance, fair pickups, traversal fixes, adaptive music and weapon/impact SFX without starting Phase 10.
+Phase 9 remains closed for the current mechanical/gameplay scope. v0.9.8 RC consolidates combat balance, fair pickups, traversal recovery, adaptive soundtrack behavior and synchronized weapon/impact SFX before the Phase 10 visual overhaul begins.
 
-The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Phase 10 is intentionally parked for now and will focus on the large visual identity pass: characters/animal riders, vehicles, map art, backgrounds, terrain redesign and later vertical/dynamic map experimentation.
+The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Phase 10 is not part of the v0.9.8 RC mechanical contract.
 
 Mobile/touch gameplay is not part of this project roadmap.
 
@@ -28,13 +28,13 @@ Mobile/touch gameplay is not part of this project roadmap.
 - Team and Survival modes
 - Authoritative Node.js + Socket.IO server
 - Google Cloud Run backend in `us-east1`
-- In-memory rooms; no persistent database in v0.9.6
+- In-memory rooms; no persistent database in v0.9.8 RC
 - Socket connection begins on CREATE/JOIN rather than intentionally waking the backend on page load
 - Connection-state recovery protects active matches from brief transport cuts
 
 GitHub source/CI does not by itself prove the latest backend commit is already deployed to Cloud Run; deployed runtime parity is checked separately when needed.
 
-## v0.9.6 gameplay baseline
+## v0.9.8 gameplay baseline
 
 - 2–8 players
 - Team / Survival
@@ -47,7 +47,8 @@ GitHub source/CI does not by itself prove the latest backend commit is already d
 - free active-turn movement
 - unlimited jumps with cooldown
 - adaptive ledge vault for unusually tall/wide terrain walls
-- natural ledge drop when walking onto a lower solid surface, so descending does not require a forward jump
+- natural ledge drop when walking onto a lower solid surface
+- embedded-terrain recovery before move/jump so terrain deformation cannot permanently trap a vehicle inside the heightmap
 - destructible terrain
 - seven terrain presets + RANDOM selector
 - randomized physical spawns
@@ -61,24 +62,26 @@ GitHub source/CI does not by itself prove the latest backend commit is already d
 ## Weapons / utilities
 
 Permanent slot:
-- Basic — maximum 10 damage on a direct hit
+- Basic — maximum 10 damage, radial falloff inside radius 260; direct hit = 10
 
 Special pickup pool:
-- Heavy Bomb — weight 25; maximum 20 direct damage
+- Heavy Bomb — weight 25; maximum 20 damage, radial falloff inside radius 320; direct hit = 20
 - Triple Shot — weight 20; 3 projectiles, 10 damage for each projectile that directly hits a vehicle
-- Cluster Bomb — weight 20; main projectile direct hit = 10 damage, plus 5 damage for each cluster subimpact that directly reaches the vehicle hitbox
+- Cluster Bomb — weight 20; main direct hit = 10; each child explosion independently deals up to 5 damage with radial falloff inside radius 150
 - Shield — weight 12; halves one complete incoming attack and is then consumed if that attack hits
 - Heal +20 — weight 12; restores up to 20 HP, capped at 100
-- Air Strike — weight 8; 7 shells, 5 damage for each shell that directly reaches the vehicle hitbox
-- Nuke Laser — weight 3; 20 direct damage
+- Air Strike — weight 8; 7 shells; each shell independently deals up to 5 damage with radial falloff inside radius 165
+- Nuke Laser — weight 3; 20 damage
 
 Pool total: 100.
 
 Current notable behavior:
 - Triple only deals damage for the individual projectiles that directly hit the vehicle: 0/1/2/3 hits = 0/10/20/30 damage before Shield.
-- Cluster main damage is direct-contact only; each child deals 5 only if that child reaches the vehicle hitbox.
-- Air Strike shells visibly descend from above and deal 5 only for direct shell contact.
-- Nuke uses a designator, 5-second warning and 5-second beam, remains at 20 direct damage and keeps the diagonal terrain scar.
+- Cluster child explosions are independent. A vehicle inside several child blast radii receives damage from each qualifying explosion, with distance falloff per child.
+- Air Strike shells are independent. A vehicle inside several shell blast radii receives damage from each qualifying shell, with distance falloff per shell.
+- Cluster theoretical maximum remains 35 before Shield: 10 main + five children × 5.
+- Air Strike theoretical maximum remains 35 before Shield: seven shells × 5.
+- Nuke uses a designator, 5-second warning and 5-second beam, remains at 20 damage and keeps the diagonal terrain scar.
 - Shield retains 50% mitigation and protects one entire incoming attack sequence.
 - Heal restores +20 up to 100 HP.
 
@@ -94,7 +97,7 @@ Current notable behavior:
 - explosions/projectiles do **not** collect pickups
 - Nuke may destroy pickups intersected by the beam
 - spawn placement is balanced around midpoint gaps between living players
-- v0.9.6 touch collection uses a 74-world-unit center threshold, representing the 51-unit vehicle hit radius plus the visible pickup body; a slight visual/hitbox graze should collect the box
+- touch collection uses a 74-world-unit center threshold, representing the 51-unit vehicle hit radius plus the visible pickup body; a slight visual/hitbox graze should collect the box
 
 ## Vehicle / traversal readability
 
@@ -105,7 +108,8 @@ The placeholder vehicles remain temporary assets for Phase 10:
 - authoritative projectile hit radius = 51 world units
 - normal jump distance remains 180 world units
 - adaptive ledge vault may extend a blocked jump up to 420 world units only when required to clear unusually tall/wide terrain
-- walking down a steep but solid ledge now creates a short fall motion instead of forcing the player to jump forward
+- walking down a steep but solid ledge creates a short fall motion instead of forcing the player to jump forward
+- before move/jump, a vehicle detected below the valid terrain surface is reconciled back to the authoritative surface to prevent permanent terrain traps
 
 ## Music / SFX
 
@@ -114,11 +118,23 @@ Adaptive soundtrack:
 - turns 1–8: `dark.mp3`
 - turn 9: long fade to silence
 - turn 10+: `adrenaline.mp3`
-- each soundtrack loop fades out near the end, restarts and fades back in
-- track changes use crossfades
+- every soundtrack loop fades out near its end, restarts and fades back in
+- track changes use fade-out/fade-in transitions
+- a transition token prevents stale asynchronous `audio.play()` completions from restoring the wrong lobby/game track
+- music tracks are reused rather than creating competing active music instances
 - local music volume is adjustable from 0–100 and persisted in the browser
 
-Weapon/utility audio includes separate launch and impact cues for Basic, Heavy, Triple, Cluster, Air Strike and Nuke, plus Shield and Heal cues. Multi-projectile weapons use individual voices so overlapping shells/children do not cut each other off. Projectile/impact SFX use authoritative timestamps with tolerance for normal network latency.
+Weapon/utility audio:
+- Basic launch: `basic_shot.mp3`; impact: `basic_explosion.mp3`
+- Heavy launch: `heavy_bomb.mp3`; impact: `loud_explosion.mp3`
+- Triple: individual Basic launch and explosion voice per projectile
+- Cluster: Heavy launch/impact for the main projectile plus individual Basic launch/explosion voices for children
+- Air Strike: `air_strike_begin.mp3` plus individual Basic shell voices and individual explosion voices
+- Nuke: warning loop, Nuke activation and nuclear explosion sequence
+- Shield: `shield.mp3`
+- Heal: `health.mp3`
+
+For Basic, Heavy, Triple, Cluster and Air Strike, launch/impact SFX are emitted by the same renderer timeline that decides when the corresponding projectile/impact becomes visible. Events are keyed and consumed once. A late room state therefore plays the sound on the first frame where the client can actually show that event instead of silently discarding it because a timestamp window expired. Audio events arriving before browser audio unlock are retained only briefly and flushed after user interaction, avoiding both missing first sounds and stale delayed playback.
 
 ## Match-start overlay
 
@@ -133,6 +149,7 @@ Regression coverage includes, among other cases:
 - free movement and jump behavior
 - adaptive high-wall vault
 - natural downward ledge drop
+- embedded-terrain recovery
 - projectile/terrain face collision
 - long visible projectile pacing
 - Air Strike descent pacing
@@ -141,9 +158,9 @@ Regression coverage includes, among other cases:
 - Basic direct damage = 10
 - Heavy direct damage = 20
 - Triple direct projectile damage = 10 each
-- Cluster main direct hit = 10 and child direct hit = 5 each
+- Cluster main direct hit = 10 and radial child damage up to 5 each inside radius 150
 - Shield covering a complete multi-hit attack once
-- Air Strike direct shell damage = 5
+- Air Strike radial shell damage up to 5 each inside radius 165
 - Heal = +20 with 100 HP cap
 - disconnect/false-victory handling
 - stats / attribution / assists
@@ -154,6 +171,8 @@ Regression coverage includes, among other cases:
 - touch-only pickup collection
 - pickup edge-graze collection beyond the former 64-unit threshold
 
+Frontend CI syntax-checks the active renderer, controls, music and SFX modules. Browser-level music looping, audible synchronization and game feel still require manual runtime verification.
+
 Historical Phase 6/7 tests remain in the suite as regressions even though the public game is identified by release version rather than internal development phases.
 
 ## Version roadmap
@@ -162,8 +181,9 @@ Historical Phase 6/7 tests remain in the suite as regressions even though the pu
 - Phase 7 — multiplayer QA, stats, match loop and hardening ✅
 - Phase 8 — minor functional/readability polish ✅
 - **Phase 9 — v0.9 Beta functional release ✅**
-- **v0.9.1–v0.9.6 Beta — post-close beta hotfixes / polish ✅**
-- **Phase 10 — Major Visual Overhaul → v1.0 ⏳ PARKED**
+- **v0.9.1–v0.9.7 — post-close beta/pre-release hotfixes ✅**
+- **v0.9.8 Release Candidate — current pre-Phase-10 baseline**
+- **Phase 10 — Major Visual Overhaul → v1.0 ⏳ NEXT**
 
 ## Phase 10 parking lot
 
@@ -180,7 +200,7 @@ Ideas intentionally saved for later evaluation:
 - teleport/reposition utility only if vertical-map play demonstrates a real need
 - evaluate higher HP only after testing the new Phase 10 map geometry and match pacing
 
-These are Phase 10 ideas, not part of the v0.9.6 mechanical contract.
+These are Phase 10 ideas, not part of the v0.9.8 RC mechanical contract.
 
 ## Development rules
 
