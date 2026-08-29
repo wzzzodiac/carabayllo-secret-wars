@@ -1,0 +1,71 @@
+ORBITAL ARTILLERY — PROGRESS V15
+Date: 2026-08-29
+Release: v0.9.6 Beta
+
+STATUS
+- Phase 9 remains CLOSED.
+- v0.9.6 Beta is a post-Phase-9 hotfix/polish release.
+- Phase 10 remains PARKED for the future major visual overhaul toward v1.0.
+
+V0.9.6 CHANGES
+
+PICKUP TOUCH
+- Pickup collection now triggers when the current vehicle hitbox only grazes the visible pickup body.
+- Vehicle hit radius remains 51 world units.
+- Pickup visual allowance is 22 world units plus 1 unit tolerance.
+- Effective pickup center-to-center touch threshold: 74 world units (previous custom threshold: 64).
+- One pickup per player turn, two special inventory slots, touch-only collection and explosion-disabled collection remain unchanged.
+
+TRAVERSAL
+- Normal jump distance remains 180 world units.
+- Existing adaptive ledge vault remains available only when a normal jump is truncated by unusually tall/wide terrain; adaptive landing remains capped at 420 world units and 1050 apex.
+- New natural ledge drop: walking toward a solid surface that is lower by more than the normal 42-unit walk threshold now creates a short authoritative fall instead of requiring a forward jump.
+- Natural ledge drop does not convert upward walls or void into fake landings.
+
+MUSIC
+- Lobby/countdown/post-match: Sports Opener.
+- Turns 1–8: Dark.
+- Turn 9: long fade to silence.
+- Turn 10+: Adrenaline.
+- Loop fade state is protected from normal room-state refreshes.
+- Track end has an explicit restart/fade-in fallback.
+- Track changes keep independent outgoing/incoming crossfades.
+- Music volume remains locally adjustable 0–100 and persisted.
+
+WEAPON / UTILITY SFX
+- SFX playback now uses preloaded voice pools so multi-projectile weapons can overlap without cutting each other off.
+- Normal network delay no longer silently drops launch/impact cues: authoritative events up to 2.5 seconds late are played immediately.
+- Triple launch cues are slightly staggered to make the three shots audible.
+- Air Strike shell cue uses visualStartAt; explosion uses impactAt.
+- Nuke warning starts at target lock and stops at beam start; Nuke activation/explosion follows at beam start.
+- Existing Basic / Heavy / Triple / Cluster / Air Strike / Nuke / Shield / Heal mapping is retained.
+
+MATCH START PRESENTATION
+- Public countdown overlay is intentionally minimal.
+- Visible content: START + map + mode.
+- No version, internal phase, or arsenal-development text in the match-start overlay.
+
+PUBLIC IDENTITY
+- Frontend header/footer: 0.9.6 BETA.
+- Match stats: VERSION 0.9.6 BETA.
+- Backend public room version: 0.9.6-beta.
+- Backend /health source identity: 0.9.6-beta.
+
+AUTOMATED QA
+- Server CI run 121 (head 82703fe5062c431d38731832e7fdb40b1b78e66f): SUCCESS.
+- New regressions cover pickup edge-graze collection and natural downward ledge fall.
+- Frontend CI run 184 (head ec508d032232b836927e1411932485d4fba7a35d): SUCCESS.
+- GitHub Pages run 265 for the same frontend head: SUCCESS.
+
+MANUAL BETA WATCH
+- Confirm pickup collection feels correct in crater/ledge situations like the reported screenshot.
+- Confirm natural downward ledge fall looks and feels natural in the browser.
+- Confirm existing jump-to-high-structure behavior still feels correct.
+- Listen through full soundtrack loops and lobby/early/turn9/late transitions.
+- Confirm every weapon launch and explosion cue is audible exactly once and feels synchronized under live network conditions.
+- Confirm START + map + mode overlay is visually clean.
+- Latest backend Cloud Run deployment parity is not proven by GitHub CI and remains a separate live-runtime check.
+
+NEXT
+- Keep v0.9.6 Beta stable except for reproduced beta regressions.
+- Do not start Phase 10 until explicitly requested.
