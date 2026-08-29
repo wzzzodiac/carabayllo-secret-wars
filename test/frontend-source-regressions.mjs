@@ -4,6 +4,7 @@ import fs from 'node:fs';
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const visual = read('renderer7a-visual.js');
+const phase10 = read('renderer10-huancavelica.js');
 const hud = read('renderer6f.js');
 const index = read('index.html');
 const readme = read('README.md');
@@ -17,7 +18,10 @@ assert.match(hud, /AFK SKIP AFTER 20s INACTIVITY/, 'Spectator HUD must describe 
 
 assert.match(index, /<title>Carabayllo Secret Wars<\/title>/, 'Public title must use the current game name');
 assert.match(index, /CARABAYLLO SECRET WARS \/\/ VERSION 0\.9\.8 RELEASE CANDIDATE/, 'Footer must use the current game name and RC identity');
-assert.match(index, /renderer7a-visual\.js\?v=v098-csw-runtime-clean-1/, 'Active renderer cache key must point to the cleaned RC renderer');
+assert.match(index, /renderer10-huancavelica\.js\?v=phase10-huancavelica-2/, 'Phase 10 branch must load the Huancavelica renderer wrapper with a fresh cache key');
+assert.match(phase10, /renderer7a-visual\.js\?v=v098-csw-runtime-clean-1/, 'Phase 10 renderer must continue wrapping the cleaned RC renderer instead of replacing stable presentation mechanics');
+assert.match(phase10, /MULTILAYER ALPINE VOID/, 'Huancavelica renderer must expose the multilayer alpine visual identity');
+assert.match(phase10, /arena\?\.platforms/, 'Huancavelica visuals must render server-provided multilayer platform geometry');
 
 assert.match(readme, /wzzzodiac\/carabayllo-secret-wars/, 'README must reference the renamed frontend repository');
 assert.match(readme, /wzzzodiac\.github\.io\/carabayllo-secret-wars\//, 'README must reference the renamed Pages URL');
