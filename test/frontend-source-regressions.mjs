@@ -18,10 +18,12 @@ assert.match(hud, /AFK SKIP AFTER 20s INACTIVITY/, 'Spectator HUD must describe 
 
 assert.match(index, /<title>Carabayllo Secret Wars<\/title>/, 'Public title must use the current game name');
 assert.match(index, /CARABAYLLO SECRET WARS \/\/ VERSION 0\.9\.8 RELEASE CANDIDATE/, 'Footer must use the current game name and RC identity');
-assert.match(index, /renderer10-huancavelica\.js\?v=phase10-huancavelica-2/, 'Phase 10 branch must load the Huancavelica renderer wrapper with a fresh cache key');
-assert.match(phase10, /renderer7a-visual\.js\?v=v098-csw-runtime-clean-1/, 'Phase 10 renderer must continue wrapping the cleaned RC renderer instead of replacing stable presentation mechanics');
-assert.match(phase10, /MULTILAYER ALPINE VOID/, 'Huancavelica renderer must expose the multilayer alpine visual identity');
+assert.match(index, /renderer10-huancavelica\.js\?v=phase10-huancavelica-visual-3/, 'Public build must load the refreshed Huancavelica visual pass');
+assert.match(phase10, /renderer7a-visual\.js\?v=v098-csw-runtime-clean-1/, 'Huancavelica renderer must continue wrapping the cleaned RC renderer instead of replacing stable presentation mechanics');
+assert.match(phase10, /ALPINE RIDGE \/\/ EXPERIMENTAL/, 'Huancavelica renderer must expose the approved Alpine Ridge identity');
 assert.match(phase10, /arena\?\.platforms/, 'Huancavelica visuals must render server-provided multilayer platform geometry');
+assert.match(phase10, /drawIsland\(/, 'Huancavelica must use organic island silhouettes rather than flat terrain strips');
+assert.match(phase10, /drawGrassEdge\(/, 'Huancavelica must render a layered grassy rim');
 
 assert.match(readme, /wzzzodiac\/carabayllo-secret-wars/, 'README must reference the renamed frontend repository');
 assert.match(readme, /wzzzodiac\.github\.io\/carabayllo-secret-wars\//, 'README must reference the renamed Pages URL');
