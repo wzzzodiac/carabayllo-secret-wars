@@ -1,0 +1,84 @@
+ORBITAL ARTILLERY — COBY DEBUG — VERSION 16
+Date: 2026-08-29
+Scope: post-Phase-9 v0.9 Beta vehicle-scale + combat-balance hotfix
+Supersedes for current debug use: COBY_DEBUG_V15.txt
+
+INPUT HEADS REVIEWED
+Backend corrected combat head: 0825e88adcef659df5ef20204b9205b26e5f1620
+Frontend executable/cache head: c1f602e623e94612db0b4aa98e24ef351a5f563c
+
+REQUESTED CHANGES VERIFIED IN SOURCE
+A. Vehicle presentation
+- visual vehicle body scaled to65% of previous placeholder size
+- wheels/cannon/Shield ring scale with body
+- attached HP/name label and weapon badge reduced with body
+- projectile vehicle hit radius reduced 78 ->51
+
+B. Combat balance
+- Basic max direct damage10
+- Heavy max direct damage20
+- Triple 10 for each directly hitting child projectile only
+- Air Strike 5 for each shell directly reaching the51-unit vehicle hitbox
+- Heal +20, cap100
+- Nuke direct damage remains20
+- Nuke diagonal safe scar depth299 ->330
+- Cluster retained at14 max/subimpact because no new requested value was supplied
+- Shield factor remains0.5 and protects one complete incoming attack sequence
+
+CONFIRMED ANOMALY FOUND DURING DEBUG
+Classification A — confirmed implementation bug:
+Initial Air Strike direct-hit correction evaluated shell contact against the vehicle position after crater/terrain settling. A tank could move slightly from the shell-induced terrain change before the v0.9 correction, causing a real direct shell to be counted as a miss.
+
+FIX
+Air Strike direct-hit calculation now uses the authoritative pre-attack position snapshot stored with the attack.
+Corrected backend commit: 0825e88adcef659df5ef20204b9205b26e5f1620.
+
+AUTOMATED EVIDENCE
+Backend Server CI run92: SUCCESS.
+New/updated regressions cover:
+- public v0.9 balance contract
+- Heal20
+- Basic10
+- Heavy20
+- Triple direct-child-hit damage + whole-attack Shield
+- Air Strike direct-shell damage5
+- vehicle hit radius51
+- Nuke damage20 + scar depth330
+Historical regression suite also remained green on corrected head.
+
+Frontend CI run138: SUCCESS.
+Syntax checks passed for the current renderer/HUD/cache chain.
+
+GitHub Pages run219: SUCCESS for executable frontend head c1f602e623e94612db0b4aa98e24ef351a5f563c.
+
+MANUAL / VISUAL ITEMS NOT PROVEN
+Classification B — manual check required:
+- whether 65% vehicle size looks ideal at runtime
+- whether smaller wheels/cannon/text proportions feel correct
+- whether hitbox51 visually matches the perceived vehicle boundaries in live gameplay
+- whether Basic10 / Heavy20 / Triple10-per-hit / Air5-per-hit produces desired match pacing
+- whether whole-attack Shield behavior is visually understandable
+- whether Nuke scar330 looks only slightly stronger
+- whether Cluster14 remains balanced against the new lower damage baseline.
+
+TECH DEBT / NON-BLOCKERS
+Classification D:
+- v0.9 damage rebalance is implemented as a compatibility wrapper over historical Phase6 resolvers so the old tested mechanics can remain intact while authoritative final HP is corrected before telemetry/public state.
+- historical source constants still exist below the wrapper; final current behavior is represented by phase6d-v09 + later stack.
+- future cleanup may centralize combat constants after gameplay balance stabilizes.
+
+PHASE GATE
+Phase 9 remains CLOSED as v0.9 Beta.
+This is a v0.9 Beta hotfix, not Phase10.
+Code/CI gate for the hotfix: PASS.
+Manual game-feel/visual verification: PENDING.
+
+VERDICT
+APROBADO PARA MANTENER v0.9 BETA CON ESTE HOTFIX.
+No confirmed blocker remains in the reviewed source/automated contract.
+
+VERSIONING
+Do not overwrite V16.
+Next Coby Debug snapshot: COBY_DEBUG_V17.txt
+
+END COBY DEBUG V16
