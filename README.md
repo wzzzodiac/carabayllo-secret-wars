@@ -14,7 +14,7 @@ Backend:
 
 **Orbital Artillery v0.9 Beta — functional gameplay build.**
 
-Phase 9 is closed for the current mechanical/gameplay scope. The game can be played from lobby to result/rematch with the planned v0.9 mechanics implemented and regression-covered.
+Phase 9 is closed for the current mechanical/gameplay scope. Subsequent changes to this frozen beta are treated as v0.9 hotfixes rather than reopening Phase 9 automatically.
 
 The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Phase 10 is intentionally parked for now and will focus on the large visual identity pass: characters/animal riders, vehicles, map art, backgrounds, terrain redesign and later vertical/dynamic map experimentation.
 
@@ -41,6 +41,7 @@ GitHub source/CI does not by itself prove the latest backend commit is already d
 - private rooms
 - server-authoritative turns and combat
 - 5000×5000 world
+- 100 HP maximum
 - 40-second turns
 - wind, angle and power
 - free active-turn movement
@@ -61,26 +62,27 @@ GitHub source/CI does not by itself prove the latest backend commit is already d
 ## Weapons / utilities
 
 Permanent slot:
-- Basic
+- Basic — maximum 10 damage on a direct hit
 
 Special pickup pool:
-- Heavy Bomb — 25
-- Triple Shot — 20
-- Cluster Bomb — 20
-- Shield — 12
-- Heal +30 — 12
-- Air Strike — 8
-- Nuke Laser — 3
+- Heavy Bomb — weight 25; maximum 20 direct damage
+- Triple Shot — weight 20; 3 projectiles, 10 damage for each projectile that directly hits a vehicle
+- Cluster Bomb — weight 20; current 14 max damage per subimpact baseline retained
+- Shield — weight 12; halves one complete incoming attack and is then consumed if that attack hits
+- Heal +20 — weight 12; restores up to 20 HP, capped at 100
+- Air Strike — weight 8; 7 shells, 5 damage for each shell that directly reaches the vehicle hitbox
+- Nuke Laser — weight 3; 20 direct damage
 
 Pool total: 100.
 
 Current notable behavior:
 - Basic, Heavy, Triple and Cluster use long readable projectile flights.
-- Air Strike shells visibly descend from the top of the battle view.
+- Triple does not award damage merely because a nearby projectile hits terrain: only the individual projectiles that directly hit the vehicle count for its 10-damage hits.
+- Air Strike shells visibly descend from the top of the battle view; only shells that directly reach the vehicle hitbox deal their 5 damage to that vehicle.
 - Nuke uses a designator, 5-second warning and 5-second beam.
-- Nuke deals 20 direct damage and creates a survivable diagonal terrain scar rather than a vertical void.
-- Shield halves the next applicable damage.
-- Heal restores +30 up to 100 HP.
+- Nuke remains at 20 direct damage and keeps the diagonal terrain-scar behavior; the current v0.9 hotfix slightly strengthens that scar without changing its basic geometry or turning it into a vertical void.
+- Shield retains the 50% mitigation baseline but now protects against one entire incoming attack sequence, including multi-projectile attacks, rather than being consumed by the first child hit alone.
+- Heal restores +20 up to 100 HP.
 
 ## v0.9 pickup pacing
 
@@ -101,14 +103,12 @@ This creates an early positioning phase followed by a more frantic late-game ite
 
 ## Current vehicle/combat readability baseline
 
-The v0.9 placeholder vehicles remain temporary assets for Phase 10, but their gameplay scale is now established:
+The v0.9 placeholder vehicles remain temporary assets for Phase 10, but their current gameplay scale is now established:
 
-- enlarged vehicle presentation
-- matching enlarged projectile hitbox
-- one large HP bar per vehicle
-- readable `YOU // HP` / player-name labels
-- active weapon badge
-- larger spectator/AFK panel
+- vehicle presentation reduced to **65%** of the previous v0.9 placeholder size
+- wheels, cannon, Shield ring, attached HP/name text and weapon badge scale with the vehicle
+- authoritative projectile hit radius reduced from 78 to **51 world units** to match the smaller vehicle footprint
+- vehicle-attached HP/name text is correspondingly smaller; global spectator/HUD panels keep their normal readable size
 
 The current tank/cart art is explicitly placeholder material and is expected to be replaced in Phase 10.
 
@@ -126,7 +126,13 @@ Regression coverage includes, among other cases:
 - long visible projectile pacing
 - Air Strike descent pacing
 - Nuke timing/damage/terrain behavior
-- large vehicle hitbox behavior
+- 51-unit v0.9 vehicle hitbox behavior
+- Basic direct damage = 10
+- Heavy direct damage = 20
+- Triple damage only from directly hitting child projectiles
+- Shield covering a complete Triple volley once
+- Air Strike direct shell damage = 5
+- Heal = +20 with 100 HP cap
 - 100 turn timeouts without false victory
 - disconnect turn-order handling
 - stats / damage attribution / assists
@@ -144,6 +150,7 @@ Historical Phase 6/7 tests remain in the suite as regressions even though the pu
 - Phase 7 — multiplayer QA, stats, match loop and hardening ✅
 - Phase 8 — minor functional/readability polish ✅
 - **Phase 9 — v0.9 Beta functional release ✅**
+- **v0.9 Beta hotfixes — balance/readability corrections as needed**
 - **Phase 10 — Major Visual Overhaul → v1.0 ⏳ PARKED**
 
 Phase 10 is expected to cover the major identity pass rather than reopening the v0.9 mechanical foundation unnecessarily.
