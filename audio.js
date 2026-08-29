@@ -17,6 +17,7 @@ const VOLUME_EVENT='orbital-master-volume';
 const DEFAULT_POOL_SIZE=4;
 const BUSY_POOL_SIZE=10;
 const PENDING_MAX_AGE_MS=1200;
+const NUKE_WARNING_AUDIO_LEAD_MS=5000;
 const pools=new Map();
 const voiceGain=new WeakMap();
 const initialMaster=Math.max(0,Math.min(100,Number(localStorage.getItem(STORAGE_KEY)??localStorage.getItem(LEGACY_STORAGE_KEY)??72)));
@@ -35,20 +36,36 @@ function play(name,{volume=1,loop=false}={}){
   voiceGain.set(audio,Math.max(0,Math.min(1,Number(volume)||0)));
   audio.volume=effectiveVolume(audio);audio.loop=loop;
   try{audio.currentTime=0;}catch{}
-  audio.play().catch(error=>console.warn(`[Orbital Artillery] SFX playback failed: ${name}`,error));
+  audio.play().catch(error=>console.warn(`[Carabayllo Secret Wars] SFX playback failed: ${name}`,error));
   return audio;
 }
 function stop(audio){if(!audio)return;audio.pause();audio.loop=false;try{audio.currentTime=0;}catch{}}
 function once(key,fn){if(state.seen.has(key))return false;state.seen.add(key);fn();return true;}
 function stopWarning(){stop(state.warningAudio);state.warningAudio=null;state.warningKey=null;}
 function projectileKey(q){return String(q?.id??`${q?.ownerPlayerId??'x'}:${q?.weaponType??'basic'}:${q?.startedAt??q?.impactAt??0}`);}
-function relativeDelay(targetAt,anchorAt,extra=0){const target=Number(targetAt),anchor=Number(anchorAt);if(!Number.isFinite(target)||!Number.isFinite(anchor))return Math.max(0,Number(extra)||0);return Math.max(0,target-anchor+(Number(extra)||0));}
-function scheduleNukeTimer(key,delay,fn){if(state.nukeTimers.has(key)||state.seen.has(key))return;state.seen.add(key);const timer=setTimeout(()=>{state.nukeTimers.delete(key);fn();},Math.max(0,delay));state.nukeTimers.set(key,timer);}
+function absoluteDelay(targetAt){const target=Number(targetAt);return Number.isFinite(target)?Math.max(0,target-Date.now()):0;}
+function scheduleNukeTimer(key,targetAt,fn){
+  if(state.nukeTimers.has(key)||state.seen.has(key))return;
+  state.seen.add(key);
+  const timer=setTimeout(()=>{state.nukeTimers.delete(key);fn();},absoluteDelay(targetAt));
+  state.nukeTimers.set(key,timer);
+}
 function scheduleNuke(q){
   if(!q||q.weaponType!=='nuke')return;
-  const root=projectileKey(q),warningAt=q.targetLockedAt??q.impactAt??q.startedAt,beamAt=q.beamAt??q.warningUntil??q.impactAt??q.startedAt,launchHold=Number(q.authoritativeVisualDelay7A)||0;
-  scheduleNukeTimer(`${root}:warning`,relativeDelay(warningAt,q.startedAt,launchHold),()=>{stopWarning();state.warningKey=root;state.warningAudio=play('warning',{volume:.92,loop:true});});
-  scheduleNukeTimer(`${root}:nuke`,relativeDelay(beamAt,q.startedAt,launchHold),()=>{if(state.warningKey===root)stopWarning();play('nuke',{volume:.72});play('nukeExplosion',{volume:.98});});
+  const root=projectileKey(q);
+  const visualWarningStart=Number(q.targetLockedAt??q.impactAt??q.startedAt);
+  const beamAt=Number(q.beamAt??q.warningUntil??q.impactAt??q.startedAt);
+  const warningAudioStart=visualWarningStart-NUKE_WARNING_AUDIO_LEAD_MS;
+  scheduleNukeTimer(`${root}:warning-audio`,warningAudioStart,()=>{
+    stopWarning();
+    state.warningKey=root;
+    state.warningAudio=play('warning',{volume:.92,loop:true});
+  });
+  scheduleNukeTimer(`${root}:beam-audio`,beamAt,()=>{
+    if(state.warningKey===root)stopWarning();
+    play('nuke',{volume:.82});
+    play('nukeExplosion',{volume:.98});
+  });
 }
 function detectInstantUtilities(previous,room){
   if(!previous||previous.status!=='started'||room?.status!=='started')return;
@@ -83,6 +100,7 @@ function unlock(){
   for(const pool of pools.values())for(const audio of pool)audio.load();
   applyMasterVolume();
   flushPendingVisual();
+  const q=state.previousRoom?.match?.projectile;if(q?.weaponType==='nuke')scheduleNuke(q);
 }
 
 window.addEventListener('orbital-room-state',event=>update(event.detail));
