@@ -11,6 +11,8 @@ const SFX=Object.freeze({
   nukeExplosion:'assets/music/nuke_explosion.mp3'
 });
 const MASTER_VOLUME=.9;
+const MAX_LATE_LAUNCH_MS=350;
+const MAX_LATE_IMPACT_MS=650;
 const state={unlocked:false,previousRoom:null,seen:new Set(),timers:new Map(),warningAudio:null,warningKey:null};
 const preload=new Map();
 for(const [key,src] of Object.entries(SFX)){const audio=new Audio(src);audio.preload='auto';preload.set(key,audio);}
@@ -18,18 +20,24 @@ for(const [key,src] of Object.entries(SFX)){const audio=new Audio(src);audio.pre
 function play(name,{volume=1,loop=false}={}){
   if(!state.unlocked)return null;
   const src=SFX[name];if(!src)return null;
-  const audio=new Audio(src);audio.preload='auto';audio.volume=Math.max(0,Math.min(1,MASTER_VOLUME*volume));audio.loop=loop;
+  const template=preload.get(name);
+  const audio=template?.cloneNode?.(true)??new Audio(src);
+  audio.preload='auto';audio.volume=Math.max(0,Math.min(1,MASTER_VOLUME*volume));audio.loop=loop;
+  try{audio.currentTime=0;}catch{}
   audio.play().catch(()=>{});
   return audio;
 }
 function stop(audio){if(!audio)return;audio.pause();try{audio.currentTime=0;}catch{}}
 function once(key,fn){if(state.seen.has(key))return false;state.seen.add(key);fn();return true;}
-function schedule(key,at,fn){
-  if(state.seen.has(key))return;
+function schedule(key,at,fn,{maxLateMs=Infinity}={}){
+  if(state.seen.has(key))return false;
   state.seen.add(key);
-  const delay=Math.max(0,Number(at??Date.now())-Date.now());
+  const target=Number(at??Date.now()),now=Date.now(),lateness=Number.isFinite(target)?now-target:0;
+  if(Number.isFinite(maxLateMs)&&lateness>maxLateMs)return false;
+  const delay=Math.max(0,(Number.isFinite(target)?target:now)-now);
   const timer=setTimeout(()=>{state.timers.delete(key);fn();},delay);
   state.timers.set(key,timer);
+  return true;
 }
 function projectileKey(q){return String(q?.id??`${q?.ownerPlayerId??'x'}:${q?.weaponType??'basic'}:${q?.startedAt??q?.impactAt??0}`);}
 function stopWarning(){stop(state.warningAudio);state.warningAudio=null;state.warningKey=null;}
@@ -39,28 +47,29 @@ function scheduleProjectile(q){
   if(!q)return;
   const root=projectileKey(q),type=q.weaponType??'basic';
   if(type==='basic'){
-    schedule(`${root}:basic`,q.startedAt,()=>play('basic'));
-    if(validImpact(q))schedule(`${root}:basic-explosion`,q.impactAt,()=>play('basicExplosion'));
+    schedule(`${root}:basic`,q.startedAt,()=>play('basic'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    if(validImpact(q))schedule(`${root}:basic-explosion`,q.impactAt,()=>play('basicExplosion'),{maxLateMs:MAX_LATE_IMPACT_MS});
   }else if(type==='heavy'){
-    schedule(`${root}:heavy`,q.startedAt,()=>play('heavy'));
-    if(validImpact(q))schedule(`${root}:heavy-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}));
+    schedule(`${root}:heavy`,q.startedAt,()=>play('heavy'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    if(validImpact(q))schedule(`${root}:heavy-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
   }else if(type==='triple'){
     for(const [index,v] of (q.volley??[]).entries()){
-      schedule(`${root}:triple:${index}`,v.startedAt,()=>play('basic'));
-      if(validImpact(v))schedule(`${root}:triple-explosion:${index}`,v.impactAt,()=>play('basicExplosion',{volume:.92}));
+      schedule(`${root}:triple:${index}`,v.startedAt,()=>play('basic'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+      if(validImpact(v))schedule(`${root}:triple-explosion:${index}`,v.impactAt,()=>play('basicExplosion',{volume:.92}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='cluster'){
-    schedule(`${root}:cluster-main`,q.startedAt,()=>play('heavy'));
-    if(validImpact(q))schedule(`${root}:cluster-main-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}));
+    schedule(`${root}:cluster-main`,q.startedAt,()=>play('heavy'),{maxLateMs:MAX_LATE_LAUNCH_MS});
+    if(validImpact(q))schedule(`${root}:cluster-main-explosion`,q.impactAt,()=>play('loudExplosion',{volume:.96}),{maxLateMs:MAX_LATE_IMPACT_MS});
     for(const [index,child] of (q.clusterImpacts??[]).entries()){
-      schedule(`${root}:cluster-child:${index}`,child.visualStartAt??child.impactAt,()=>play('basic',{volume:.9}));
-      if(validImpact(child))schedule(`${root}:cluster-child-explosion:${index}`,child.impactAt,()=>play('basicExplosion',{volume:.88}));
+      schedule(`${root}:cluster-child:${index}`,child.visualStartAt??child.impactAt,()=>play('basic',{volume:.9}),{maxLateMs:MAX_LATE_LAUNCH_MS});
+      if(validImpact(child))schedule(`${root}:cluster-child-explosion:${index}`,child.impactAt,()=>play('basicExplosion',{volume:.88}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='airstrike'){
-    schedule(`${root}:air-begin`,q.startedAt??Date.now(),()=>play('airBegin'));
+    schedule(`${root}:air-begin`,q.startedAt??Date.now(),()=>play('airBegin'),{maxLateMs:MAX_LATE_LAUNCH_MS});
     for(const [index,shell] of (q.airStrikeShells??[]).entries()){
-      schedule(`${root}:air-impact-shot:${index}`,shell.impactAt,()=>play('basic',{volume:.82}));
-      if(validImpact(shell))schedule(`${root}:air-impact-explosion:${index}`,shell.impactAt,()=>play('basicExplosion',{volume:.9}));
+      const visualStart=shell.visualStartAt??shell.startedAt??shell.impactAt;
+      schedule(`${root}:air-shell:${index}`,visualStart,()=>play('basic',{volume:.68}),{maxLateMs:MAX_LATE_LAUNCH_MS});
+      if(validImpact(shell))schedule(`${root}:air-impact-explosion:${index}`,shell.impactAt,()=>play('basicExplosion',{volume:.9}),{maxLateMs:MAX_LATE_IMPACT_MS});
     }
   }else if(type==='nuke'){
     once(`${root}:warning`,()=>{
@@ -73,7 +82,7 @@ function scheduleProjectile(q){
       if(state.warningKey===root)stopWarning();
       play('nuke',{volume:.72});
       play('nukeExplosion',{volume:.98});
-    });
+    },{maxLateMs:MAX_LATE_IMPACT_MS});
   }
 }
 
