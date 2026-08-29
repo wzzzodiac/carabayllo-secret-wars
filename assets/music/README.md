@@ -1,4 +1,4 @@
-# Orbital Artillery v0.9.6 audio assets
+# Carabayllo Secret Wars v0.9.8 RC audio assets
 
 ## Soundtrack
 
@@ -11,19 +11,19 @@ Files currently used by the game:
 - `adrenaline.mp3` — **Adrenaline - Adrenaline Music**, The_Mountain — turn 10+ until the round ends
   - Source: https://pixabay.com/music/action-adrenaline-adrenaline-music-576557/
 
-All three source pages identify the tracks as free for use under the Pixabay Content License. Pixabay's license permits using and adapting Content as part of a larger creative work; standalone redistribution of the Content is restricted. Source/license details are retained here even though attribution is not required by the Pixabay Content License.
+All three source pages identify the tracks as free for use under the Pixabay Content License. Source/license details are retained here even though attribution is not required by the Pixabay Content License.
 
 ### Transition contract
 
 - every track enters with a fade-in
-- when changing tracks, outgoing and incoming audio use independent ramps for a real crossfade
+- when changing tracks, outgoing and incoming audio use independent ramps
 - every loop fades out near the end, restarts cleanly, then fades back in
-- turn 9 uses a longer fade from the early-game track to silence
+- turn 9 uses a longer fade from early-game music to silence
 - turn 10 fades in the late-game track
-- match end crossfades back to lobby music
-- music volume is controlled locally from 0–100 and persisted in the browser
-- browser autoplay rules are respected: playback unlocks after the player's first pointer or keyboard interaction
-- there is no legacy procedural/synth music fallback; missing soundtrack assets fail silent and log an error instead
+- match end returns to lobby music
+- the 0–100 game-volume slider controls both soundtrack and SFX
+- browser autoplay rules are respected
+- there is no legacy procedural/synth music fallback
 
 ## Weapon / utility SFX
 
@@ -47,8 +47,8 @@ Playback contract:
 - Triple: one basic shot per projectile + one basic explosion per projectile impact
 - Cluster: heavy launch/main loud explosion + individual basic child launches/explosions
 - Air Strike: begin cue + individual shell cues + individual basic explosions
-- Nuke: warning after target lock until beam start, then nuke activation + nuke explosion
+- Nuke: `warning.mp3` starts 5 seconds before the visual warning begins to compensate for delayed audible content in that source file; the warning audio is stopped exactly when the visual warning ends at `beamAt`; `nuke.mp3` then accompanies the active laser and `nuke_explosion.mp3` provides the nuclear impact cue
 - Shield: shield activation cue
 - Heal: health cue
 
-`audio.js` uses small preloaded voice pools so rapid multi-projectile weapons can overlap without cutting each other off. Authoritative timestamps are used for projectile and impact synchronization; reasonably late network events are played immediately rather than silently discarded.
+`audio.js` uses preloaded voice pools so rapid multi-projectile weapons can overlap without cutting each other off. Basic/Heavy/Triple/Cluster/Air launch and impact cues are driven by the visual renderer events so the audible event follows the same local presentation timeline.
