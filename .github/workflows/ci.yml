@@ -30,22 +30,47 @@ jobs:
       - run: node --check wind-gusts.js
       - run: node --check projectile-renderer.js
       - run: node --check terrain-renderer.js
-      - name: Verify Pixabay music endpoints
+      - name: Probe Pixabay JSON-LD music CDN URLs
         shell: bash
         run: |
           set -euo pipefail
-          urls=(
-            "https://pixabay.com/music/download/id-590001.mp3"
-            "https://pixabay.com/music/download/id-571483.mp3"
-            "https://pixabay.com/music/download/id-576557.mp3"
+          pages=(
+            "https://pixabay.com/music/rock-sports-opener-590001/"
+            "https://pixabay.com/music/action-dark-571483/"
+            "https://pixabay.com/music/action-adrenaline-adrenaline-music-576557/"
           )
           i=0
-          for url in "${urls[@]}"; do
+          for page in "${pages[@]}"; do
             i=$((i+1))
-            file="/tmp/orbital-track-${i}.mp3"
-            curl -L --fail --silent --show-error --retry 2 -A "Mozilla/5.0" "$url" -o "$file"
-            bytes=$(stat -c%s "$file")
-            kind=$(file -b "$file")
+            html="/tmp/pixabay-${i}.html"
+            curl -L --fail --silent --show-error --retry 2 -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36" "$page" -o "$html"
+            url=$(python - "$html" <<'PY'
+          import html as h, json, re, sys
+          text=open(sys.argv[1],encoding='utf-8',errors='ignore').read()
+          matches=re.findall(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',text,re.I|re.S)
+          found=''
+          for raw in matches:
+              try:
+                  data=json.loads(h.unescape(raw))
+              except Exception:
+                  continue
+              items=data if isinstance(data,list) else [data]
+              for item in items:
+                  if isinstance(item,dict) and item.get('contentUrl'):
+                      found=item['contentUrl'];break
+              if found:break
+          if not found:
+              m=re.search(r'"contentUrl"\s*:\s*"([^"]+)"',text)
+              if m:found=m.group(1).replace('\\u002F','/').replace('\\/','/')
+          print(found)
+          PY
+            )
+            test -n "$url"
+            echo "track $i CDN host: $(python -c 'import sys,urllib.parse;print(urllib.parse.urlparse(sys.argv[1]).netloc)' "$url")"
+            out="/tmp/orbital-track-${i}.mp3"
+            curl -L --fail --silent --show-error --retry 2 -A "Mozilla/5.0" "$url" -o "$out"
+            bytes=$(stat -c%s "$out")
+            kind=$(file -b "$out")
             echo "track $i: $bytes bytes // $kind"
             test "$bytes" -gt 100000
             echo "$kind" | grep -Eqi 'audio|mpeg|mp3'
