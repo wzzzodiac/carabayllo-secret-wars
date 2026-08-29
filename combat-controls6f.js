@@ -4,7 +4,7 @@ export function initCombatControls(gameCanvas) {
   const base=initPhase6dControls(gameCanvas);
   const panel=document.getElementById('gameInfoPanel');
   let room=null,playerId=null;
-  const weaponLabel=type=>({basic:'BASIC',heavy:'HEAVY BOMB',triple:'TRIPLE SHOT',cluster:'CLUSTER BOMB',shield:'SHIELD',heal:'HEAL +30',airstrike:'AIR STRIKE',nuke:'NUKE LASER'}[type]??String(type??'BASIC').toUpperCase());
+  const weaponLabel=type=>({basic:'BASIC',heavy:'HEAVY BOMB',triple:'TRIPLE SHOT',cluster:'CLUSTER BOMB',shield:'SHIELD',heal:'HEAL +20',airstrike:'AIR STRIKE',nuke:'NUKE LASER'}[type]??String(type??'BASIC').toUpperCase());
   function selectedType(activeRoom){const id=activeRoom?.match?.activePlayerId,p=activeRoom?.players?.find(x=>x.id===id),slot=p?.selectedItemSlot??1;return slot>1?(p?.inventory?.[slot-2]?.type??'basic'):'basic';}
   function patch(){
     if(!room||!panel||!['started','finished'].includes(room.status))return;
