@@ -1,0 +1,43 @@
+ORBITAL ARTILLERY — PROGRESS V14
+Date: 2026-08-29
+Release: v0.9.1 Beta
+
+STATUS
+- Phase 9 remains CLOSED.
+- v0.9.1 Beta is a post-Phase-9 balance/readability hotfix release.
+- Phase 10 remains PARKED for the future major visual overhaul toward v1.0.
+
+CURRENT COMBAT BALANCE
+- Max HP: 100
+- Basic: max 10 direct damage
+- Heavy Bomb: max 20 direct damage
+- Triple Shot: 10 damage per projectile that directly hits the vehicle
+- Cluster Bomb: main projectile direct hit = 10; each child/subimpact that directly reaches the vehicle hitbox = 5
+- Air Strike: 5 per shell that directly reaches the vehicle hitbox
+- Nuke Laser: 20 direct damage; diagonal survivable terrain scar retained and slightly strengthened
+- Heal: +20, capped at 100 HP
+- Shield: 50% mitigation for one complete incoming attack sequence, then consumed if the attack actually hits
+
+VEHICLE / HITBOX
+- Placeholder vehicle visual scale: 65% of the previous large placeholder presentation
+- Projectile vehicle hit radius: 51 world units
+- Attached wheels/cannon/name/HP/weapon badge scale with vehicle
+
+PICKUPS
+- Turns 1–9: spawn cadence every 3 turns
+- Turn 10+: one spawn opportunity every turn
+- Lifetime: 4 turns
+- Max live pickups: 4
+- Max collected per player per turn: 1
+- Physical touch only; explosions/projectiles do not collect
+- Pickup collection does not consume the turn
+
+QA / CI
+- Server regression includes explicit Cluster contract: 10 main direct + 5 per direct child hit.
+- Final server CI after the v0.9.1 version expectation correction: SUCCESS.
+- Frontend v0.9.1 identity/cache CI and Pages deployment were SUCCESS before this documentation snapshot.
+- Manual gameplay feel remains the final authority for visual scale and balance feel.
+
+NEXT
+- Keep v0.9.1 Beta stable except for confirmed hotfixes.
+- Do not start Phase 10 until explicitly requested.
