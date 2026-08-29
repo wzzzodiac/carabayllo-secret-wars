@@ -26,7 +26,7 @@ export function initCombatControls(gameCanvas) {
   }
   const timer=setInterval(patch,100);
   return Object.freeze({
-    update(nextRoom,nextPlayerId){room=nextRoom;playerId=nextPlayerId;base.update(nextRoom,nextPlayerId);patch();},
+    update(nextRoom,nextPlayerId){room=nextRoom;playerId=nextPlayerId;base.update(nextRoom,nextPlayerId);window.dispatchEvent(new CustomEvent('orbital-room-state',{detail:nextRoom}));patch();},
     destroy(){clearInterval(timer);room=null;playerId=null;base.destroy();}
   });
 }
