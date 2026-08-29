@@ -1,4 +1,4 @@
-import { initCombatControls as initPhase6dControls } from './combat-controls6d.js?v=phase6f-hud-base-1';
+import { initCombatControls as initPhase6dControls } from './combat-controls6d.js?v=v098-csw-afk-1';
 
 export function initCombatControls(gameCanvas) {
   const base=initPhase6dControls(gameCanvas);
