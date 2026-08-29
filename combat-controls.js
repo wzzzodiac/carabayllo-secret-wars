@@ -4,7 +4,7 @@ export function initCombatControls(gameCanvas) {
   if (!(panel instanceof HTMLElement)) throw new Error('Missing #gameInfoPanel.');
 
   let currentRoom = null, currentPlayerId = null, timer = null;
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));
   const key = value => `<kbd>${esc(value)}</kbd>`;
 
   function weaponButton(slot, name, meta, selected, disabled, special = false) {
@@ -39,16 +39,11 @@ export function initCombatControls(gameCanvas) {
     const eligibleVoters = afkVote?.eligibleVoters ?? Math.max(0, alive - 1);
     const requiredVotes = afkVote?.requiredVotes ?? (eligibleVoters > 0 ? Math.floor(eligibleVoters / 2) + 1 : 0);
     const hasVoted = afkVote?.votes?.includes(playerId) ?? false;
-    const afkOpen = room.status === 'started' && !projectile && remaining <= 20 && now >= eligibleAt;
+    const afkOpen = room.status === 'started' && !projectile && now >= eligibleAt;
     const canVoteAfk = afkOpen && !myTurn && me?.alive !== false;
     const recentSkip = room.match?.lastAfkSkip && now < (room.match.lastAfkSkip.expiresAt ?? 0);
     const stateText = room.status === 'finished' ? 'MATCH ENDED' : recentSkip ? 'TURN SKIPPED // AFK VOTE' : airStrike ? (warningRemaining > 0 ? `AIR STRIKE INBOUND // ${warningRemaining.toFixed(1)}s` : 'AIR STRIKE IMPACT') : projectile ? 'SHOT IN FLIGHT' : myTurn ? 'YOUR TURN' : 'SPECTATING';
-    const afkStatus = room.status !== 'started' ? 'OFF'
-      : projectile ? 'LOCKED'
-        : !afkOpen ? `OPENS AT 20s`
-          : myTurn ? `${voteCount}/${requiredVotes} VOTES`
-            : canVoteAfk ? `${hasVoted?'VOTED ':' '}${voteCount}/${requiredVotes}`.trim()
-              : 'INELIGIBLE';
+    const afkStatus = canVoteAfk ? `${hasVoted?'VOTED ':''}${voteCount}/${requiredVotes}`.trim() : '';
 
     panel.innerHTML = `
       <section class="info-block">
@@ -77,7 +72,7 @@ export function initCombatControls(gameCanvas) {
           <div class="control-line"><span>${key('W')} ${key('S')} angle</span><strong>${Math.round(room.match?.aimAngle ?? 45)}°</strong></div>
           <div class="control-line"><span>${key('Q')} ${key('E')} power</span><strong>${Math.round(room.match?.aimPower ?? 55)}%</strong></div>
           <div class="control-line"><span>${key('F')} use / fire</span><strong>${projectile?'LOCKED':myTurn?'READY':'WAIT'}</strong></div>
-          <div class="control-line"><span>${key('F1')} skip AFK turn</span><strong>${esc(afkStatus)}</strong></div>
+          ${canVoteAfk?`<div class="control-line afk-control"><span>${key('F1')} skip AFK turn</span><strong>${esc(afkStatus)}</strong></div>`:''}
         </div>
       </section>
       <section class="info-block">
@@ -87,7 +82,7 @@ export function initCombatControls(gameCanvas) {
           ${weaponButton(2,inv1?.label ?? 'EMPTY',inv1 ? 'special item' : 'inventory slot 1',selected===2,!inv1,true)}
           ${weaponButton(3,inv2?.label ?? 'EMPTY',inv2 ? 'special item' : 'inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Shield and Heal activate instantly without ending your turn. Air Strike uses your aimed impact point, warns the arena, then drops seven staggered shells; self and friendly damage are enabled. If a damaging shot successfully collects a box, the same player keeps the turn with the time they had before firing; a miss still ends the turn. AFK skip voting opens at 20 seconds remaining; press F1 to vote. Any action by the active player clears existing AFK votes.</p>
+        <p class="pickup-note">Shield and Heal activate instantly without ending your turn. Air Strike uses your aimed impact point, warns the arena, then drops seven staggered shells; self and friendly damage are enabled. Pickups are collected by vehicle-hitbox contact, including movement through them while jumping or falling. AFK skip voting becomes visible only after the active player has shown no activity for 20 seconds; any new active-player action hides it again and clears existing votes.</p>
       </section>`;
   }
 
