@@ -12,6 +12,7 @@ const LEGACY_STORAGE_KEY='orbital-artillery-music-volume';
 const VOLUME_EVENT='orbital-master-volume';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const ramps=new WeakMap();
+const envelopes=new WeakMap();
 const tracks=new Map();
 const storedMaster=localStorage.getItem(STORAGE_KEY);
 const legacyMaster=localStorage.getItem(LEGACY_STORAGE_KEY);
@@ -28,26 +29,29 @@ const state={
   loopFading:false
 };
 const targetGain=()=>state.volume/100;
+const envelopeOf=audio=>clamp(Number(envelopes.get(audio)??0),0,1);
+function applyTrackVolume(audio){if(audio)audio.volume=clamp(envelopeOf(audio)*targetGain(),0,1);}
+function applyMasterToAllTracks(){for(const audio of tracks.values())applyTrackVolume(audio);}
 
 function cancelRamp(audio){const timer=audio?ramps.get(audio):null;if(timer)cancelAnimationFrame(timer);if(audio)ramps.delete(audio);}
 function ramp(audio,from,to,duration,onDone){
   if(!audio){onDone?.();return;}
   cancelRamp(audio);
-  const started=performance.now(),span=Math.max(1,duration);
-  audio.volume=clamp(from,0,1);
+  const started=performance.now(),span=Math.max(1,duration),a=clamp(from,0,1),b=clamp(to,0,1);
+  envelopes.set(audio,a);applyTrackVolume(audio);
   const tick=now=>{
     const t=clamp((now-started)/span,0,1);
-    audio.volume=clamp(from+(to-from)*t,0,1);
+    envelopes.set(audio,a+(b-a)*t);applyTrackVolume(audio);
     if(t>=1){ramps.delete(audio);onDone?.();return;}
     ramps.set(audio,requestAnimationFrame(tick));
   };
   ramps.set(audio,requestAnimationFrame(tick));
 }
-function stopAudio(audio,{reset=true}={}){if(!audio)return;cancelRamp(audio);audio.pause();if(reset){try{audio.currentTime=0;}catch{}}}
+function stopAudio(audio,{reset=true}={}){if(!audio)return;cancelRamp(audio);audio.pause();envelopes.set(audio,0);applyTrackVolume(audio);if(reset){try{audio.currentTime=0;}catch{}}}
 function getTrack(key){
   if(tracks.has(key))return tracks.get(key);
   const meta=TRACKS[key];if(!meta)return null;
-  const audio=new Audio(meta.src);audio.preload='auto';audio.loop=false;audio.volume=0;audio.dataset.orbitalTrack=key;
+  const audio=new Audio(meta.src);audio.preload='auto';audio.loop=false;envelopes.set(audio,0);applyTrackVolume(audio);audio.dataset.orbitalTrack=key;
   audio.addEventListener('error',()=>console.error(`[Carabayllo Secret Wars] Could not load music asset: ${meta.src}`));
   audio.addEventListener('ended',()=>{if(audio===state.current&&key===state.desiredKey)restartLoop(audio,key);});
   tracks.set(key,audio);return audio;
@@ -59,16 +63,17 @@ async function restartLoop(audio,key){
   if(!state.unlocked||audio!==state.current||key!==state.desiredKey)return;
   state.loopFading=true;cancelRamp(audio);
   try{audio.currentTime=0;}catch{}
-  audio.volume=0;
-  if(await safePlay(audio))ramp(audio,0,targetGain(),FADE_IN_MS,()=>{if(audio===state.current&&key===state.desiredKey)state.loopFading=false;});
+  envelopes.set(audio,0);applyTrackVolume(audio);
+  if(await safePlay(audio))ramp(audio,0,1,FADE_IN_MS,()=>{if(audio===state.current&&key===state.desiredKey)state.loopFading=false;});
   else state.loopFading=false;
 }
 function beginLoopFade(audio,key){
   if(state.loopFading||audio!==state.current||key!==state.desiredKey)return;
-  const remaining=Number.isFinite(audio.duration)?audio.duration-audio.currentTime:LOOP_FADE_SECONDS;
+  if(!Number.isFinite(audio.duration)||audio.duration<=0)return;
+  const remaining=audio.duration-audio.currentTime;
   if(remaining>LOOP_FADE_SECONDS||remaining<=0)return;
   state.loopFading=true;
-  ramp(audio,audio.volume,0,Math.max(450,remaining*1000-90),()=>restartLoop(audio,key));
+  ramp(audio,envelopeOf(audio),0,Math.max(450,remaining*1000-90),()=>restartLoop(audio,key));
 }
 function desiredTrack(room){
   if(!room||room.status!=='started')return'lobby';
@@ -85,22 +90,21 @@ async function transitionTo(key,{fadeOut=FADE_OUT_MS,fadeIn=FADE_IN_MS}={}){
   const previousKey=state.currentKey;
   if(key===previousKey&&previous){
     if(previous.paused||previous.ended)await restartLoop(previous,key);
-    else if(!state.loopFading&&Math.abs(previous.volume-targetGain())>.015)ramp(previous,previous.volume,targetGain(),350);
     return;
   }
   if(key==null){
     state.current=null;state.currentKey=null;state.loopFading=false;
-    if(previous)ramp(previous,previous.volume,0,fadeOut,()=>stopAudio(previous));
+    if(previous)ramp(previous,envelopeOf(previous),0,fadeOut,()=>stopAudio(previous));
     return;
   }
   const next=getTrack(key);if(!next)return;
   state.current=next;state.currentKey=key;state.loopFading=false;
-  if(previous&&previous!==next)ramp(previous,previous.volume,0,fadeOut,()=>{if(previous!==state.current)stopAudio(previous);});
-  cancelRamp(next);try{next.currentTime=0;}catch{}next.volume=0;
+  if(previous&&previous!==next)ramp(previous,envelopeOf(previous),0,fadeOut,()=>{if(previous!==state.current)stopAudio(previous);});
+  cancelRamp(next);try{next.currentTime=0;}catch{}envelopes.set(next,0);applyTrackVolume(next);
   const played=await safePlay(next);
   if(token!==state.transitionToken||state.current!==next||state.desiredKey!==key){if(next!==state.current)stopAudio(next);return;}
   if(!played)return;
-  ramp(next,0,targetGain(),fadeIn);
+  ramp(next,0,1,fadeIn);
 }
 function syncMusic(room){
   state.room=room;
@@ -112,7 +116,7 @@ function publishVolume(){window.dispatchEvent(new CustomEvent(VOLUME_EVENT,{deta
 function setVolume(value,{publish=true}={}){
   state.volume=clamp(Math.round(Number(value)||0),0,100);localStorage.setItem(STORAGE_KEY,String(state.volume));
   volumeValue.textContent=`${state.volume}%`;slider.value=String(state.volume);speaker.textContent=state.volume===0?'🔇':state.volume<35?'🔈':state.volume<70?'🔉':'🔊';
-  if(state.current&&!state.loopFading)ramp(state.current,state.current.volume,targetGain(),180);
+  applyMasterToAllTracks();
   if(publish)publishVolume();
 }
 
