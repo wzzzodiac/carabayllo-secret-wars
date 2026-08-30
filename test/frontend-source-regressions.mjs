@@ -28,7 +28,10 @@ assert.match(renderer, /drawBackground\(room\);drawTerrain\(room,view\)/, 'Scene
 assert.match(huancavelicaMap, /arena\?\.platforms/, 'Huancavelica visuals must render server-provided multilayer platform geometry');
 assert.match(huancavelicaMap, /drawIsland\(/, 'Huancavelica must use organic island silhouettes rather than flat terrain strips');
 assert.match(huancavelicaMap, /grassCap\(/, 'Huancavelica must render a layered grassy rim');
-assert.match(huancavelicaMap, /boulder\(/, 'Huancavelica terrain must be built from visible rock clusters instead of flat brown slabs');
+assert.match(huancavelicaMap, /paintRockMass\(/, 'Huancavelica terrain must use cohesive illustrated rock masses');
+assert.match(huancavelicaMap, /rockFacet\(/, 'Huancavelica terrain must integrate irregular large and small rock planes');
+assert.match(huancavelicaMap, /drawCliffFormation\(/, 'Huancavelica side shelves must read as continuous cliff formations');
+assert.doesNotMatch(huancavelicaMap, /function boulder\(/, 'Huancavelica must not regress to visible rows of circular boulders');
 assert.match(huancavelicaMap, /timberFrame\(/, 'Huancavelica cliffs must support wooden structural detail like the approved concept');
 assert.match(huancavelicaMap, /phase10PlatformId/, 'Visual crater deformation must stay bound to the impacted platform');
 assert.doesNotMatch(huancavelicaMap, /RUTAS PRINCIPALES|PLATAFORMA CENTRAL|ALPINE RIDGE \/\//, 'Reference annotations must never be painted into the game map');

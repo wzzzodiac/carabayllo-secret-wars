@@ -1,4 +1,4 @@
-import { createHuancavelicaPainter, huancavelicaTerrainY, isHuancavelicaRoom } from './huancavelica-map.js?v=phase10-production-map-1';
+import { createHuancavelicaPainter, huancavelicaTerrainY, isHuancavelicaRoom } from './huancavelica-map.js?v=phase10-production-map-2';
 
 export function createRenderer(canvas, config) {
   if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError('A valid game canvas is required.');
