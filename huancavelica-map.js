@@ -95,6 +95,21 @@ export function createHuancavelicaPainter(ctx, canvas, worldToScreen) {
     ctx.lineTo(centerX + width * .075, top + height * .38);
     ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = near ? 'rgba(28, 74, 107, .20)' : 'rgba(55, 101, 129, .16)';
+    ctx.beginPath();
+    ctx.moveTo(centerX - width * .47, baseY);
+    ctx.lineTo(centerX - width * .16, top + height * .31);
+    ctx.lineTo(centerX - width * .02, top + height * .58);
+    ctx.lineTo(centerX - width * .23, baseY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = near ? 'rgba(221, 242, 249, .28)' : 'rgba(230, 246, 250, .18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(centerX - width * .16, top + height * .31);
+    ctx.lineTo(centerX - width * .02, top + height * .58);
+    ctx.lineTo(centerX + width * .12, top + height * .27);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -103,18 +118,23 @@ export function createHuancavelicaPainter(ctx, canvas, worldToScreen) {
     ctx.globalAlpha = alpha;
     for (let x = -45; x < canvas.width + 70; x += step) {
       const height = 42 + ((x * 17) % 58 + 58) % 58;
-      ctx.fillStyle = '#123e37';
+      const center = x + 9;
+      ctx.fillStyle = '#173e38';
+      for (let layer = 0; layer < 4; layer += 1) {
+        const yy = y - height + 11 + layer * height * .21;
+        const half = 6 + layer * 4.4;
+        ctx.beginPath();
+        ctx.moveTo(center, yy - 12);
+        ctx.lineTo(center - half, yy + 16);
+        ctx.quadraticCurveTo(center, yy + 10, center + half, yy + 16);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = '#2f6752';
       ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 9, y - height);
-      ctx.lineTo(x + 18, y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#2e6850';
-      ctx.beginPath();
-      ctx.moveTo(x + 2, y - 12);
-      ctx.lineTo(x + 9, y - height * .70);
-      ctx.lineTo(x + 16, y - 12);
+      ctx.moveTo(center, y - height);
+      ctx.lineTo(center - 6, y - height * .46);
+      ctx.lineTo(center + 4, y - height * .56);
       ctx.closePath();
       ctx.fill();
     }
@@ -152,6 +172,12 @@ export function createHuancavelicaPainter(ctx, canvas, worldToScreen) {
     mountain(canvas.width * .42, baseY, canvas.width * .43, canvas.height * .56, true);
     mountain(canvas.width * .65, baseY, canvas.width * .36, canvas.height * .47, false);
     mountain(canvas.width * .83, baseY, canvas.width * .40, canvas.height * .53, true);
+    const valleyMist = ctx.createLinearGradient(0, canvas.height * .56, 0, canvas.height);
+    valleyMist.addColorStop(0, 'rgba(226, 246, 250, .08)');
+    valleyMist.addColorStop(.48, 'rgba(183, 222, 232, .20)');
+    valleyMist.addColorStop(1, 'rgba(72, 129, 137, .06)');
+    ctx.fillStyle = valleyMist;
+    ctx.fillRect(0, canvas.height * .55, canvas.width, canvas.height * .45);
     forest(canvas.height * .83, .18, 32);
     forest(canvas.height * .91, .34, 27);
     forest(canvas.height * .99, .56, 22);
@@ -170,59 +196,147 @@ export function createHuancavelicaPainter(ctx, canvas, worldToScreen) {
     return { left, right, width, points, averageY: points.reduce((sum, point) => sum + point.y, 0) / points.length };
   }
 
-  function boulder(x, y, radius, seed, bright = false) {
-    const wobble = .80 + ((seed >>> 4) % 20) / 100;
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(1, wobble);
-    const gradient = ctx.createRadialGradient(-radius * .32, -radius * .38, radius * .12, 0, 0, radius);
-    gradient.addColorStop(0, bright ? '#b68b58' : '#906c47');
-    gradient.addColorStop(.46, bright ? '#79583b' : '#60452f');
-    gradient.addColorStop(1, '#29231e');
-    ctx.fillStyle = gradient;
-    ctx.strokeStyle = 'rgba(38, 29, 22, .72)';
-    ctx.lineWidth = Math.max(1, radius * .10);
+  function traceOutline(outline) {
     ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.moveTo(outline.points[0].x, outline.points[0].y);
+    for (const point of outline.points.slice(1)) ctx.lineTo(point.x, point.y);
+    for (const point of outline.lower) ctx.lineTo(point.x, point.y);
+    ctx.closePath();
+  }
+
+  function rockFacet(x, y, rx, ry, seed, bright = false) {
+    const sides = 6 + (seed % 3);
+    const gradient = ctx.createLinearGradient(x - rx, y - ry, x + rx * .7, y + ry);
+    gradient.addColorStop(0, bright ? '#9d8253' : '#796344');
+    gradient.addColorStop(.46, bright ? '#665238' : '#544631');
+    gradient.addColorStop(1, '#302d28');
+    ctx.fillStyle = gradient;
+    ctx.strokeStyle = 'rgba(33, 31, 28, .54)';
+    ctx.lineWidth = Math.max(1, Math.min(rx, ry) * .075);
+    ctx.beginPath();
+    for (let index = 0; index < sides; index += 1) {
+      const angle = -Math.PI / 2 + index / sides * Math.PI * 2;
+      const jitter = .78 + (((seed >>> (index % 16)) + index * 19) % 25) / 100;
+      const px = x + Math.cos(angle) * rx * jitter;
+      const py = y + Math.sin(angle) * ry * jitter;
+      if (!index) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = 'rgba(236, 200, 132, .14)';
+    ctx.fillStyle = 'rgba(239, 215, 151, .10)';
     ctx.beginPath();
-    ctx.arc(-radius * .28, -radius * .34, radius * .29, 0, Math.PI * 2);
+    ctx.moveTo(x - rx * .62, y - ry * .18);
+    ctx.lineTo(x - rx * .12, y - ry * .66);
+    ctx.lineTo(x + rx * .34, y - ry * .36);
+    ctx.lineTo(x - rx * .06, y - ry * .10);
+    ctx.closePath();
     ctx.fill();
-    ctx.restore();
+  }
+
+  function paintRockMass(outline, cliff = false) {
+    const body = ctx.createLinearGradient(0, outline.averageY, 0, outline.averageY + outline.depth);
+    body.addColorStop(0, '#756143');
+    body.addColorStop(.18, '#65533a');
+    body.addColorStop(.62, '#413a30');
+    body.addColorStop(1, '#242a28');
+    ctx.fillStyle = body;
+    ctx.fillRect(outline.left - 10, outline.averageY - 8, outline.width + 20, outline.depth + 42);
+
+    const columns = Math.max(3, Math.ceil(outline.width / (cliff ? 86 : 78)));
+    const rows = Math.max(3, Math.ceil(outline.depth / (cliff ? 76 : 64)));
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const value = (outline.seed + row * 1619 + column * 7919) >>> 0;
+        const stagger = row % 2 ? .38 : 0;
+        const x = outline.left + ((column + .5 + stagger) / columns) * outline.width;
+        const y = outline.averageY + 18 + (row + .48) / rows * outline.depth * .88 + (((value >>> 7) % 17) - 8);
+        const rx = outline.width / columns * (.58 + ((value >>> 13) % 20) / 100);
+        const ry = outline.depth / rows * (.58 + ((value >>> 18) % 24) / 100);
+        rockFacet(x, y, rx, ry, value, (row * 3 + column) % 7 === 0);
+      }
+    }
+
+    ctx.lineCap = 'round';
+    for (let index = 0; index < Math.max(3, Math.floor(outline.width / 130)); index += 1) {
+      const value = (outline.seed + index * 12289) >>> 0;
+      const x = outline.left + outline.width * (.12 + ((value % 75) / 100));
+      const startY = outline.averageY + outline.depth * (.15 + ((value >>> 9) % 26) / 100);
+      const length = outline.depth * (.16 + ((value >>> 15) % 23) / 100);
+      ctx.strokeStyle = 'rgba(25, 28, 26, .68)';
+      ctx.lineWidth = Math.max(1.2, outline.scale * 3.5);
+      ctx.beginPath();
+      ctx.moveTo(x, startY);
+      ctx.lineTo(x + (((value >>> 4) % 25) - 12) * outline.scale, startY + length * .42);
+      ctx.lineTo(x + (((value >>> 11) % 37) - 18) * outline.scale, startY + length);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(197, 173, 113, .13)';
+      ctx.lineWidth = Math.max(1, outline.scale * 1.2);
+      ctx.stroke();
+    }
+
+    const shade = ctx.createLinearGradient(0, outline.averageY, 0, outline.averageY + outline.depth);
+    shade.addColorStop(0, 'rgba(22, 29, 25, 0)');
+    shade.addColorStop(.7, 'rgba(17, 23, 23, .20)');
+    shade.addColorStop(1, 'rgba(8, 18, 20, .58)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(outline.left - 10, outline.averageY, outline.width + 20, outline.depth + 40);
+
+    ctx.fillStyle = 'rgba(19, 29, 25, .58)';
+    for (let index = 0; index < Math.max(2, Math.floor(outline.width / 170)); index += 1) {
+      const value = (outline.seed + 31337 * (index + 1)) >>> 0;
+      const x = outline.left + outline.width * (.12 + (value % 76) / 100);
+      const y = outline.averageY + outline.depth * (.22 + ((value >>> 8) % 55) / 100);
+      ctx.beginPath();
+      ctx.ellipse(x, y, 7 + (value % 10), 3 + ((value >>> 6) % 6), -.28, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function grassCap(points, scale, seed) {
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1b3e21';
-    ctx.lineWidth = Math.max(7, 19 * scale);
+    ctx.shadowColor = 'rgba(13, 29, 19, .52)';
+    ctx.shadowBlur = Math.max(2, 7 * scale);
+    ctx.shadowOffsetY = Math.max(1, 4 * scale);
+    ctx.strokeStyle = '#173622';
+    ctx.lineWidth = Math.max(10, 25 * scale);
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (const point of points.slice(1)) ctx.lineTo(point.x, point.y);
     ctx.stroke();
-    ctx.strokeStyle = '#4d8a2c';
-    ctx.lineWidth = Math.max(5, 14 * scale);
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#3f7429';
+    ctx.lineWidth = Math.max(8, 19 * scale);
     ctx.stroke();
-    ctx.strokeStyle = '#83bd36';
-    ctx.lineWidth = Math.max(2, 8 * scale);
+    ctx.strokeStyle = '#6ca32d';
+    ctx.lineWidth = Math.max(5, 12 * scale);
     ctx.stroke();
-    ctx.strokeStyle = '#c5e75f';
-    ctx.lineWidth = Math.max(1, 2.2 * scale);
+    ctx.strokeStyle = '#b1d94a';
+    ctx.lineWidth = Math.max(1.5, 3.4 * scale);
     ctx.stroke();
     for (let index = 0; index < points.length; index += 2) {
       const point = points[index];
-      for (let blade = 0; blade < 4; blade += 1) {
-        const height = (4 + ((seed + index * 13 + blade * 7) % 8)) * scale;
-        ctx.strokeStyle = blade % 2 ? '#55942e' : '#79ae36';
-        ctx.lineWidth = Math.max(1, 1.3 * scale);
+      for (let blade = 0; blade < 5; blade += 1) {
+        const height = (6 + ((seed + index * 13 + blade * 7) % 11)) * scale;
+        ctx.strokeStyle = blade % 2 ? '#4d8a2a' : '#83b83b';
+        ctx.lineWidth = Math.max(1, 1.6 * scale);
         ctx.beginPath();
         ctx.moveTo(point.x + (blade - 1.5) * 2, point.y - 2);
-        ctx.lineTo(point.x + (blade - 2) * 3, point.y - height);
+        ctx.quadraticCurveTo(point.x + (blade - 2) * 3, point.y - height * .55, point.x + (blade - 2.1) * 4, point.y - height);
         ctx.stroke();
       }
+    }
+    for (let index = 1; index < points.length - 1; index += 3) {
+      const point = points[index];
+      const drop = (5 + ((seed + index * 29) % 12)) * scale;
+      ctx.strokeStyle = 'rgba(62, 116, 39, .86)';
+      ctx.lineWidth = Math.max(1, 2.2 * scale);
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y + 2);
+      ctx.quadraticCurveTo(point.x + 2 * scale, point.y + drop * .55, point.x - 2 * scale, point.y + drop);
+      ctx.stroke();
     }
     ctx.restore();
   }
@@ -264,52 +378,106 @@ export function createHuancavelicaPainter(ctx, canvas, worldToScreen) {
     const outline = islandOutline(room, platform, view);
     if (outline.right < -180 || outline.left > canvas.width + 180) return;
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(outline.points[0].x, outline.points[0].y);
-    for (const point of outline.points.slice(1)) ctx.lineTo(point.x, point.y);
-    for (const point of outline.lower) ctx.lineTo(point.x, point.y);
-    ctx.closePath();
+    traceOutline(outline);
+    ctx.fillStyle = '#443a2e';
+    ctx.fill();
     ctx.clip();
-    const columns = Math.max(4, Math.ceil(outline.width / 42));
-    const rows = Math.max(3, Math.ceil(outline.depth / 34));
-    for (let row = 0; row < rows; row += 1) {
-      for (let column = 0; column < columns; column += 1) {
-        const value = (outline.seed + row * 1619 + column * 7919) >>> 0;
-        const t = (column + .5 + (row % 2) * .32) / columns;
-        const x = outline.left + t * outline.width;
-        const y = outline.averageY + 18 + row * (outline.depth * .82 / rows) + (((value >>> 7) % 17) - 8);
-        const edge = Math.abs(t - .5) * 2;
-        const radius = (15 + ((value >>> 16) % 18)) * clamp(outline.scale * .95, .52, 1.22) * (1 - edge * .13);
-        boulder(x, y, radius, value, (row + column) % 5 === 0);
-      }
-    }
-    const shade = ctx.createLinearGradient(0, outline.averageY, 0, outline.averageY + outline.depth);
-    shade.addColorStop(0, 'rgba(65, 41, 25, 0)');
-    shade.addColorStop(1, 'rgba(17, 18, 17, .52)');
-    ctx.fillStyle = shade;
-    ctx.fillRect(outline.left, outline.averageY, outline.width, outline.depth + 30);
+    paintRockMass(outline, platform.kind === 'cliff');
+    ctx.restore();
+    ctx.save();
+    traceOutline(outline);
+    ctx.strokeStyle = 'rgba(25, 35, 29, .76)';
+    ctx.lineWidth = Math.max(1.2, 3.2 * outline.scale);
+    ctx.stroke();
     ctx.restore();
     grassCap(outline.points, outline.scale, outline.seed);
+  }
+
+  function drawCliffFormation(room, platforms, view, side) {
+    const shelves = platforms
+      .filter(platform => platform.kind === 'cliff' && String(platform.id).startsWith(`${side}-`))
+      .map(platform => islandOutline(room, platform, view))
+      .filter(outline => outline.averageY < canvas.height + 220 && outline.averageY + outline.depth > -180)
+      .sort((a, b) => a.averageY - b.averageY);
+    if (!shelves.length) return;
+    const inner = outline => side === 'left' ? outline.right : outline.left;
+    const outer = side === 'left' ? -180 : canvas.width + 180;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(outer, shelves[0].averageY - 12);
+    ctx.lineTo(inner(shelves[0]), shelves[0].averageY - 12);
+    for (const [index, outline] of shelves.entries()) {
+      const wobble = (((outline.seed >>> 6) % 31) - 15) * outline.scale;
+      const inset = inner(outline) + (side === 'left' ? wobble : -wobble);
+      ctx.lineTo(inset, outline.averageY + outline.depth * .18);
+      ctx.lineTo(inset + (side === 'left' ? -1 : 1) * outline.width * (.08 + index % 2 * .05), outline.averageY + outline.depth * .92);
+    }
+    ctx.lineTo(outer, shelves.at(-1).averageY + shelves.at(-1).depth + 180);
+    ctx.closePath();
+    ctx.clip();
+    const wall = ctx.createLinearGradient(side === 'left' ? 0 : canvas.width, 0, side === 'left' ? canvas.width * .34 : canvas.width * .66, canvas.height);
+    wall.addColorStop(0, '#62543d');
+    wall.addColorStop(.52, '#433c31');
+    wall.addColorStop(1, '#26302d');
+    ctx.fillStyle = wall;
+    ctx.fillRect(-200, -200, canvas.width + 400, canvas.height + 400);
+    ctx.strokeStyle = 'rgba(30, 32, 28, .54)';
+    ctx.lineCap = 'round';
+    for (let index = 0; index < 16; index += 1) {
+      const seed = hash(`${side}-formation-${index}`);
+      const anchor = shelves[index % shelves.length];
+      const x = side === 'left'
+        ? anchor.left + anchor.width * (.22 + (seed % 58) / 100)
+        : anchor.left + anchor.width * (.18 + (seed % 58) / 100);
+      const y = anchor.averageY + ((seed >>> 8) % 120) - 12;
+      ctx.lineWidth = 2 + (seed % 4);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (((seed >>> 3) % 45) - 22), y + 55 + (seed % 45));
+      ctx.lineTo(x + (((seed >>> 11) % 61) - 30), y + 110 + (seed % 70));
+      ctx.stroke();
+    }
+    const edgeShade = ctx.createLinearGradient(side === 'left' ? canvas.width * .12 : canvas.width * .88, 0, side === 'left' ? canvas.width * .34 : canvas.width * .66, 0);
+    edgeShade.addColorStop(0, 'rgba(13, 24, 23, .08)');
+    edgeShade.addColorStop(1, 'rgba(10, 21, 23, .48)');
+    ctx.fillStyle = edgeShade;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
   }
 
   function pine(x, y, scale = 1) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(scale, scale);
-    ctx.fillStyle = '#704525';
-    ctx.fillRect(-4, -34, 8, 35);
-    const colors = ['#163c2b', '#1e5633', '#2c713b', '#438943'];
-    for (let layer = 0; layer < 5; layer += 1) {
-      const yy = -83 + layer * 14;
-      const width = 16 + layer * 7;
+    ctx.fillStyle = '#604224';
+    ctx.fillRect(-4, -39, 8, 40);
+    ctx.fillStyle = '#9a7040';
+    ctx.fillRect(-2.5, -38, 2, 38);
+    const colors = ['#123a2a', '#175033', '#21653a', '#327941', '#438b47'];
+    for (let layer = 0; layer < 6; layer += 1) {
+      const yy = -91 + layer * 14;
+      const width = 14 + layer * 6.7;
       ctx.fillStyle = colors[layer % colors.length];
       ctx.beginPath();
-      ctx.moveTo(0, yy - 20);
+      ctx.moveTo(0, yy - 18);
+      ctx.lineTo(-width * .58, yy + 2);
       ctx.lineTo(-width, yy + 17);
-      ctx.quadraticCurveTo(0, yy + 10, width, yy + 17);
+      ctx.quadraticCurveTo(-width * .22, yy + 12, 0, yy + 15);
+      ctx.quadraticCurveTo(width * .24, yy + 11, width, yy + 17);
+      ctx.lineTo(width * .56, yy + 1);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = 'rgba(8, 35, 24, .44)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
     }
+    ctx.strokeStyle = 'rgba(130, 187, 87, .42)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(0, -103);
+    ctx.lineTo(-9, -78);
+    ctx.lineTo(-18, -58);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -486,6 +654,8 @@ export function createHuancavelicaPainter(ctx, canvas, worldToScreen) {
 
   function drawTerrain(room, view) {
     const platforms = room?.arena?.platforms ?? [];
+    drawCliffFormation(room, platforms, view, 'left');
+    drawCliffFormation(room, platforms, view, 'right');
     for (const platform of [...platforms].sort((a, b) => Number(b.y) - Number(a.y))) drawIsland(room, platform, view);
     for (const platform of platforms) decorate(room, platform, view);
     const haze = ctx.createLinearGradient(0, canvas.height * .78, 0, canvas.height);
