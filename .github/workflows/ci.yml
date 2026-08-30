@@ -20,6 +20,7 @@ jobs:
       - run: node --check renderer6f.js
       - run: node --check renderer7a-visual.js
       - run: node --check renderer10-huancavelica.js
+      - run: node --check huancavelica-map.js
       - run: node --check combat-controls.js
       - run: node --check combat-controls6d.js
       - run: node --check combat-controls6f.js
@@ -32,3 +33,4 @@ jobs:
       - run: node --check projectile-renderer.js
       - run: node --check terrain-renderer.js
       - run: node test/frontend-source-regressions.mjs
+
