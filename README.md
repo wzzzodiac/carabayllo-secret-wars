@@ -32,7 +32,7 @@ The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Mob
 
 ### Huancavelica Simulator map pipeline
 
-Huancavelica uses a backward-compatible hybrid map path. The server publishes the approved 31-platform Alpine Ridge composition and platform-scoped crater data. The base Canvas renderer consumes that same geometry for aiming previews and draws the alpine backdrop, destructible rock silhouettes, grass caps and props before pickups, vehicles and projectiles. Other maps continue through the legacy terrain renderer unchanged. Reference arrows, route lines, labels and title boxes are not game assets and are never rendered.
+Huancavelica uses a backward-compatible authored bitmap path. The supplied 1448×1086 background, terrain and decor PNGs are composited directly in one canonical world/image transform; rocks, cliffs, vegetation and scenery are not procedurally reconstructed. The client derives its cached collision sample from the terrain alpha channel once, then rebuilds the visible terrain from the clean PNG and replays authoritative crater events with `destination-out`. The server uses a compact bit mask generated from the same terrain alpha threshold for grounding and projectile collision. Other maps continue through the legacy terrain renderer unchanged. Reference arrows, route lines, labels and title boxes are never rendered.
 
 GitHub source/CI does not by itself prove the latest backend commit is already deployed to Cloud Run; deployed runtime parity is checked separately when needed.
 
@@ -152,4 +152,3 @@ Gameplay-critical state remains server authoritative: turns, projectile resoluti
 Starting-player weighting against the host is intentional unless explicitly redesigned.
 
 Historical versioned documents keep their historical filenames/content. When old documents disagree with current executable source or later snapshots, current source/later snapshots win.
-
