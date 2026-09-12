@@ -32,7 +32,7 @@ The next major milestone is **Phase 10 — Major Visual Overhaul → v1.0**. Mob
 
 ### Huancavelica Simulator map pipeline
 
-Huancavelica uses a backward-compatible authored bitmap path. The supplied 1448×1086 background, terrain and decor PNGs are composited directly in one canonical world/image transform; rocks, cliffs, vegetation and scenery are not procedurally reconstructed. The client derives its cached collision sample from the terrain alpha channel once, then rebuilds the visible terrain from the clean PNG and replays authoritative crater events with `destination-out`. The server uses a compact bit mask generated from the same terrain alpha threshold for grounding and projectile collision. Other maps continue through the legacy terrain renderer unchanged. Reference arrows, route lines, labels and title boxes are never rendered.
+Huancavelica v2 uses a backward-compatible authored bitmap path. The supplied 1448×1086 background, terrain and decor PNGs are composited directly in one canonical 5000×3750 world/image transform; rocks, cliffs, vegetation and scenery are not procedurally reconstructed. A cleaned binary mask aligned to the Terrain asset drives collision, and the client rebuilds visible terrain from the clean PNGs before replaying authoritative crater events with `destination-out`. Huancavelica v1 remains available as a fallback and other maps continue through their legacy renderers unchanged. See [HUANCAVELICA_V2.md](HUANCAVELICA_V2.md) for the full revision, transform, mask, destruction, and compatibility contract.
 
 GitHub source/CI does not by itself prove the latest backend commit is already deployed to Cloud Run; deployed runtime parity is checked separately when needed.
 
