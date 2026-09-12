@@ -68,7 +68,12 @@ assert.doesNotMatch(huancavelicaMap, /RUTAS PRINCIPALES|PLATAFORMA CENTRAL|ALPIN
 
 assert.match(huancavelicaV2Map, /HUANCAVELICA_V2_REVISION='huancavelica-v2-bitmap-1'/, 'Frontend must publish the strict v2 terrain revision');
 assert.match(huancavelicaV2Map, /HUANCAVELICA_V2_COLLISION_MODEL='bitmap-terrain-mask-v2'/, 'Frontend must publish the v2 collision model');
-assert.match(huancavelicaV2Map, /Math\.min\(canvas\.width\/current\.width,canvas\.height\/current\.height\)/, 'V2 destination rendering must letterbox with one uniform scale');
+assert.match(huancavelicaV2Map, /destination:\{x:0,y:0,width:canvasWidth,height:canvasHeight\}/, 'V2 authored layers must fill the gameplay canvas');
+assert.match(huancavelicaV2Map, /const \{source,destination\}=huancavelicaV2Projection\(view,canvas\.width,canvas\.height\)/, 'Background, terrain and decor must share one projection');
+assert.match(renderer, /huancavelicaV2WorldToScreen\(x,y,v,canvas\.width,canvas\.height\)/, 'V2 entities and effects must use the shared projection');
+assert.match(renderer, /huancavelicaV2ScreenToWorld\(x,y,v,canvas\.width,canvas\.height\)/, 'V2 aim and pointer input must invert the shared projection');
+assert.match(renderer, /if\(room\.status==='lobby'\)\{setFullMap\(room\)/, 'Switching between 5000-high maps and 3750-high v2 must recenter the full-map camera');
+assert.doesNotMatch(renderer, /v2Destination\(|Math\.min\(canvas\.width\/v\.width/, 'V2 must not retain an inset letterbox projection');
 assert.match(huancavelicaV2Map, /globalCompositeOperation='destination-out'/, 'V2 crater replay must remove pixels from the authored terrain and decor layers');
 assert.match(huancavelicaV2Map, /layerCtx\.arc\(center\.x,center\.y,radius/, 'Uniform world/image scaling must keep v2 crater cuts circular');
 assert.doesNotMatch(huancavelicaV2Map, /drawIsland\(|rockFacet\(|paintRockMass\(|function boulder\(/, 'V2 must never procedurally approximate the supplied terrain art');
@@ -121,6 +126,30 @@ const v2ImagePoint = bitmapV2.huancavelicaV2WorldToImage(1875, 2812.5);
 const v2WorldPoint = bitmapV2.huancavelicaV2ImageToWorld(v2ImagePoint.x, v2ImagePoint.y);
 assert.ok(Math.abs(v2WorldPoint.x - 1875) < 1e-9 && Math.abs(v2WorldPoint.y - 2812.5) < 1e-9, 'V2 world/image transforms must be exact uniform inverses');
 assert.equal(bitmapV2.HUANCAVELICA_V2_WORLD_HEIGHT, 3750, 'A 4:3 authored image must map to a 4:3 world without stretching');
+for (const [canvasWidth,canvasHeight] of [[1600,900],[1280,720],[960,720]]) {
+  for (const view of [{x:0,y:0,width:5000,height:3750},{x:1250,y:800,width:1000,height:750}]) {
+    const projection=bitmapV2.huancavelicaV2Projection(view,canvasWidth,canvasHeight);
+    assert.deepEqual(projection.destination,{x:0,y:0,width:canvasWidth,height:canvasHeight},'Every v2 camera view must fill the canvas');
+    for (const [x,y] of [[view.x,view.y],[view.x+view.width,view.y+view.height],[view.x+view.width*.37,view.y+view.height*.61]]) {
+      const screen=bitmapV2.huancavelicaV2WorldToScreen(x,y,view,canvasWidth,canvasHeight);
+      const back=bitmapV2.huancavelicaV2ScreenToWorld(screen.x,screen.y,view,canvasWidth,canvasHeight);
+      assert.ok(Math.abs(back.x-x)<1e-9&&Math.abs(back.y-y)<1e-9,'V2 screen/world coordinates must round-trip');
+    }
+  }
+}
+const fullV2View={x:0,y:0,width:5000,height:3750};
+const terrainPixel={x:720,y:449},terrainWorld=bitmapV2.huancavelicaV2ImageToWorld(terrainPixel.x,terrainPixel.y);
+const terrainScreen=bitmapV2.huancavelicaV2WorldToScreen(terrainWorld.x,terrainWorld.y,fullV2View,1600,900);
+assert.ok(Math.abs(terrainScreen.x-terrainPixel.x/1448*1600)<1e-9&&Math.abs(terrainScreen.y-terrainPixel.y/1086*900)<1e-9,'Known terrain pixels must map to the same screen point as the authored image');
+const spawnScreen=bitmapV2.huancavelicaV2WorldToScreen(terrainWorld.x,terrainWorld.y-8,fullV2View,1600,900);
+assert.equal(spawnScreen.x,terrainScreen.x,'Vehicle spawn must stay in the same terrain column');
+assert.ok(spawnScreen.y<terrainScreen.y,'Vehicle spawn must remain above its supporting terrain');
+const impactScreen=bitmapV2.huancavelicaV2WorldToScreen(terrainWorld.x,terrainWorld.y,fullV2View,1600,900);
+assert.deepEqual(impactScreen,terrainScreen,'Projectile impact, crater center and terrain contact use one projection');
+const craterRadius=120,projection=bitmapV2.huancavelicaV2Projection(fullV2View,1600,900);
+const craterImageRadius=craterRadius/bitmapV2.HUANCAVELICA_V2_SCALE;
+assert.ok(Math.abs(craterImageRadius*(1600/1448)-craterRadius*projection.scaleX)<1e-9,'Crater horizontal cutout edge must match the projected world collision radius');
+assert.ok(Math.abs(craterImageRadius*(900/1086)-craterRadius*projection.scaleY)<1e-9,'Crater vertical cutout edge must match the projected world collision radius');
 
 assert.match(readme, /wzzzodiac\/carabayllo-secret-wars/, 'README must reference the renamed frontend repository');
 assert.match(readme, /wzzzodiac\.github\.io\/carabayllo-secret-wars\//, 'README must reference the renamed Pages URL');
