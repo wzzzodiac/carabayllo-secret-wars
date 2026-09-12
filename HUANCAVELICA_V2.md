@@ -4,7 +4,7 @@ Huancavelica v2 is an authored-bitmap map, identified by `huancavelica-v2` and r
 
 ## Canonical transform and rendering
 
-The image maps to a 5000×3750 world with one scale, `5000 / 1448`. Camera source rectangles, destination rectangles, collision queries, projectile previews, and crater radii all use that same scale. A canvas whose aspect ratio differs from 4:3 is letterboxed. Independent X/Y stretching is forbidden because it would misalign gameplay and turn round crater cuts into ellipses.
+The image maps to a 5000×3750 world with one uniform scale, `5000 / 1448`. Collision, projectile previews, and crater radii remain in this unchanged authored world/image space. For display, `huancavelicaV2Projection` maps the camera source rectangle onto the entire standard gameplay canvas (1600×900). On a 16:9 canvas this final screen projection is non-uniform: it widens the complete 4:3 composition without cropping islands or leaving bands. Background, terrain, decor, vehicles, labels, pickups, projectile paths and impacts, crater cutouts, and spectator world-space overlays all share the same projection; pointer/aim input uses its exact inverse. A circular world-space crater therefore projects to the same screen-space ellipse in both collision and visible terrain. Do not stretch any layer independently.
 
 Layer order is background, mutable terrain, mutable decor, pickups/aim/gameplay entities, then HUD. Terrain and decor are rebuilt from their clean supplied PNGs whenever the authoritative crater signature changes, and every crater is replayed with `destination-out` in image space.
 
@@ -12,7 +12,7 @@ Layer order is background, mutable terrain, mutable decor, pickups/aim/gameplay 
 
 `assets/huancavelica-v2/mask.png` is a cleaned binary collision mask derived from the supplied Terrain alpha and audited against the supplied Mask. Cleanup removes transparent antialias debris and non-supporting hanging vegetation while preserving 19 authored island masses. The browser decodes this mask once. It is authoritative for visual ground lookup and projectile-preview contact; server state remains authoritative for actual movement, shots, destruction, spawns, and pickups.
 
-The old Huancavelica platform graph is not used by v2 physics. Huancavelica v1 remains available through its existing authored pipeline as a fallback, and all other maps keep their established renderers.
+The old Huancavelica platform graph is not used by v2 physics. Huancavelica v1 remains in code only for legacy-room recovery and regression tests; it is no longer publicly selectable. All other maps keep their established renderers.
 
 ## Revision safety
 

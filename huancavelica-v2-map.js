@@ -21,6 +21,22 @@ export const huancavelicaV2RevisionCompatible=room=>!isHuancavelicaV2Room(room)|
 export function huancavelicaV2ImageToWorld(x,y){return{x:Number(x)*HUANCAVELICA_V2_SCALE,y:Number(y)*HUANCAVELICA_V2_SCALE};}
 export function huancavelicaV2WorldToImage(x,y){return{x:Number(x)/HUANCAVELICA_V2_SCALE,y:Number(y)/HUANCAVELICA_V2_SCALE};}
 
+// The authored image stays 4:3 in world space. Only the final screen projection
+// fills the standard 16:9 canvas, and every world-space overlay uses its inverse.
+export function huancavelicaV2Projection(view,canvasWidth,canvasHeight){
+  const current=view??{x:0,y:0,width:HUANCAVELICA_V2_WORLD_WIDTH,height:HUANCAVELICA_V2_WORLD_HEIGHT};
+  return{
+    source:{x:current.x/HUANCAVELICA_V2_SCALE,y:current.y/HUANCAVELICA_V2_SCALE,width:current.width/HUANCAVELICA_V2_SCALE,height:current.height/HUANCAVELICA_V2_SCALE},
+    destination:{x:0,y:0,width:canvasWidth,height:canvasHeight},
+    scaleX:canvasWidth/current.width,
+    scaleY:canvasHeight/current.height,
+    originX:current.x,
+    originY:current.y
+  };
+}
+export function huancavelicaV2WorldToScreen(x,y,view,canvasWidth,canvasHeight){const p=huancavelicaV2Projection(view,canvasWidth,canvasHeight);return{x:(x-p.originX)*p.scaleX,y:(y-p.originY)*p.scaleY};}
+export function huancavelicaV2ScreenToWorld(x,y,view,canvasWidth,canvasHeight){const p=huancavelicaV2Projection(view,canvasWidth,canvasHeight);return{x:p.originX+x/p.scaleX,y:p.originY+y/p.scaleY};}
+
 function craterContains(crater,x,y){const cx=Number(crater?.x),cy=Number(crater?.y),radius=Math.max(0,Number(crater?.radius));return[cx,cy,radius].every(Number.isFinite)&&radius>0&&(x-cx)**2+(y-cy)**2<=radius**2;}
 export function huancavelicaV2IsSolid(room,x,y){if(!cleanCollisionMask)return false;const image=huancavelicaV2WorldToImage(x,y),px=Math.floor(image.x),py=Math.floor(image.y);if(px<0||px>=HUANCAVELICA_V2_IMAGE_WIDTH||py<0||py>=HUANCAVELICA_V2_IMAGE_HEIGHT)return false;if(!cleanCollisionMask[py*HUANCAVELICA_V2_IMAGE_WIDTH+px])return false;return!(room?.arena?.craters??[]).some(crater=>craterContains(crater,Number(x),Number(y)));}
 
@@ -50,9 +66,7 @@ export function createHuancavelicaV2Painter(ctx,canvas){
 
   function clearCrater(layer,crater){const center=huancavelicaV2WorldToImage(crater.x,crater.y),radius=Number(crater?.radius)/HUANCAVELICA_V2_SCALE;if(![center.x,center.y,radius].every(Number.isFinite)||radius<=0)return;const layerCtx=layer.getContext('2d');layerCtx.save();layerCtx.globalCompositeOperation='destination-out';layerCtx.beginPath();layerCtx.arc(center.x,center.y,radius,0,Math.PI*2);layerCtx.fill();layerCtx.restore();}
   function syncDamage(room){if(!terrainCanvas||!decorCanvas)return;const craters=room?.arena?.craters??[],signature=craters.map(c=>[c.id??'',Number(c.x),Number(c.y),Number(c.radius)].join(':')).join('|');if(signature===damageSignature)return;terrainCanvas=createLayer(terrainImage);decorCanvas=createLayer(decorImage);for(const crater of craters){clearCrater(terrainCanvas,crater);clearCrater(decorCanvas,crater);}damageSignature=signature;}
-  function sourceRect(view){const current=view??{x:0,y:0,width:HUANCAVELICA_V2_WORLD_WIDTH,height:HUANCAVELICA_V2_WORLD_HEIGHT};return{x:current.x/HUANCAVELICA_V2_SCALE,y:current.y/HUANCAVELICA_V2_SCALE,width:current.width/HUANCAVELICA_V2_SCALE,height:current.height/HUANCAVELICA_V2_SCALE};}
-  function destinationRect(view){const current=view??{width:HUANCAVELICA_V2_WORLD_WIDTH,height:HUANCAVELICA_V2_WORLD_HEIGHT},scale=Math.min(canvas.width/current.width,canvas.height/current.height),width=current.width*scale,height=current.height*scale;return{x:(canvas.width-width)/2,y:(canvas.height-height)/2,width,height};}
-  function drawLayer(layer,view){if(!layer)return;const source=sourceRect(view),destination=destinationRect(view);ctx.drawImage(layer,source.x,source.y,source.width,source.height,destination.x,destination.y,destination.width,destination.height);}
+  function drawLayer(layer,view){if(!layer)return;const {source,destination}=huancavelicaV2Projection(view,canvas.width,canvas.height);ctx.drawImage(layer,source.x,source.y,source.width,source.height,destination.x,destination.y,destination.width,destination.height);}
   function drawBackdrop(view){ctx.fillStyle='#061426';ctx.fillRect(0,0,canvas.width,canvas.height);if(backgroundImage?.complete&&backgroundImage.naturalWidth===HUANCAVELICA_V2_IMAGE_WIDTH&&backgroundImage.naturalHeight===HUANCAVELICA_V2_IMAGE_HEIGHT)drawLayer(backgroundImage,view);}
   function drawTerrain(room,view){syncDamage(room);drawLayer(terrainCanvas,view);drawLayer(decorCanvas,view);}
   function getAssetState(){return Object.freeze({ready:Boolean(backgroundImage?.complete&&terrainCanvas&&maskImage?.complete&&decorCanvas&&cleanCollisionMask),width:HUANCAVELICA_V2_IMAGE_WIDTH,height:HUANCAVELICA_V2_IMAGE_HEIGHT,uniformScale:HUANCAVELICA_V2_SCALE,maskSource:'cleaned-binary-mask',damageSignature});}
