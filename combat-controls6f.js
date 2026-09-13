@@ -23,6 +23,16 @@ export function initCombatControls(gameCanvas) {
     }
     const note=panel.querySelector('.pickup-note');
     if(note&&!note.dataset.phase6fPatched){note.dataset.phase6fPatched='true';note.textContent+=' Spectators receive live aim, power and weapon information while waiting for the active turn.';}
+    if(room.terrainPreset==='huancavelica-v2'){
+      const airborne=Boolean(active?.airborne),rows=[...panel.querySelectorAll('.control-line')];
+      if(turnState&&myTurn&&airborne)turnState.textContent='YOUR TURN // AIRBORNE';
+      for(const row of rows){const text=row.querySelector('span')?.textContent??'',value=row.querySelector('strong');if(!value)continue;
+        if(text.includes('move'))value.textContent='GROUND + AIR';
+        else if(text.includes('jump'))value.textContent='UPWARD IMPULSE';
+        else if(airborne&&myTurn&&(text.includes('angle')||text.includes('power')||text.includes('use / fire')))value.textContent='AIR LOCK';
+      }
+      if(note)note.textContent=note.textContent.replace('normal jump cadence is about half a second.','SPACE gives an upward impulse; A/D steer in air. Fire and aim stay locked until landing.');
+    }
   }
   const timer=setInterval(patch,100);
   return Object.freeze({
