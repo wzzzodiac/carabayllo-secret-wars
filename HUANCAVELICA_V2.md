@@ -14,6 +14,10 @@ Layer order is background, mutable terrain, mutable decor, pickups/aim/gameplay 
 
 The old Huancavelica platform graph is not used by v2 physics. Huancavelica v1 remains in code only for legacy-room recovery and regression tests; it is no longer publicly selectable. All other maps keep their established renderers.
 
+## Free airborne controls
+
+For v2 only, SPACE sends one undirected `jump_player` intent. A/D keydown and keyup send `air_move` input state (`-1`, `0`, `1`); simultaneous A+D cancels out. Grounded A/D retains the established 15-unit walking step, while the server's 20 Hz simulation owns airborne acceleration, gravity, collision, landing and void death. The browser never sends positions or a landing target. Each room update carries authoritative `spawn` plus `airborne` velocity/state; the renderer smoothly interpolates snapshots for presentation and camera follow without altering collision. A/D can counter-steer during a jump or a ledge/support-loss fall. F and aim/power controls are disabled until landing, then normal firing resumes. No double jump is sent on browser key repeat.
+
 ## Revision safety
 
 The frontend accepts v2 only when the server announces both:

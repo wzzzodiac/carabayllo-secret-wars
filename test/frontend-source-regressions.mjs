@@ -39,6 +39,8 @@ const phase10 = read('renderer10-huancavelica.js');
 const huancavelicaMap = read('huancavelica-map.js');
 const huancavelicaV2Map = read('huancavelica-v2-map.js');
 const renderer = read('renderer.js');
+const client = read('client.js');
+const controlsV2 = read('combat-controls6f.js');
 const hud = read('renderer6f.js');
 const index = read('index.html');
 const readme = read('README.md');
@@ -150,6 +152,16 @@ const craterRadius=120,projection=bitmapV2.huancavelicaV2Projection(fullV2View,1
 const craterImageRadius=craterRadius/bitmapV2.HUANCAVELICA_V2_SCALE;
 assert.ok(Math.abs(craterImageRadius*(1600/1448)-craterRadius*projection.scaleX)<1e-9,'Crater horizontal cutout edge must match the projected world collision radius');
 assert.ok(Math.abs(craterImageRadius*(900/1086)-craterRadius*projection.scaleY)<1e-9,'Crater vertical cutout edge must match the projected world collision radius');
+
+assert.match(client, /request\('air_move',\{direction\}\)/, 'V2 must send horizontal input state, not client positions');
+assert.match(client, /mutate\('jump_player',\{\}\)/, 'V2 SPACE must send an undirected jump start');
+assert.match(client, /if\(!event\.repeat\)/, 'Key repeat must not create repeated takeoffs');
+assert.match(client, /heldAirKeys\.KeyD.*heldAirKeys\.KeyA/, 'Simultaneous A and D must resolve deterministically');
+assert.match(client, /visualAirborne/, 'Authoritative airborne snapshots must receive visual interpolation');
+assert.match(renderer, /const air=player\.visualAirborne/, 'Renderer must interpolate server airborne snapshots');
+assert.match(renderer, /active\?\.airborne/, 'V2 aim preview must be hidden while firing is locked in air');
+assert.match(controlsV2, /UPWARD IMPULSE/, 'V2 HUD must no longer advertise the old timed jump');
+assert.match(controlsV2, /AIR LOCK/, 'V2 HUD must explain the airborne fire and aim lock');
 
 assert.match(readme, /wzzzodiac\/carabayllo-secret-wars/, 'README must reference the renamed frontend repository');
 assert.match(readme, /wzzzodiac\.github\.io\/carabayllo-secret-wars\//, 'README must reference the renamed Pages URL');
