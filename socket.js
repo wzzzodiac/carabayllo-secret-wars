@@ -3,7 +3,7 @@ import { BACKEND_URL } from './config.js';
 let socketPromise = null;
 
 async function loadSocketIO() {
-  const module = await import('https://cdn.socket.io/4.8.1/socket.io.esm.min.js');
+  const module = await import('./vendor/socket.io.esm.min.js');
   return module.io;
 }
 
