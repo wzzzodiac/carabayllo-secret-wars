@@ -1,3 +1,4 @@
+import {craterCutsPixel} from './simulation/collision.js';
 export const HUANCAVELICA_V2_ID='huancavelica-v2';
 export const HUANCAVELICA_V2_REVISION='huancavelica-v2-bitmap-1';
 export const HUANCAVELICA_V2_COLLISION_MODEL='bitmap-terrain-mask-v2';
@@ -38,7 +39,7 @@ export function huancavelicaV2WorldToScreen(x,y,view,canvasWidth,canvasHeight){c
 export function huancavelicaV2ScreenToWorld(x,y,view,canvasWidth,canvasHeight){const p=huancavelicaV2Projection(view,canvasWidth,canvasHeight);return{x:p.originX+x/p.scaleX,y:p.originY+y/p.scaleY};}
 
 function craterContains(crater,x,y){const cx=Number(crater?.x),cy=Number(crater?.y),radius=Math.max(0,Number(crater?.radius));return[cx,cy,radius].every(Number.isFinite)&&radius>0&&(x-cx)**2+(y-cy)**2<=radius**2;}
-export function huancavelicaV2IsSolid(room,x,y){if(!cleanCollisionMask)return false;const image=huancavelicaV2WorldToImage(x,y),px=Math.floor(image.x),py=Math.floor(image.y);if(px<0||px>=HUANCAVELICA_V2_IMAGE_WIDTH||py<0||py>=HUANCAVELICA_V2_IMAGE_HEIGHT)return false;if(!cleanCollisionMask[py*HUANCAVELICA_V2_IMAGE_WIDTH+px])return false;return!(room?.arena?.craters??[]).some(crater=>craterContains(crater,Number(x),Number(y)));}
+export function huancavelicaV2IsSolid(room,x,y){if(!cleanCollisionMask)return false;const image=huancavelicaV2WorldToImage(x,y),px=Math.floor(image.x),py=Math.floor(image.y);if(px<0||px>=HUANCAVELICA_V2_IMAGE_WIDTH||py<0||py>=HUANCAVELICA_V2_IMAGE_HEIGHT)return false;if(!cleanCollisionMask[py*HUANCAVELICA_V2_IMAGE_WIDTH+px])return false;return!(room?.arena?.craters??[]).some(crater=>craterCutsPixel(crater,px,py,HUANCAVELICA_V2_SCALE));}
 
 function playableBoundary(room,px,py){
   const world=huancavelicaV2ImageToWorld(px+.5,py),above=huancavelicaV2ImageToWorld(px+.5,py-1);if(!huancavelicaV2IsSolid(room,world.x,world.y)||huancavelicaV2IsSolid(room,above.x,above.y))return false;
