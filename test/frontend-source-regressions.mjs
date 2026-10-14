@@ -9,7 +9,7 @@ const bytes = path => fs.readFileSync(new URL(`../${path}`, import.meta.url));
 const sha256 = value => crypto.createHash('sha256').update(value).digest('hex').toUpperCase();
 const pngDimensions = buffer => ({ width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) });
 
-function decodeRgbaPng(buffer) {
+export function decodeRgbaPng(buffer) {
   assert.equal(buffer.toString('hex', 0, 8), '89504e470d0a1a0a');
   let offset = 8, width = 0, height = 0, colorType = 0, bitDepth = 0;
   const compressed = [];

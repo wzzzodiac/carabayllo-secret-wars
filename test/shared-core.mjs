@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {decodeRgbaPng} from './frontend-source-regressions.mjs';
+import {runCoreScenario} from './core-scenario.js';
+const {pixels}=decodeRgbaPng(readFileSync(new URL('../assets/huancavelica-v2/mask.png',import.meta.url)));
+const mask=new Uint8Array(Math.ceil(1448*1086/8));for(let i=0;i<1448*1086;i++)if(pixels[i*4+3]>=128)mask[i>>3]|=1<<(i&7);
+const cases=runCoreScenario(mask),digest=createHash('sha256').update(JSON.stringify(cases)).digest('hex');
+assert.equal(digest,'c50546629d5cd0351d2cf60072f592a96bd59053ae7a55f8febb3d23eee36377','paired Node authority fixture equivalence, 1e-6 world tolerance');
+console.log('G08 browser-distributed pure core vs authority fixture: PASS '+digest);
