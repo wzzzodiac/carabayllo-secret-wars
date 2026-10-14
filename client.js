@@ -1,4 +1,5 @@
 import { CLIENT_CONFIG } from './config.js';
+import {nextVehiclePresentation} from './simulation/vehicle-pose.js';
 import { createSocketBoundary } from './socket.js';
 import { createRenderer } from './renderer.js?v=phase6c-heal-1';
 import { createUI } from './ui.js?v=phase5b-combat-1';
@@ -19,6 +20,26 @@ let activeSocket = null, playerId = null, currentRoom = null, disconnectHandlerB
 let heldMoveDirection = 0, moveTimer = null, moveInFlight = false, pendingAngleDelta = 0, pendingPowerDelta = 0, aimPumpPromise = null;
 const lastAuthoritativeSpawns = new Map();
 const visualMotionClock = new Map();
+const vehiclePresentations=new Map();
+const heldV2Keys={KeyA:false,KeyD:false};let lastAirDirection=0,airInputInFlight=false,pendingAirDirection=null,airEpoch=0;
+function sendAirDirection(direction){
+  if(!isHuancavelicaV2Room(currentRoom)||!activeSocket||!isMyActionTurn())return;
+  pendingAirDirection=direction;if(airInputInFlight)return;
+  airInputInFlight=true;
+  (async()=>{while(pendingAirDirection!=null&&isMyActionTurn()){
+    const value=pendingAirDirection;pendingAirDirection=null;
+    if(value===lastAirDirection)continue;
+    const epoch=airEpoch,result=await request('air_input',{direction:value});if(epoch!==airEpoch)continue;if(result.ok)lastAirDirection=value;
+    else{pendingAirDirection=null;ui.setMessage(humanError(result.error));break;}
+  }})().finally(()=>{airInputInFlight=false;if(pendingAirDirection!=null)sendAirDirection(pendingAirDirection);});
+}
+function setV2HeldKey(code,down){heldV2Keys[code]=down;heldMoveDirection=Number(heldV2Keys.KeyD)-Number(heldV2Keys.KeyA);sendAirDirection(heldMoveDirection);syncV2WalkTimer();}
+function syncV2WalkTimer(){
+  if(!isHuancavelicaV2Room(currentRoom))return;
+  const me=currentRoom?.players.find(p=>p.id===playerId);
+  if(!isMyActionTurn()||me?.airborne||!heldMoveDirection){if(moveTimer)clearInterval(moveTimer);moveTimer=null;return;}
+  if(!moveTimer){sendMoveStep();moveTimer=setInterval(sendMoveStep,MOVE_INTERVAL_MS);}
+}
 const MOVE_INTERVAL_MS = 70, MOVE_VISUAL_MS = 110;
 
 const terrainGroup = document.createElement('div');
@@ -67,6 +88,12 @@ function makeDisplayRoom(room) {
     players: room.players.map(player => {
       const next = { ...player, inventory: (player.inventory ?? []).map(item => item ? { ...item } : null), shield: player.shield ? { ...player.shield } : null, spawn: player.spawn ? { ...player.spawn } : null, motion: player.motion ? { ...player.motion } : null, lastDamage: player.lastDamage ? { ...player.lastDamage } : null };
       if (next.motion) next.motion = normalizeServerMotion(player.id, next.motion, now);
+      if(isHuancavelicaV2Room(room)&&next.spawn){
+        next.airborne=player.airborne?{...player.airborne}:null;
+        next.presentation=nextVehiclePresentation(vehiclePresentations.get(player.id),next.spawn,now);
+        vehiclePresentations.set(player.id,next.presentation);next.motion=null;
+        lastAuthoritativeSpawns.set(player.id,{...next.spawn});return next;
+      }
       const previous = lastAuthoritativeSpawns.get(player.id);
       if (next.spawn && previous && !next.motion && next.alive !== false) {
         const moved = Math.abs(next.spawn.x - previous.x) > .01 || Math.abs(next.spawn.y - previous.y) > .01;
@@ -78,12 +105,12 @@ function makeDisplayRoom(room) {
   };
 }
 
-function stopHeldMove(){heldMoveDirection=0;if(moveTimer)clearInterval(moveTimer);moveTimer=null;}
+function stopHeldMove(){heldV2Keys.KeyA=false;heldV2Keys.KeyD=false;heldMoveDirection=0;sendAirDirection(0);if(moveTimer)clearInterval(moveTimer);moveTimer=null;}
 function clearPendingAim(){pendingAngleDelta=0;pendingPowerDelta=0;}
 function syncTerrainOptions(room){const entries=room?.terrainPresets??[],signature=`random|${entries.map(entry=>`${entry.id}:${entry.name}`).join('|')}`;if(terrainSelect.dataset.signature!==signature){terrainSelect.innerHTML='<option value="random">RANDOM MAP</option>';for(const entry of entries){const option=document.createElement('option');option.value=entry.id;option.textContent=entry.name;terrainSelect.appendChild(option);}terrainSelect.dataset.signature=signature;}}
 function updateTerrainControl(room){syncTerrainOptions(room);const me=room?.players?.find(player=>player.id===playerId);terrainGroup.hidden=!room||room.status!=='lobby';terrainSelect.disabled=!me?.isHost||room?.status!=='lobby';if(room?.terrainPreset)terrainSelect.value=room.terrainPreset;const selectedName=room?.terrainPresets?.find(entry=>entry.id===room.terrainPreset)?.name??terrainSelect.selectedOptions[0]?.textContent??'—';terrainControlLabel.textContent=me?.isHost?`TERRAIN // HOST // ${selectedName}`:`TERRAIN // ${selectedName}`;}
 
-function renderRoom(room){currentRoom=room;if(['started','finished'].includes(room?.status)&&['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))document.activeElement.blur();const me=room?.players?.find(player=>player.id===playerId);if(room?.status!=='started'||room?.match?.activePlayerId!==playerId||room?.match?.projectile||me?.alive===false){stopHeldMove();clearPendingAim();}updateTerrainControl(room);ui.renderRoom(room,playerId);const incompatible=isHuancavelicaV2Room(room)&&!huancavelicaV2RevisionCompatible(room);if(incompatible){ui.startGameButton.disabled=true;ui.setMessage('Huancavelica v2 backend revision required');}renderer.drawArena(makeDisplayRoom(room),playerId);windGusts.update(room);combatControls.update(room,playerId);matchStatsPanel?.update(room,playerId);}
+function renderRoom(room){if(currentRoom?.code!==room?.code){vehiclePresentations.clear();lastAuthoritativeSpawns.clear();visualMotionClock.clear();}currentRoom=room;for(const id of vehiclePresentations.keys())if(!room.players.some(p=>p.id===id))vehiclePresentations.delete(id);if(['started','finished'].includes(room?.status)&&['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))document.activeElement.blur();const me=room?.players?.find(player=>player.id===playerId);if(room?.status!=='started'||room?.match?.activePlayerId!==playerId||room?.match?.projectile||me?.alive===false){airEpoch++;lastAirDirection=0;pendingAirDirection=null;stopHeldMove();clearPendingAim();}syncV2WalkTimer();updateTerrainControl(room);ui.renderRoom(room,playerId);const incompatible=isHuancavelicaV2Room(room)&&!huancavelicaV2RevisionCompatible(room);if(incompatible){ui.startGameButton.disabled=true;ui.setMessage('Huancavelica v2 backend revision required');}renderer.drawArena(makeDisplayRoom(room),playerId);windGusts.update(room);combatControls.update(room,playerId);matchStatsPanel?.update(room,playerId);}
 
 async function ensureConnection(){ui.setBusy(true);ui.setServerStatus('CONNECTING');try{activeSocket=await socketBoundary.connect();ui.setServerStatus('CONNECTED');activeSocket.off('room_state');activeSocket.on('room_state',renderRoom);if(!disconnectHandlerBound){activeSocket.on('disconnect',()=>{disconnectHandlerBound=false;stopHeldMove();clearPendingAim();ui.setServerStatus('OFFLINE');ui.setMessage('Connection closed. Create or join again.');});disconnectHandlerBound=true;}return activeSocket;}finally{ui.setBusy(false);}}
 function request(event,payload={}){return new Promise(resolve=>activeSocket.timeout(8000).emit(event,payload,(err,result)=>resolve(err?{ok:false,error:'request_timeout'}:result||{ok:false,error:'empty_response'})));}
@@ -104,15 +131,15 @@ ui.startGameButton.addEventListener('click',()=>{if(isHuancavelicaV2Room(current
 function isMyActionTurn(){const me=currentRoom?.players.find(player=>player.id===playerId);return currentRoom?.status==='started'&&currentRoom.match?.activePlayerId===playerId&&!currentRoom.match?.projectile&&me?.alive!==false;}
 function canVoteAfkSkip(){const me=currentRoom?.players.find(player=>player.id===playerId),now=Date.now(),remaining=(currentRoom?.match?.turnEndsAt??now)-now,eligibleAt=currentRoom?.match?.afkSkipVote?.eligibleAt??((currentRoom?.match?.turnStartedAt??now)+20_000);return Boolean(activeSocket&&currentRoom?.status==='started'&&currentRoom.match?.activePlayerId!==playerId&&!currentRoom.match?.projectile&&me?.alive!==false&&remaining<=20_000&&now>=eligibleAt);}
 async function toggleAfkSkipVote(){if(!canVoteAfkSkip())return;const result=await request('toggle_afk_skip_vote',{});if(!result.ok){ui.setMessage(humanError(result.error));return;}renderRoom(result.room);if(result.skipped)ui.setMessage('AFK vote passed. Turn skipped.');else ui.setMessage(result.voted?'AFK skip vote added. Press F1 again to withdraw it.':'AFK skip vote withdrawn.');}
-async function sendMoveStep(){if(!heldMoveDirection||!isMyActionTurn()||moveInFlight||!activeSocket)return;moveInFlight=true;try{const result=await request('move_player',{direction:heldMoveDirection});if(!result.ok){if(['movement_limit','terrain_too_steep','not_your_turn','shot_in_flight','player_missing'].includes(result.error))stopHeldMove();if(result.error!=='movement_limit')ui.setMessage(humanError(result.error));return;}renderRoom(result.room);}finally{moveInFlight=false;}}
+async function sendMoveStep(){if(!heldMoveDirection||!isMyActionTurn()||moveInFlight||!activeSocket)return;if(isHuancavelicaV2Room(currentRoom)&&currentRoom.players.find(p=>p.id===playerId)?.airborne){syncV2WalkTimer();return;}moveInFlight=true;try{const result=await request('move_player',{direction:heldMoveDirection});if(!result.ok){if(['movement_limit','terrain_too_steep','not_your_turn','shot_in_flight','player_missing'].includes(result.error))stopHeldMove();if(result.error!=='movement_limit')ui.setMessage(humanError(result.error));return;}renderRoom(result.room);}finally{moveInFlight=false;}}
 function startHeldMove(direction){heldMoveDirection=direction;if(!moveTimer){sendMoveStep();moveTimer=setInterval(sendMoveStep,MOVE_INTERVAL_MS);}}
-function queueAim(angleDelta=0,powerDelta=0){if(!isMyActionTurn())return;pendingAngleDelta+=angleDelta;pendingPowerDelta+=powerDelta;if(aimPumpPromise)return;aimPumpPromise=(async()=>{while(isMyActionTurn()&&(pendingAngleDelta||pendingPowerDelta)){const angleStep=pendingAngleDelta,powerStep=pendingPowerDelta;pendingAngleDelta=0;pendingPowerDelta=0;const payload={};if(angleStep)payload.angle=(currentRoom.match?.aimAngle??45)+angleStep;if(powerStep)payload.power=(currentRoom.match?.aimPower??55)+powerStep;const result=await request('set_aim',payload);if(!result.ok){clearPendingAim();ui.setMessage(humanError(result.error));break;}renderRoom(result.room);}})().finally(()=>{aimPumpPromise=null;});}
-async function fireShot(){stopHeldMove();if(aimPumpPromise)await aimPumpPromise;if(!isMyActionTurn())return;const me=currentRoom.players.find(player=>player.id===playerId),slot=me?.selectedItemSlot??1,item=slot>1?me?.inventory?.[slot-2]:null,label=item?.label??'Basic shot',healAmount=Math.max(0,Math.min(30,100-(me?.hp??100)));const message=item?.type==='shield'?'Shield activated — turn continues.':item?.type==='heal'?`Heal +${healAmount} HP — turn continues.`:`${label} fired.`;await mutate('fire_projectile',{},message);}
+function queueAim(angleDelta=0,powerDelta=0){if(!isMyActionTurn()||(isHuancavelicaV2Room(currentRoom)&&currentRoom.players.find(p=>p.id===playerId)?.airborne))return;pendingAngleDelta+=angleDelta;pendingPowerDelta+=powerDelta;if(aimPumpPromise)return;aimPumpPromise=(async()=>{while(isMyActionTurn()&&(pendingAngleDelta||pendingPowerDelta)){const angleStep=pendingAngleDelta,powerStep=pendingPowerDelta;pendingAngleDelta=0;pendingPowerDelta=0;const payload={};if(angleStep)payload.angle=(currentRoom.match?.aimAngle??45)+angleStep;if(powerStep)payload.power=(currentRoom.match?.aimPower??55)+powerStep;const result=await request('set_aim',payload);if(!result.ok){clearPendingAim();ui.setMessage(humanError(result.error));break;}renderRoom(result.room);}})().finally(()=>{aimPumpPromise=null;});}
+async function fireShot(){if(isHuancavelicaV2Room(currentRoom)&&currentRoom.players.find(p=>p.id===playerId)?.airborne){ui.setMessage('Land before firing.');return;}stopHeldMove();if(aimPumpPromise)await aimPumpPromise;if(!isMyActionTurn())return;const me=currentRoom.players.find(player=>player.id===playerId),slot=me?.selectedItemSlot??1,item=slot>1?me?.inventory?.[slot-2]:null,label=item?.label??'Basic shot',healAmount=Math.max(0,Math.min(30,100-(me?.hp??100)));const message=item?.type==='shield'?'Shield activated — turn continues.':item?.type==='heal'?`Heal +${healAmount} HP — turn continues.`:`${label} fired.`;await mutate('fire_projectile',{},message);}
 function selectItem(slot){if(!currentRoom||!activeSocket||currentRoom.status!=='started')return;const me=currentRoom.players.find(player=>player.id===playerId);if(!me||me.alive===false)return;mutate('select_item',{slot},slot===1?'Basic weapon selected.':`Weapon ${slot} selected.`);}
 
 const gameInfoPanel=document.getElementById('gameInfoPanel');
 gameInfoPanel?.addEventListener('pointerdown',event=>{const button=event.target.closest?.('[data-weapon-slot]');if(!button||button.disabled)return;event.preventDefault();selectItem(Number(button.dataset.weaponSlot));});
-window.addEventListener('keydown',event=>{const code=event.code;if(code==='F1'&&currentRoom?.status==='started'){event.preventDefault();if(!event.repeat&&canVoteAfkSkip())toggleAfkSkipVote();return;}if(['Digit1','Digit2','Digit3'].includes(code)&&!event.repeat){event.preventDefault();selectItem(Number(code.slice(-1)));return;}if(!isMyActionTurn())return;if(['KeyA','KeyD','KeyW','KeyS','KeyQ','KeyE','KeyF','Space'].includes(code))event.preventDefault();if(code==='KeyA'||code==='KeyD'){if(!event.repeat)startHeldMove(code==='KeyA'?-1:1);return;}if(code==='Space'&&!event.repeat){stopHeldMove();const me=currentRoom.players.find(player=>player.id===playerId);mutate('jump_player',{direction:me?.spawn?.facing||1});return;}if(code==='KeyW'||code==='KeyS'){stopHeldMove();queueAim(code==='KeyW'?3:-3,0);return;}if(code==='KeyQ'||code==='KeyE'){stopHeldMove();queueAim(0,code==='KeyE'?5:-5);return;}if(code==='KeyF'&&!event.repeat)fireShot();});
-window.addEventListener('keyup',event=>{if((event.code==='KeyA'&&heldMoveDirection<0)||(event.code==='KeyD'&&heldMoveDirection>0))stopHeldMove();});
+window.addEventListener('keydown',event=>{const code=event.code;if(code==='F1'&&currentRoom?.status==='started'){event.preventDefault();if(!event.repeat&&canVoteAfkSkip())toggleAfkSkipVote();return;}if(['Digit1','Digit2','Digit3'].includes(code)&&!event.repeat){event.preventDefault();selectItem(Number(code.slice(-1)));return;}if(!isMyActionTurn())return;if(['KeyA','KeyD','KeyW','KeyS','KeyQ','KeyE','KeyF','Space'].includes(code))event.preventDefault();if(code==='KeyA'||code==='KeyD'){if(!event.repeat){if(isHuancavelicaV2Room(currentRoom))setV2HeldKey(code,true);else startHeldMove(code==='KeyA'?-1:1);}return;}if(code==='Space'&&!event.repeat){const me=currentRoom.players.find(player=>player.id===playerId);if(isHuancavelicaV2Room(currentRoom)){if(!me?.airborne)mutate('jump_player',{});}else{stopHeldMove();mutate('jump_player',{direction:me?.spawn?.facing||1});}return;}if(code==='KeyW'||code==='KeyS'){if(!isHuancavelicaV2Room(currentRoom))stopHeldMove();queueAim(code==='KeyW'?3:-3,0);return;}if(code==='KeyQ'||code==='KeyE'){stopHeldMove();queueAim(0,code==='KeyE'?5:-5);return;}if(code==='KeyF'&&!event.repeat)fireShot();});
+window.addEventListener('keyup',event=>{if(isHuancavelicaV2Room(currentRoom)&&(event.code==='KeyA'||event.code==='KeyD')){setV2HeldKey(event.code,false);return;}if((event.code==='KeyA'&&heldMoveDirection<0)||(event.code==='KeyD'&&heldMoveDirection>0))stopHeldMove();});
 window.addEventListener('blur',stopHeldMove);window.addEventListener('pagehide',()=>{stopHeldMove();clearPendingAim();matchStatsPanel?.destroy();combatControls.destroy();windGusts.destroy();socketBoundary.disconnect();});
 console.info('Orbital Artillery Phase 7A.1 match stats and rematch ready.');

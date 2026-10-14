@@ -214,3 +214,44 @@ assert.equal(grazingPreview.impact.type,'player');assert.equal(grazingPreview.im
 assert.ok(Math.abs(Math.hypot(grazingPreview.impact.x-target.spawn.x,grazingPreview.impact.y-target.spawn.y+10)-collision.VEHICLE_HITBOX.radius)<.01);
 assert.ok(grazingPreview.dots.every(p=>p.x<grazingPreview.impact.x),'preview stops at first contact');
 console.log('G04 actual renderer preview and G05 60000 raster queries: PASS');
+
+// G07: the base world, camera and only visible vehicle layer sample one pose.
+const {vehiclePose,nextVehiclePresentation,VEHICLE_BODY}=await import('../simulation/vehicle-pose.js');
+const moving={id:'b',name:'B',alive:true,hp:100,spawn:{x:100,y:200,facing:1},presentation:{fromX:0,fromY:100,toX:100,toY:200,startedAt:1000,endsAt:1100,receivedAt:1000}};
+const poseContext={Date:{now:()=>1050},vehiclePose,Math,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),lerp:(a,b,t)=>a+(b-a)*t,smoothstep:t=>t*t*(3-2*t)};
+const basePoseLine=read('renderer.js').split(/\r?\n/).find(l=>l.includes('function visualPlayerPosition('));
+const enhancedPoseSource=read('renderer6f.js').match(/function visualPlayerPosition\([\s\S]*?(?=\s+function worldToScreen)/)[0];
+const basePose=vm.runInNewContext(`(${basePoseLine.trim()})`,poseContext),enhancedPose=vm.runInNewContext(`(${enhancedPoseSource.trim()})`,poseContext);
+assert.deepEqual(JSON.parse(JSON.stringify(basePose(moving))),JSON.parse(JSON.stringify(enhancedPose(moving))));
+assert.equal(basePose(moving).x,50);assert.equal(basePose(moving).y,150);
+assert.equal(nextVehiclePresentation(moving.presentation,moving.spawn,1060),moving.presentation,'identical snapshot does not restart interpolation');
+const continued=nextVehiclePresentation(moving.presentation,{x:200,y:250},1060);
+assert.equal(continued.fromX,60);assert.equal(continued.fromY,160);assert.equal(vehiclePose({spawn:{x:200,y:250},presentation:continued},2000).x,200,'never overshoot');
+let baseBodies=0;
+const worldSource=read('renderer.js').split(/\r?\n/).find(l=>l.includes('function drawWorld('));
+const noop=()=>{},worldContext={ctx:{clearRect:noop},canvas:{width:1600,height:900},currentView:()=>({}),drawBackground:noop,isHuancavelicaV2Room:()=>true,huancavelicaV2RevisionCompatible:()=>true,drawTerrain:noop,drawPreviewSpawns:noop,drawPickups:noop,drawAimPreview:noop,drawVehicle:()=>baseBodies++,visualPlayerPosition:basePose,localPlayerId:'b',drawProjectile:noop,drawLobbyHud:noop,drawResultOverlay:noop};
+vm.runInNewContext(`(${worldSource.trim()})`,worldContext)({status:'started',arena:{},match:{activePlayerId:'b'},players:[moving]});
+assert.equal(baseBodies,0,'v2 base world must not render a second vehicle');
+const translations=[],rectangles=[],recordingCtx=new Proxy({measureText:()=>({width:80}),translate:(...v)=>translations.push(v),roundRect:(...v)=>rectangles.push(v)},{get:(o,k)=>o[k]??noop,set:(o,k,v)=>(o[k]=v,true)});
+const enhancedVehicles=read('renderer6f.js').match(/function drawEnhancedVehicles\([\s\S]*?(?=\s+function drawWeaponBadge)/)[0];
+vm.runInNewContext(`(${enhancedVehicles.trim()})`,{...poseContext,visualPlayerPosition:enhancedPose,overlay:{width:1600,height:900},worldToScreen:(x,y)=>({x:x*.32,y:y*.24}),ctx:recordingCtx,localPlayerId:'b',isHuancavelicaV2Room:()=>true,VEHICLE_BODY,VEHICLE_SCALE:.65})({mode:'team',match:{activePlayerId:'b'},players:[moving]}, {width:5000,height:3750});
+assert.equal(rectangles.filter(v=>Math.abs(v[2]-VEHICLE_BODY.visualWidth*.32)<1e-8&&Math.abs(v[3]-VEHICLE_BODY.visualHeight*.24)<1e-8).length,1,'one actual enhanced body');
+assert.ok(Math.abs(translations[0][1]+VEHICLE_BODY.visualHeight*.24*.52-(150+VEHICLE_BODY.feet)*.24)<1e-8,'visible wheel bottom and collider feet share the same world anchor');
+console.log('G07 single visible body, pose interpolation and feet anchor: PASS');
+
+const sentInputs=[],inputHandlers={};
+const inputContext={Math,Date,Promise,window:{addEventListener:(name,fn)=>inputHandlers[name]=fn},currentRoom:{terrainPreset:'huancavelica-v2',status:'started',players:[{id:'b',alive:true,airborne:{}}],match:{activePlayerId:'b'}},playerId:'b',activeSocket:{},isHuancavelicaV2Room:()=>true,request:async(name,payload)=>{sentInputs.push({name,...payload});return{ok:true};},ui:{setMessage:()=>{}},setInterval:()=>1,clearInterval:()=>{},sendMoveStep:()=>{throw Error('ground timer while airborne');},queueAim:()=>{},fireShot:()=>{},selectItem:()=>{},canVoteAfkSkip:()=>false,toggleAfkSkipVote:()=>{},mutate:(name,payload)=>sentInputs.push({name,...payload})};
+const inputClient=read('client.js'),heldSource=inputClient.slice(inputClient.indexOf('const heldV2Keys='),inputClient.indexOf('const MOVE_INTERVAL_MS'));
+const turnFn=inputClient.split(/\r?\n/).find(l=>l.startsWith('function isMyActionTurn('));
+const stopFn=inputClient.split(/\r?\n/).find(l=>l.startsWith('function stopHeldMove('));
+const keyFns=inputClient.split(/\r?\n/).filter(l=>l.startsWith("window.addEventListener('keydown'")||l.startsWith("window.addEventListener('keyup'")).join('\n');
+vm.runInNewContext('let heldMoveDirection=0,moveTimer=null;const MOVE_INTERVAL_MS=70;'+heldSource+'\n'+turnFn+'\n'+stopFn+'\n'+keyFns,inputContext);
+const keyEvent=(code,repeat=false)=>({code,repeat,preventDefault(){}});
+inputHandlers.keydown(keyEvent('KeyD'));
+for(let i=0;i<12;i++)inputHandlers.keydown(keyEvent('KeyD',true));
+await new Promise(resolve=>setImmediate(resolve));
+inputHandlers.keyup(keyEvent('KeyD'));
+await new Promise(resolve=>setImmediate(resolve));
+assert.deepEqual(sentInputs.map(i=>i.direction),[1,0],'held input changes only, no key-repeat flood');
+inputHandlers.keydown(keyEvent('Space'));assert.equal(sentInputs.length,2,'airborne double jump not sent');
+console.log('G06 actual held-key handlers and bounded sends: PASS');

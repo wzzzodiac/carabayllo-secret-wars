@@ -11,7 +11,7 @@ export function initCombatControls(gameCanvas) {
     const active=room.players?.find(p=>p.id===room.match?.activePlayerId),q=room.match?.projectile,myTurn=room.status==='started'&&room.match?.activePlayerId===playerId;
     const type=q?.weaponType??room.spectatorAim?.selectedItemType??selectedType(room),label=weaponLabel(type),angle=Math.round(room.spectatorAim?.angle??room.match?.aimAngle??45),power=Math.round(room.spectatorAim?.power??room.match?.aimPower??55);
     const turnState=panel.querySelector('.turn-state');
-    if(turnState&&room.status==='started'&&!q){turnState.textContent=myTurn?`YOUR TURN // ${label}`:`SPECTATING ${active?.name??'PLAYER'} // ${label} // ${angle}° // ${power}%`;}
+    if(turnState&&room.status==='started'&&!q){turnState.textContent=myTurn?(active?.airborne?'AIRBORNE // A/D TO STEER':`YOUR TURN // ${label}`):`SPECTATING ${active?.name??'PLAYER'} // ${active?.airborne?'AIRBORNE':label} // ${angle}° // ${power}%`;}
     const grid=panel.querySelector('.info-grid');
     if(grid){
       let weaponCell=[...grid.children].find(cell=>cell.querySelector('span')?.textContent?.trim()==='WEAPON');
