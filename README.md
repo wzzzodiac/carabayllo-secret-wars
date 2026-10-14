@@ -167,3 +167,18 @@ Gameplay-critical state remains server authoritative: turns, projectile resoluti
 Starting-player weighting against the host is intentional unless explicitly redesigned.
 
 Historical versioned documents keep their historical filenames/content. When old documents disagree with current executable source or later snapshots, current source/later snapshots win.
+## Session03: v2 preview and crater parity
+
+The v2 renderer delegates preview contact to `simulation/preview.js` and the
+identical server/browser `simulation/collision.js` contract. The adapter receives
+the renderer's actual loaded mask rather than loading a second module instance.
+Preview uses swept radius51 vehicle contact, competes with bitmap terrain inside
+each segment, and stops at the definitive contact. Air Strike preview columns
+match the corrected designator. Legacy-map behavior is unchanged.
+
+Destroyed-terrain queries sample pixel-centre cuts, matching the server raster.
+Approved PNG assets and world/screen projection are unchanged. Visual cut-edge
+antialiasing has a separate tolerance of one source pixel (3.453 world units).
+Run `node test/frontend-source-regressions.mjs`; it exercises the actual renderer
+preview adapter and 60000 crater-edge queries in addition to existing tests.
+

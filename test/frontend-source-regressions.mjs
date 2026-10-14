@@ -183,3 +183,34 @@ assert.match(readme, /wzzzodiac\.github\.io\/carabayllo-secret-wars\//, 'README 
 assert.doesNotMatch(readme, /wzzzodiac\.github\.io\/orbital-artillery\//, 'README must not advertise the obsolete Pages URL');
 
 console.log('frontend source regressions: PASS');
+
+// G05: every query in a raster pixel must agree with the pixel-centre cut rule.
+const savedImage=globalThis.Image,savedDocument=globalThis.document;
+try {
+  globalThis.Image=class {addEventListener(_,fn){this.fn=fn;}set src(_){this.complete=true;this.naturalWidth=1448;this.naturalHeight=1086;this.fn(this);}};
+  globalThis.document={createElement:()=>({getContext:()=>({drawImage(){},getImageData:()=>({data:v2Mask.pixels})})})};
+  bitmapV2.createHuancavelicaV2Painter({},{});
+  for(const craters of [[{id:'one',x:2490,y:1600,radius:135}],[{id:'one',x:2490,y:1600,radius:135},{id:'two',x:2570,y:1650,radius:72}]]) {
+    const room={arena:{craters}};
+    for(let py=420;py<520;py++)for(let px=670;px<770;px++)for(const fraction of [.1,.5,.9]){
+      const x=(px+fraction)*bitmapV2.HUANCAVELICA_V2_SCALE,y=(py+fraction)*bitmapV2.HUANCAVELICA_V2_SCALE;
+      const cx=(px+.5)*bitmapV2.HUANCAVELICA_V2_SCALE,cy=(py+.5)*bitmapV2.HUANCAVELICA_V2_SCALE;
+      const expected=v2Mask.pixels[(py*1448+px)*4+3]>=128&&!craters.some(c=>(cx-c.x)**2+(cy-c.y)**2<=c.radius**2);
+      assert.equal(bitmapV2.huancavelicaV2IsSolid(room,x,y),expected,`G05 pixel ${px},${py} fraction ${fraction}`);
+    }
+  }
+} finally {globalThis.Image=savedImage;globalThis.document=savedDocument;}
+
+const collision=await import('../simulation/collision.js');
+const {simulateHuancavelicaV2Preview}=await import('../simulation/preview.js');
+const previewSource=read('renderer.js').split(/\r?\n/).find(l=>l.includes('function simulatePreview('));
+const actualPreview=vm.runInNewContext(`(${previewSource.trim()})`,{isHuancavelicaV2Room:bitmapV2.isHuancavelicaV2Room,simulateHuancavelicaV2Preview,huancavelicaV2IsSolid:bitmapV2.huancavelicaV2IsSolid,huancavelicaV2FirstSolidOnSegment:bitmapV2.huancavelicaV2FirstSolidOnSegment});
+const shooter={id:'b',alive:true,spawn:{x:500,y:1000,facing:1}};
+const velocity=815/Math.sqrt(2),grazeT=.5,grazeDy=-velocity+480*grazeT,grazeLength=Math.hypot(velocity,grazeDy);
+const target={id:'a',alive:true,spawn:{x:524+velocity*grazeT-grazeDy/grazeLength*40,y:976-velocity*grazeT+240*grazeT**2+velocity/grazeLength*40+10}};
+const previewRoom={terrainPreset:'huancavelica-v2',arena:{worldWidth:5000,worldHeight:3750,craters:[]},players:[shooter,target],match:{wind:{signed:0}}};
+const grazingPreview=actualPreview(previewRoom,shooter,45,55);
+assert.equal(grazingPreview.impact.type,'player');assert.equal(grazingPreview.impact.targetPlayerId,'a');
+assert.ok(Math.abs(Math.hypot(grazingPreview.impact.x-target.spawn.x,grazingPreview.impact.y-target.spawn.y+10)-collision.VEHICLE_HITBOX.radius)<.01);
+assert.ok(grazingPreview.dots.every(p=>p.x<grazingPreview.impact.x),'preview stops at first contact');
+console.log('G04 actual renderer preview and G05 60000 raster queries: PASS');
