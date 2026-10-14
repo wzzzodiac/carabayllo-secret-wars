@@ -182,3 +182,16 @@ antialiasing has a separate tolerance of one source pixel (3.453 world units).
 Run `node test/frontend-source-regressions.mjs`; it exercises the actual renderer
 preview adapter and 60000 crater-edge queries in addition to existing tests.
 
+## Session04: free-air controls and one visual pose
+
+For Huancavelica v2, SPACE jumps vertically. Hold A/D to steer, release to coast
+or counter-steer to brake. Aim/fire/rejump unlock on physical landing. Held-key
+changes are serialized and key repeat does not flood the authoritative server.
+The base renderer, enhanced vehicle, camera and muzzle use one interpolated
+pose. Only the enhanced renderer draws the v2 vehicle, with world-sized body
+dimensions and wheel contact aligned to the shared physics feet.
+
+`node test/frontend-source-regressions.mjs` covers actual key handlers, release
+races, interpolation retargeting, sole-body rendering and projected foot contact.
+Pair this frontend with the Session04 backend. No approved PNGs were changed.
+
