@@ -195,3 +195,16 @@ dimensions and wheel contact aligned to the shared physics feet.
 races, interpolation retargeting, sole-body rendering and projected foot contact.
 Pair this frontend with the Session04 backend. No approved PNGs were changed.
 
+## Session05: actual browser gameplay core
+
+The `simulation/` pure core is identical to the authority's shared modules.
+`browser-mask.js` packs alpha from the approved mask PNG; it does not generate
+terrain art. Loading, display and network transport remain outside gameplay.
+`package.json` only declares ES modules for Node CI; there are no dependencies.
+
+Run `npm run check` or `node test/shared-core.mjs` for source and shared-core
+regressions. Serve this folder, open `test/core-browser.html`, and press RUN CORE
+EQUIVALENCE for real Chromium execution without a backend/room. It compares the
+same seed, commands, ticks, contacts, masks/cuts, damage and inventory as Node,
+canonicalized to1e-6 world units. The gameplay menu integration follows in06.
+
