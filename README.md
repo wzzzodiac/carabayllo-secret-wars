@@ -208,3 +208,29 @@ EQUIVALENCE for real Chromium execution without a backend/room. It compares the
 same seed, commands, ticks, contacts, masks/cuts, damage and inventory as Node,
 canonicalized to1e-6 world units. The gameplay menu integration follows in06.
 
+## Session06: TRY IT
+
+Open the main-menu **TRY IT** link, or [practice.html](https://wzzzodiac.github.io/carabayllo-secret-wars/practice.html).
+It loads only static files: no room, Socket.IO, Cloud Run or opponent AI.
+Use A/D, SPACE, W/S, Q/E and F, or the aim sliders and JUMP/FIRE buttons.
+The initial aim permits an immediate Basic hit on the nearby stationary dummy.
+LOADOUT and EQUIP LOADOUT expose every existing weapon/utility; carried items
+still consume normally. Sixteen pickup stations restock across the real islands.
+
+The dummy is deliberately anchored, even over destroyed ground, and never gets
+a turn. RESET DUMMY restores its100HP after an attack. RECOVER PLAYER restores
+your vehicle on remaining terrain. RESET ARENA cancels any attack and restores
+terrain, HP, inventory, pickups, camera, event IDs and counters. MAIN MENU exits.
+
+Finite budgets:16 boxes,36 events,100 attacks, a400-cut new-fire threshold and
+512-cut hard ceiling. Reaching the budget requests an explicit reset; old cuts
+are never silently removed. Four reusable sound voices; three visual overlays
+plus base renderer and one simulation RAF, all explicitly disposed on exit/reset.
+The shared terrain validates its crater signature once per read-only body sweep.
+
+`npm run check` includes25 input/simulation lifecycles,20 actual renderer destroy
+chains and600 audio events with bounded voices. Backend tests cover all weapons,
+dummy elimination/recovery, repeated attacks, resource limits and reset behavior.
+Browser QA is desktop Chromium; no physical mobile, other-engine, network-latency
+or multiplayer load certification is claimed. Keyboard movement is required.
+
