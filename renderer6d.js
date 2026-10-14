@@ -227,6 +227,6 @@ export function createRenderer(canvas, config) {
     drawScaffold(){room=null;ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);base.drawScaffold();},
     drawArena(nextRoom,nextLocalPlayerId=null){room=nextRoom;localPlayerId=nextLocalPlayerId;base.drawArena(nextRoom,nextLocalPlayerId);},
     getViewSnapshot(){return exactView(room);},
-    destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlayCanvas.remove();}
+    destroy(){if(frameId)cancelAnimationFrame(frameId);frameId=null;overlayCanvas.remove();base.destroy?.();}
   });
 }

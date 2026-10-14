@@ -20,6 +20,7 @@ export function createRenderer(canvas, config) {
   }
   function emitVisualSfx(key,name,volume=1){
     if(visualSfxSeen.has(key))return;
+    if(visualSfxSeen.size>=256)visualSfxSeen.delete(visualSfxSeen.values().next().value);
     visualSfxSeen.add(key);
     window.dispatchEvent(new CustomEvent('orbital-visual-sfx',{detail:{key,name,volume,emittedAt:Date.now()}}));
   }

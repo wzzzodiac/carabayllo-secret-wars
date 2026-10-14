@@ -8,3 +8,6 @@ const mask=new Uint8Array(Math.ceil(1448*1086/8));for(let i=0;i<1448*1086;i++)if
 const cases=runCoreScenario(mask),digest=createHash('sha256').update(JSON.stringify(cases)).digest('hex');
 assert.equal(digest,'c50546629d5cd0351d2cf60072f592a96bd59053ae7a55f8febb3d23eee36377','paired Node authority fixture equivalence, 1e-6 world tolerance');
 console.log('G08 browser-distributed pure core vs authority fixture: PASS '+digest);
+if(process.argv.includes('--practice')){
+ const {runPracticeRegressions}=await import('./practice-regressions.mjs');runPracticeRegressions(mask);
+}
