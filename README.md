@@ -127,6 +127,21 @@ The match-start presentation is intentionally minimal: **START + map + mode**. I
 
 ## Automated coverage
 
+Session02 v2 multi-impact presentation consumes the server's `bitmapFlight`
+coefficients and definitive `impactId`, `x/y` and `impactAt` for Cluster children
+and Air Strike shells. It does not invent a different sine/eased trajectory for
+these contacts. Legacy events retain their existing presentation. Stable impact
+IDs deduplicate impact SFX. The Nuke renderer and bitmap crater replay are
+unchanged; the companion backend sends the complete beam and its circular cuts.
+Use this branch together with the Session02 backend review branch.
+
+Run `node test/frontend-source-regressions.mjs` (also run by CI). In addition to
+the existing art/hash and projection checks, a canvas recorder exercises both
+actual v2 flight renderers, their final pulses and one-shot SFX identities.
+Local QA uses two browser clients on port4173 and the actual server on port3000;
+deterministic preload fixtures only set inventory, wind, HP and starting poses.
+They are not shipped and do not replace UI fire or Socket.IO resolution.
+
 Regression coverage includes movement/jump behavior, adaptive vault, natural drop, embedded-terrain recovery, projectile/terrain collision, projectile pacing, Nuke timing/damage/terrain behavior, weapon balance, Shield sequences, radial Cluster/Air damage, disconnect handling, stats, rematch, pickup pacing, edge-graze pickup contact, airborne pickup sweep, and inactivity-based AFK eligibility.
 
 Frontend CI syntax-checks the active renderer, controls, music and SFX modules. Audible timing/game feel still requires manual browser runtime verification.

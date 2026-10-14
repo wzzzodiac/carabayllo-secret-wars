@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import zlib from 'node:zlib';
+import vm from 'node:vm';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const bytes = path => fs.readFileSync(new URL(`../${path}`, import.meta.url));
@@ -42,6 +43,32 @@ const renderer = read('renderer.js');
 const hud = read('renderer6f.js');
 const index = read('index.html');
 const readme = read('README.md');
+
+// Exercise the actual composed presentation with a canvas recorder: v2 flight
+// coordinates must come from the server, not the legacy endpoint sine/ease.
+for (const type of ['cluster','airstrike']) {
+  const arcs=[],sfx=[],frames=[];
+  const context=new Proxy({arc:(...args)=>arcs.push(args)}, {get:(o,k)=>o[k]??(()=>{})});
+  const overlay={width:1600,height:900,style:{},setAttribute(){},getContext:()=>context};
+  let time=1500;
+  const sandbox={Math,Date:{now:()=>time},document:{createElement:()=>overlay},
+    requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},cancelAnimationFrame(){},
+    window:{dispatchEvent:event=>sfx.push(event.detail)},CustomEvent:class {constructor(_,data){this.detail=data.detail;}},
+    createPhase6fRenderer:()=>({drawArena(){},getViewSnapshot:()=>({x:0,y:0,width:1600,height:900})})};
+  const source=visual.replace(/^import[^\n]+\n/,'').replace('export function createRenderer','function createRenderer');
+  const create=vm.runInNewContext(`${source}\ncreateRenderer`,sandbox);
+  const rendererUnderTest=create({width:1600,height:900,parentElement:{appendChild(){}}},{});
+  const flight={id:'attack:child',impactId:'attack:child',bitmapFlight:true,startX:100,startY:700,vx:120,vy:-200,
+    gravity:400,windAccel:0,startedAt:1000,visualStartAt:1000,impactAt:2000,durationMs:1000,x:220,y:700};
+  const projectile={id:'attack',weaponType:type,startedAt:0,impactAt:500,
+    impactX:900,impactY:900,clusterImpacts:type==='cluster'?[flight]:[],airStrikeShells:type==='airstrike'?[flight]:[]};
+  rendererUnderTest.drawArena({status:'started',arena:{},match:{projectile}});
+  frames[0]();
+  assert.ok(arcs.some(([x,y,r])=>x===160&&y===650&&r===(type==='cluster'?10:12)),`${type} orb follows transmitted trajectory at t=.5s`);
+  time=2050;frames[0]();frames[0]();
+  assert.equal(sfx.filter(e=>e.key==='attack:child').length,1,`${type} stable impact ID emits once`);
+  assert.ok(arcs.some(([x,y])=>Math.abs(x-220)<.0001&&Math.abs(y-700)<.0001),`${type} impact pulse uses definitive contact`);
+}
 
 assert.doesNotMatch(visual, /ctx\.moveTo\(tail\.x,t\.y\)/, 'Air Strike trail must not reference an undefined t variable');
 assert.match(visual, /ctx\.moveTo\(tail\.x,tail\.y\)/, 'Air Strike trail must use the tail y coordinate');
