@@ -1,4 +1,4 @@
-import {ANIMALS,CARTS,normalizeAppearance} from './appearance.js';
+import {ANIMALS,CARTS,normalizeAppearance} from './appearance.js?v=english-release-20261025';
 import {drawAppearancePreview} from './mini-avatar.js?v=somber-v1-20261025';
 const STORAGE_KEY='carabayllo-appearance-v1';
 export function readAppearance(){
@@ -11,7 +11,7 @@ export function mountAppearancePicker(root,{compact=false,onChange=()=>{},signal
  root.classList.add('appearance-picker');if(compact)root.classList.add('is-compact');
  root.innerHTML=(compact?'':'<canvas width="256" height="192" role="img" aria-label="Your character"></canvas>')+
  '<div class="appearance-fields"><label>ANIMAL<select aria-label="Animal">'+options(ANIMALS)+'</select></label>'+
- '<label>VEHÍCULO<select aria-label="Cart">'+options(CARTS)+'</select></label></div>';
+ '<label>VEHICLE<select aria-label="Cart">'+options(CARTS)+'</select></label></div>';
  const animal=root.querySelector('[aria-label="Animal"]'),cart=root.querySelector('[aria-label="Cart"]'),preview=root.querySelector('canvas');
  function setValue(next,{persist=true}={}){
   value=normalizeAppearance(next);animal.value=value.animal;cart.value=value.cart;

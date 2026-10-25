@@ -4,7 +4,7 @@ import {createPracticeSession} from './simulation/practice.js?v=contact-fix-2026
 import {createPracticeLoop} from './practice-loop.js?v=desktop-clean-20261024';
 import {createPracticeAudio} from './practice-audio.js?v=feel11-20261024';
 import {createRenderer} from './renderer10-huancavelica.js?v=feel11-20261024&look=pickup-spin-20261025';
-import {mountAppearancePicker} from './appearance-picker.js?v=somber-v1-20261025';
+import {mountAppearancePicker} from './appearance-picker.js?v=english-release-20261025';
 import {drawWeaponIcon} from './weapon-art.js?v=pickup-spin-20261025';
 const $=id=>document.getElementById(id),canvas=$('gameCanvas'),message=$('practiceMessage'),abort=new AbortController();
 const names={basic:'Basic',heavy:'Heavy Bomb',triple:'Triple Shot',cluster:'Cluster Bomb',airstrike:'Air Strike',nuke:'Nuke Laser',shield:'Shield',heal:'Heal +20'};
