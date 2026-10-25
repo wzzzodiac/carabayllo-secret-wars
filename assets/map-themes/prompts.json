@@ -1,0 +1,30 @@
+[
+  {
+    "id": "rolling",
+    "kind": "background",
+    "prompt": "Use case: background-extraction. Edit target: approved Chacras del Chillon game concept. Create the BACKGROUND ONLY layer of this same scene. Remove ALL large foreground cross-section playable ground, raised ledges, foreground grass lip and underground rocks, filling the removed lower area with the distant agricultural valley scene continuing naturally: orchards, corn fields, irrigation river, green fields and dry Peruvian foothills. Keep the beautiful illustrated painterly style, bright sky and clouds, warm palette, houses, original distant composition. Landscape 16:9, no text, no characters, no UI. This image is a non-colliding scenery layer; do not leave any large foreground playable terrain.",
+    "reference": "../../../concept-art/map-themes-20261025/01-chacras-del-chillon.png",
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "brokenridge",
+    "kind": "background",
+    "prompt": "Use case: background-extraction. Edit target: approved Cantera de Carabayllo concept. Create BACKGROUND ONLY layer. Remove ALL foreground playable cross-section ground, six raised rock ledges and three dark vertical foreground fissures. Extend distant quarry scenery naturally into lower area: terraced distant ochre quarry, Peruvian desert hills, tiny distant town, crane and excavator confined to background, warm orange sunset, blue-violet shadow haze. Preserve approved illustrated painterly style and composition, landscape 16:9. No text, characters, UI, foreground ground or playable ledges.",
+    "reference": "../../../concept-art/map-themes-20261025/05-cantera-de-carabayllo-v2.png",
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "rolling",
+    "kind": "terrain",
+    "prompt": "Use case: background-extraction. Edit target: approved Chacras del Chillon game concept. Extract ONLY the continuous FOREGROUND PLAYABLE CROSS-SECTION GROUND as a transparent PNG, preserving its illustration: honey-brown chunky stone, fertile earth, hanging roots, vines and flowers, bright short grass lip, FOUR raised flat-topped ledges with original arrangement. Keep the same panorama composition and entire ground body extending to the image bottom. Remove the sky, clouds, all distant mountains, valley, houses, corn fields behind the playable lip, fences and any background imagery completely to genuine transparency. Alpha is solid within the rock body. No black matte or checkerboard. No text, characters, props floating in sky. The ground still fills full width and reaches the bottom. Preserve exact rich approved rock art rather than simplifying. Landscape 16:9.",
+    "reference": "../../../concept-art/map-themes-20261025/01-chacras-del-chillon.png",
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "brokenridge",
+    "kind": "terrain",
+    "prompt": "Use case: background-extraction. Edit target: approved Cantera de Carabayllo concept. Extract ONLY foreground PLAYABLE CROSS-SECTION GROUND as transparent PNG. Preserve rich ochre terracotta rock strata illustration and sparse dry grass / succulents along the rim, SIX raised flat-topped ledges, original arrangement. Exactly THREE full-depth open fissures at x20.2–22.8%, x48.2–51%, x77.2–79.6%, from top of ground all the way down bottom, leave them TRANSPARENT. Four separate ground sections extend to image bottom. Remove ALL sky, distant quarry scenery, machinery, mountains and distant buildings to genuine transparency. The dark blue contents of the fissures are BACKGROUND and must be removed to transparent as well. Solid rock body retains opaque alpha. No black matte, no checkerboard, no text or characters. Preserve approved art rather than simplifying. Landscape 16:9.",
+    "reference": "../../../concept-art/map-themes-20261025/05-cantera-de-carabayllo-v2.png",
+    "mode": "built-in image_gen"
+  }
+]

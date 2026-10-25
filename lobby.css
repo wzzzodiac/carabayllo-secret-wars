@@ -1,0 +1,78 @@
+/* Entry and room presentation only; practice keeps its own layout. */
+.lobby-page .shell { width: min(1500px, calc(100% - 40px)); padding: 30px 0 24px; }
+.lobby-page .hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 24px; }
+.lobby-page .eyebrow { margin: 0 0 12px; font-size: 10px; color: var(--muted); }
+.lobby-page h1 { margin: 0; font-size: clamp(25px, 3vw, 42px); letter-spacing: -.04em; }
+.lobby-page h1 span { font-weight: 400; color: #bac8e1; }
+.connection { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.connection::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #778399; }
+.connection[data-state="connected"]::before { background: var(--good); }
+.connection[data-state="connecting"]::before { background: #ffe89a; }
+.connection[data-state="offline"]::before { background: #ff9a9a; }
+.lobby-page .lobby-grid { max-width: 1080px; margin: 28px auto 0; grid-template-columns: .9fr 1.1fr; gap: 24px; align-items: start; }
+.lobby-page .lobby-card { padding: 26px; border-radius: 12px; background: linear-gradient(150deg, #111b2c, #0a101d); min-width: 0; }
+.lobby-page .section-label { margin: 0 0 16px; font-size: 11px; }
+.lobby-page .lobby-card label { margin: 0 0 8px; }
+.lobby-page input, .lobby-page select, .lobby-page button { border-radius: 6px; }
+.lobby-page button, .try-link { font-size: 12px; }
+.lobby-page .primary-action { display: flex; align-items: center; justify-content: space-between; background: #a9c5f5; color: #0a1424; border-color: #a9c5f5; font-weight: 800; }
+.lobby-page .primary-action:hover:not(:disabled) { background: #c4d9ff; }
+.lobby-page .join-row { grid-template-columns: minmax(0, .8fr) 1.2fr; }
+.try-link { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; padding: 18px 0 0; border-top: 1px solid var(--line); color: var(--text); text-decoration: none; font-weight: 700; }
+.try-link small { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 12px; }
+.try-link:hover { color: var(--accent); }
+.lobby-page .room-heading .section-label { margin-bottom: 8px; }
+.lobby-page .empty-room { padding: 45px 0; font-size: 12px; }
+.lobby-page .player-row { grid-template-columns: 22px minmax(0, 1fr) auto auto auto; gap: 8px; border-radius: 6px; font-size: 12px; }
+.lobby-page .player-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-page .room-controls { gap: 10px; grid-template-columns: 1fr 1fr; }
+.lobby-page .room-controls .control-group:has(#terrainSelect), .lobby-page .lobby-hint { grid-column: 1 / -1; }
+.lobby-page .room-controls:has(#modeControls[hidden]) #teamControls { grid-column: 1 / -1; }
+.lobby-page .control-group[hidden], .lobby-page [hidden] { display: none !important; }
+.lobby-page .ready-button { color: var(--good); border-color: #538a65; }
+.lobby-page .start-button:not(:disabled) { background: var(--accent); color: #0a1424; }
+.lobby-page .message { max-width: 1080px; min-height: 0; margin: 12px auto 0; font-size: 11px; }
+.lobby-page .message:empty { display: none; }
+.match-notice { display: flex; align-items: center; justify-content: space-between; border: 1px solid #42624e; background: #101f1b; border-radius: 8px; padding: 12px 16px; margin: 16px 0; font-size: 12px; color: var(--good); }
+.match-notice a { color: var(--good); font-weight: 800; text-decoration: none; padding: 4px; }
+.lobby-page .battle-layout { grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; scroll-margin-top: 16px; }
+.lobby-page .game-frame { border-radius: 8px; }
+.lobby-page .overlay { display: none; }
+.lobby-page .game-info-panel { border-radius: 8px; padding: 12px; gap: 12px; }
+.lobby-page .info-block { padding: 0; border: 0; background: none; }
+.lobby-page .info-block + .info-block { padding-top: 12px; border-top: 1px solid var(--line); }
+.lobby-page .info-block-title { margin-bottom: 8px; }
+.lobby-page .turn-state { font-size: 14px; overflow-wrap: anywhere; }
+.lobby-page .info-grid { gap: 6px 12px; }
+.lobby-page .control-list { gap: 6px; }
+.lobby-page .weapon-list { gap: 5px; }
+.lobby-page .weapon-button { padding: 8px; grid-template-columns: 18px minmax(0, 1fr); font-size: 11px; }
+.lobby-page .weapon-meta { display: none; }
+.lobby-page footer { padding-top: 24px; font-size: 9px; }
+.lobby-page:not([data-phase="battle"]) footer { max-width: 1080px; margin: 0 auto; }
+.lobby-page[data-phase="battle"] #entryPanel, .lobby-page[data-phase="battle"] .room-controls { display: none; }
+.lobby-page[data-phase="battle"] .hero { padding-bottom: 16px; }
+.lobby-page[data-phase="battle"] .eyebrow { display: none; }
+.lobby-page[data-phase="battle"] h1 { font-size: 24px; }
+.lobby-page[data-phase="battle"] .lobby-grid { max-width: none; display: block; margin-top: 18px; }
+.lobby-page[data-phase="battle"] .room-card { min-height: 0; padding: 12px 16px; display: flex; align-items: center; gap: 24px; }
+.lobby-page[data-phase="battle"] .room-heading { align-items: center; border: 0; padding: 0; min-width: 180px; }
+.lobby-page[data-phase="battle"] .room-heading .section-label { display: none; }
+.lobby-page[data-phase="battle"] #activeRoomCode { font-size: 18px; }
+.lobby-page[data-phase="battle"] .player-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.lobby-page[data-phase="battle"] .player-row { display: flex; padding: 7px 9px; }
+.lobby-page[data-phase="battle"] .player-index, .lobby-page[data-phase="battle"] .player-host, .lobby-page[data-phase="battle"] .player-team { display: none; }
+.lobby-page[data-phase="battle"] .message { max-width: none; }
+.lobby-page a:focus-visible, .lobby-page button:focus-visible, #battle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 1180px) {
+  .lobby-page .battle-layout { grid-template-columns: minmax(0, 1fr) 232px; }
+  .lobby-page .game-info-panel { display: flex; }
+}
+@media (max-width: 850px) {
+  .lobby-page .shell { width: calc(100% - 32px); }
+  .lobby-page .lobby-grid { gap: 16px; }
+  .lobby-page .lobby-card { padding: 18px; }
+  .lobby-page .battle-layout { grid-template-columns: 1fr; }
+  .lobby-page .game-info-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lobby-page .player-ready, .lobby-page .player-host { grid-column: auto; }
+}

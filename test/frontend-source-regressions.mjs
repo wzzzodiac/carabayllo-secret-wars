@@ -1,8 +1,12 @@
+import {isBitmapPhysicsRoom,bitmapIsSolid,bitmapFirstSolid,bitmapRevisionCompatible} from '../bitmap-map.js';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import vm from 'node:vm';
+import {drawMiniAvatar,avatarLayout,projectAvatarBounds} from '../mini-avatar.js';
+import {createAvatarWorld,drawAvatarGrounding,drawAvatarContactForeground,drawAvatarDust} from '../avatar-world.js';
+import * as arsenal from '../weapon-art.js';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const bytes = path => fs.readFileSync(new URL(`../${path}`, import.meta.url));
@@ -21,18 +25,21 @@ export function decodeRgbaPng(buffer) {
     if (type === 'IEND') break;
   }
   assert.equal(bitDepth, 8);
-  assert.equal(colorType, 6);
-  const raw = zlib.inflateSync(Buffer.concat(compressed)), stride = width * 4, pixels = Buffer.alloc(stride * height);
+  assert.ok(colorType===6||colorType===2);
+  const channels=colorType===6?4:3;
+  const raw = zlib.inflateSync(Buffer.concat(compressed)), stride = width * channels, pixels = Buffer.alloc(stride * height);
   const paeth = (a, b, c) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c; };
   for (let y = 0, source = 0; y < height; y += 1) {
     const filter = raw[source++], row = y * stride, previous = row - stride;
     for (let x = 0; x < stride; x += 1) {
-      const encoded = raw[source++], left = x >= 4 ? pixels[row + x - 4] : 0, above = y ? pixels[previous + x] : 0, upperLeft = y && x >= 4 ? pixels[previous + x - 4] : 0;
+      const encoded = raw[source++], left = x >= channels ? pixels[row + x - channels] : 0, above = y ? pixels[previous + x] : 0, upperLeft = y && x >= channels ? pixels[previous + x - channels] : 0;
       const prediction = filter === 0 ? 0 : filter === 1 ? left : filter === 2 ? above : filter === 3 ? Math.floor((left + above) / 2) : paeth(left, above, upperLeft);
       pixels[row + x] = (encoded + prediction) & 255;
     }
   }
-  return { width, height, pixels };
+  if(channels===4)return { width, height, pixels };
+  const rgba=Buffer.alloc(width*height*4);for(let i=0;i<width*height;i++){rgba[i*4]=pixels[i*3];rgba[i*4+1]=pixels[i*3+1];rgba[i*4+2]=pixels[i*3+2];rgba[i*4+3]=255;}
+  return {width,height,pixels:rgba};
 }
 
 const visual = read('renderer7a-visual.js');
@@ -47,15 +54,15 @@ const readme = read('README.md');
 // Exercise the actual composed presentation with a canvas recorder: v2 flight
 // coordinates must come from the server, not the legacy endpoint sine/ease.
 for (const type of ['cluster','airstrike']) {
-  const arcs=[],sfx=[],frames=[];
+  const arcs=[],sfx=[],frames=[],sprites=[],impacts=[];
   const context=new Proxy({arc:(...args)=>arcs.push(args)}, {get:(o,k)=>o[k]??(()=>{})});
   const overlay={width:1600,height:900,style:{},setAttribute(){},getContext:()=>context};
   let time=1500;
-  const sandbox={Math,Date:{now:()=>time},document:{createElement:()=>overlay},
+  const sandbox={...arsenal,drawWeaponSprite:(_ctx,type,x,y,options)=>sprites.push({type,x,y,options}),drawWeaponImpact:(_ctx,type,x,y)=>impacts.push({type,x,y}),Math,Date:{now:()=>time},document:{createElement:()=>overlay},
     requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},cancelAnimationFrame(){},
     window:{dispatchEvent:event=>sfx.push(event.detail)},CustomEvent:class {constructor(_,data){this.detail=data.detail;}},
     createPhase6fRenderer:()=>({drawArena(){},getViewSnapshot:()=>({x:0,y:0,width:1600,height:900})})};
-  const source=visual.replace(/^import[^\n]+\n/,'').replace('export function createRenderer','function createRenderer');
+  const source=visual.replace(/^import[^\n]+\n/gm,'').replace('export function createRenderer','function createRenderer');
   const create=vm.runInNewContext(`${source}\ncreateRenderer`,sandbox);
   const rendererUnderTest=create({width:1600,height:900,parentElement:{appendChild(){}}},{});
   const flight={id:'attack:child',impactId:'attack:child',bitmapFlight:true,startX:100,startY:700,vx:120,vy:-200,
@@ -64,14 +71,14 @@ for (const type of ['cluster','airstrike']) {
     impactX:900,impactY:900,clusterImpacts:type==='cluster'?[flight]:[],airStrikeShells:type==='airstrike'?[flight]:[]};
   rendererUnderTest.drawArena({status:'started',arena:{},match:{projectile}});
   frames[0]();
-  assert.ok(arcs.some(([x,y,r])=>x===160&&y===650&&r===(type==='cluster'?10:12)),`${type} orb follows transmitted trajectory at t=.5s`);
+  assert.ok(sprites.some(s=>s.x===160&&s.y===650&&s.type===(type==='cluster'?'child':'airbomb')),`${type} authored sprite follows transmitted trajectory at t=.5s`);
   time=2050;frames[0]();frames[0]();
   assert.equal(sfx.filter(e=>e.key==='attack:child').length,1,`${type} stable impact ID emits once`);
-  assert.ok(arcs.some(([x,y])=>Math.abs(x-220)<.0001&&Math.abs(y-700)<.0001),`${type} impact pulse uses definitive contact`);
+  assert.ok(impacts.some(({x,y})=>Math.abs(x-220)<.0001&&Math.abs(y-700)<.0001),`${type} impact artwork uses definitive contact`);
 }
 
 assert.doesNotMatch(visual, /ctx\.moveTo\(tail\.x,t\.y\)/, 'Air Strike trail must not reference an undefined t variable');
-assert.match(visual, /ctx\.moveTo\(tail\.x,tail\.y\)/, 'Air Strike trail must use the tail y coordinate');
+assert.match(visual, /drawWeaponTrail\(ctx,\[tail,head\]/, 'Air Strike trail must connect its actual tail and head');
 
 assert.doesNotMatch(hud, /remaining\s*<=\s*20000/, 'Spectator F1 visibility must not depend on remaining turn time');
 assert.match(hud, /voteWindow=Boolean\(vote&&now>=eligibleAt\)/, 'Spectator F1 visibility must follow AFK inactivity eligibility');
@@ -80,7 +87,7 @@ assert.match(hud, /AFK SKIP AFTER 20s INACTIVITY/, 'Spectator HUD must describe 
 assert.match(index, /<title>Carabayllo Secret Wars<\/title>/, 'Public title must use the current game name');
 assert.match(index, /CARABAYLLO SECRET WARS \/\/ HUANCAVELICA V2/, 'Footer must identify the authored Huancavelica v2 build');
 assert.match(index, /renderer10-huancavelica\.js\?v=huancavelica-v2-bitmap-1/, 'Public build must load the strict Huancavelica v2 revision');
-assert.match(phase10, /renderer7a-visual\.js\?v=v098-csw-runtime-clean-1/, 'Huancavelica renderer must continue wrapping the cleaned RC renderer instead of replacing stable presentation mechanics');
+assert.match(phase10, /renderer7a-visual\.js\?v=feel11-20261024/, 'Huancavelica must wrap the same renderer chain with the current local camera/audio cache version');
 assert.doesNotMatch(phase10, /createElement\(['"]canvas['"]\)/, 'Huancavelica must not cover vehicles with an opaque post-gameplay canvas');
 assert.match(renderer, /createHuancavelicaPainter/, 'The stable renderer must integrate Huancavelica into the world draw order');
 assert.match(renderer, /drawBackground\(room,view\);[\s\S]{0,180}drawTerrain\(room,view\)/, 'Bitmap scenery and terrain must share the gameplay camera transform');
@@ -204,7 +211,7 @@ try {
 const collision=await import('../simulation/collision.js');
 const {simulateHuancavelicaV2Preview}=await import('../simulation/preview.js');
 const previewSource=read('renderer.js').split(/\r?\n/).find(l=>l.includes('function simulatePreview('));
-const actualPreview=vm.runInNewContext(`(${previewSource.trim()})`,{isHuancavelicaV2Room:bitmapV2.isHuancavelicaV2Room,simulateHuancavelicaV2Preview,huancavelicaV2IsSolid:bitmapV2.huancavelicaV2IsSolid,huancavelicaV2FirstSolidOnSegment:bitmapV2.huancavelicaV2FirstSolidOnSegment});
+const actualPreview=vm.runInNewContext(`(${previewSource.trim()})`,{isBitmapPhysicsRoom,bitmapIsSolid,bitmapFirstSolid,isHuancavelicaV2Room:bitmapV2.isHuancavelicaV2Room,simulateHuancavelicaV2Preview,huancavelicaV2IsSolid:bitmapV2.huancavelicaV2IsSolid,huancavelicaV2FirstSolidOnSegment:bitmapV2.huancavelicaV2FirstSolidOnSegment});
 const shooter={id:'b',alive:true,spawn:{x:500,y:1000,facing:1}};
 const velocity=815/Math.sqrt(2),grazeT=.5,grazeDy=-velocity+480*grazeT,grazeLength=Math.hypot(velocity,grazeDy);
 const target={id:'a',alive:true,spawn:{x:524+velocity*grazeT-grazeDy/grazeLength*40,y:976-velocity*grazeT+240*grazeT**2+velocity/grazeLength*40+10}};
@@ -229,12 +236,12 @@ const continued=nextVehiclePresentation(moving.presentation,{x:200,y:250},1060);
 assert.equal(continued.fromX,60);assert.equal(continued.fromY,160);assert.equal(vehiclePose({spawn:{x:200,y:250},presentation:continued},2000).x,200,'never overshoot');
 let baseBodies=0;
 const worldSource=read('renderer.js').split(/\r?\n/).find(l=>l.includes('function drawWorld('));
-const noop=()=>{},worldContext={ctx:{clearRect:noop},canvas:{width:1600,height:900},currentView:()=>({}),drawBackground:noop,isHuancavelicaV2Room:()=>true,huancavelicaV2RevisionCompatible:()=>true,drawTerrain:noop,drawPreviewSpawns:noop,drawPickups:noop,drawAimPreview:noop,drawVehicle:()=>baseBodies++,visualPlayerPosition:basePose,localPlayerId:'b',drawProjectile:noop,drawLobbyHud:noop,drawResultOverlay:noop};
-vm.runInNewContext(`(${worldSource.trim()})`,worldContext)({status:'started',arena:{},match:{activePlayerId:'b'},players:[moving]});
+const noop=()=>{},worldContext={isBitmapPhysicsRoom,bitmapRevisionCompatible:()=>true,ctx:{clearRect:noop},canvas:{width:1600,height:900},currentView:()=>({}),drawBackground:noop,isHuancavelicaV2Room:()=>true,huancavelicaV2RevisionCompatible:()=>true,drawTerrain:noop,drawPreviewSpawns:noop,drawPickups:noop,drawAimPreview:noop,drawVehicle:()=>baseBodies++,visualPlayerPosition:basePose,localPlayerId:'b',drawProjectile:noop,drawLobbyHud:noop,drawResultOverlay:noop};
+vm.runInNewContext(`(${worldSource.trim()})`,worldContext)({status:'started',terrainPreset:'huancavelica-v2',arena:{},match:{activePlayerId:'b'},players:[moving]});
 assert.equal(baseBodies,0,'v2 base world must not render a second vehicle');
 const translations=[],rectangles=[],recordingCtx=new Proxy({measureText:()=>({width:80}),translate:(...v)=>translations.push(v),roundRect:(...v)=>rectangles.push(v)},{get:(o,k)=>o[k]??noop,set:(o,k,v)=>(o[k]=v,true)});
 const enhancedVehicles=read('renderer6f.js').match(/function drawEnhancedVehicles\([\s\S]*?(?=\s+function drawWeaponBadge)/)[0];
-vm.runInNewContext(`(${enhancedVehicles.trim()})`,{...poseContext,visualPlayerPosition:enhancedPose,overlay:{width:1600,height:900},worldToScreen:(x,y)=>({x:x*.32,y:y*.24}),ctx:recordingCtx,localPlayerId:'b',isHuancavelicaV2Room:()=>true,VEHICLE_BODY,VEHICLE_SCALE:.65})({mode:'team',match:{activePlayerId:'b'},players:[moving]}, {width:5000,height:3750});
+vm.runInNewContext(`(${enhancedVehicles.trim()})`,{...arsenal,...poseContext,avatarWorld:createAvatarWorld(),drawAvatarGrounding,drawAvatarContactForeground,drawAvatarDust,drawMiniAvatar,avatarLayout,projectAvatarBounds,visualPlayerPosition:enhancedPose,overlay:{width:1600,height:900},worldToScreen:(x,y)=>({x:x*.32,y:y*.24}),ctx:recordingCtx,canvas:{width:1600,height:900},localPlayerId:'b',isHuancavelicaV2Room:()=>true,VEHICLE_BODY,VEHICLE_SCALE:.65})({mode:'team',match:{activePlayerId:'b'},players:[moving]}, {width:5000,height:3750});
 assert.equal(rectangles.filter(v=>Math.abs(v[2]-VEHICLE_BODY.visualWidth*.32)<1e-8&&Math.abs(v[3]-VEHICLE_BODY.visualHeight*.24)<1e-8).length,1,'one actual enhanced body');
 assert.ok(Math.abs(translations[0][1]+VEHICLE_BODY.visualHeight*.24*.52-(150+VEHICLE_BODY.feet)*.24)<1e-8,'visible wheel bottom and collider feet share the same world anchor');
 console.log('G07 single visible body, pose interpolation and feet anchor: PASS');

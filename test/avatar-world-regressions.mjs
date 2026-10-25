@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {createAvatarWorld,drawAvatarGrounding,drawAvatarContactForeground} from '../avatar-world.js';
+import {avatarLayout,drawMiniAvatar,projectAvatarBounds} from '../mini-avatar.js';
+export function runAvatarWorldRegressions(){
+ const room={code:'test',arena:{craters:[]}},player={id:'local',alive:true,airborne:null},pos={x:200,y:92,facing:1};
+ const flat=(room,x,y)=>y>=100&&!room.arena.craters.some(c=>(x-c.x)**2+(y-c.y)**2<c.radius**2);
+ const world=createAvatarWorld({isSolid:flat}),before=JSON.stringify({room,player,pos});
+ let frame=world.update(player,pos,room,1000);assert.equal(frame.grounded,true);assert.equal(frame.contacts.filter(Boolean).length,3);
+ const idle=world.update(player,pos,room,1100);assert.notEqual(idle.motion.riderBob,frame.motion.riderBob,'animal breathes while parked');assert.equal(JSON.stringify({room,player,pos}),before,'presentation cannot mutate physics');
+ const moved=world.update(player,{...pos,x:215},room,1150);assert.ok(Math.abs(moved.motion.wheel)>0);assert.ok(world.particles.length>0,'moving on ground kicks up a small bounded trail');
+ assert.ok(Math.abs(moved.motion.riderLean)>0,'acceleration moves the rider independently');
+ const hill=createAvatarWorld({isSolid:(_r,x,y)=>y>=100+(x-200)*.1});
+ const slope=hill.update(player,pos,room,1000);const slopeNext=hill.update(player,pos,room,1050);assert.ok(slopeNext.motion.pitch>0,'chassis follows the local slope');
+ player.airborne={vx:250,vy:-500};world.update(player,{...pos,x:220,y:45},room,1200);const airborne=world.update(player,{...pos,x:230,y:20},room,1250);assert.equal(airborne.grounded,false);
+ const drawCalls=[],ctx=new Proxy({drawImage:(...args)=>drawCalls.push(args)},{get:(o,k)=>o[k]??(()=>{})});
+ drawAvatarContactForeground(ctx,airborne,(x,y)=>({x,y}),{width:1000,height:700},1,1);assert.equal(drawCalls.length,0,'airborne wheels never receive grass occlusion');
+ player.airborne.vy=1100;world.update(player,{...pos,x:235,y:60},room,1300);player.airborne=null;
+ const landed=world.update(player,{...pos,x:235},room,1370);assert.ok(landed.motion.squash<1,'landing compresses the presentation briefly');
+ const count=world.particles.length;world.update(player,{...pos,x:235},room,1380);assert.equal(world.particles.length,count,'same landing is not emitted twice');
+ assert.ok(count<=64);
+ room.arena.craters.push({id:'hole',x:235,y:100,radius:1000});
+ const cut=world.update(player,{...pos,x:235},room,1390);assert.equal(cut.grounded,false);assert.ok(cut.contacts.every(p=>p===null),'destroyed ground immediately removes contact shadows');
+ const ellipses=[];const shadowCtx=new Proxy({ellipse:(...args)=>ellipses.push(args)},{get:(o,k)=>o[k]??(()=>{})});drawAvatarGrounding(shadowCtx,cut,(x,y)=>({x,y}),1,1);assert.equal(ellipses.length,0);
+ const reset=world.update(player,pos,{code:'reset',arena:{craters:[]}},1500);assert.equal(world.particles.length,0,'new arena clears visual trails');assert.equal(world.size,1);
+ for(let i=0;i<180;i++)world.update(player,{...pos,x:200+i*5},{code:'reset',arena:{craters:[]}},1550+i*100);
+ assert.ok(world.particles.length<=64);world.prune([]);assert.equal(world.size,0);world.dispose();assert.equal(world.size,0);assert.equal(world.particles.length,0);
+ const transforms=[],draws=[],translations=[],paintCtx=new Proxy({drawImage:(...args)=>draws.push(args),scale:(...v)=>transforms.push(v),translate:(...v)=>translations.push(v)},{get:(o,k)=>o[k]??(()=>{})});
+ const geometry={x:300,y:400,pxX:1.6,pxY:1.2,facing:-1,motion:{wheel:1,pitch:.1,squash:.97,riderBob:1,riderLean:.02,riderBreath:1.008}};
+ drawMiniAvatar(paintCtx,{animal:'fox',cart:'pnp'},geometry,{fox:{}});assert.equal(draws.length,3,'one complete integrated sprite plus two wheel hub clips');
+ assert.deepEqual(transforms[0],[-1.6,1.6]);assert.equal(translations[0][1]+8*1.6,400+8*1.2,'effects keep the original projected wheel anchor');
+ console.log('World integration: contacts / destroyed support / slope / air / landing / rider lag / wheel textures / bounded particles / cleanup: PASS');
+}

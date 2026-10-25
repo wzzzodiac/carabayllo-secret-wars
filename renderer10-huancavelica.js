@@ -1,4 +1,4 @@
-import { createRenderer as createPhase9Renderer } from './renderer7a-visual.js?v=v098-csw-runtime-clean-1';
+import { createRenderer as createPhase9Renderer } from './renderer7a-visual.js?v=feel11-20261024&look=pickup-spin-20261025';
 import { huancavelicaPlatformY, huancavelicaTerrainY, isHuancavelicaRoom } from './huancavelica-map.js?v=phase10-production-map-3';
 import { HUANCAVELICA_V2_REVISION, huancavelicaV2RevisionCompatible, huancavelicaV2TerrainY, isHuancavelicaV2Room } from './huancavelica-v2-map.js?v=huancavelica-v2-bitmap-1';
 

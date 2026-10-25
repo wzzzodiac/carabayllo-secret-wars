@@ -1,4 +1,4 @@
-import {createGameplayCore} from '../simulation/core.js';
+import {createGameplayCore} from '../simulation/core.js?v=contact-fix-20261025';
 import {HUANCAVELICA_V2_SCALE as scale} from '../simulation/terrain.js';
 export function canonical(value){return JSON.parse(JSON.stringify(value,(k,v)=>typeof v==='number'&&Number.isFinite(v)?Math.round(v*1e6)/1e6:v));}
 export function runCoreScenario(mask){
