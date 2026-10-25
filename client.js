@@ -3,7 +3,7 @@ import {nextVehiclePresentation} from './simulation/vehicle-pose.js';
 import { createSocketBoundary } from './socket.js';
 import { createRenderer } from './renderer.js?v=phase6c-heal-1';
 import { createUI } from './ui.js?v=somber-v1-20261025';
-import {mountAppearancePicker} from './appearance-picker.js?v=somber-v1-20261025';
+import {mountAppearancePicker} from './appearance-picker.js?v=english-release-20261025';
 import { initWindGusts } from './wind-gusts.js?v=phase3-wind-1';
 import { initCombatControls } from './combat-controls.js?v=phase6b-afk-1';
 import { createMatchStatsPanel } from './match-stats7a1.js?v=phase7a1-stats-1';
