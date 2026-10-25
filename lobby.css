@@ -76,3 +76,35 @@
   .lobby-page .game-info-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .lobby-page .player-ready, .lobby-page .player-host { grid-column: auto; }
 }
+
+/* Portrait visitors can browse the cast and watch; gameplay stays keyboard/mouse. */
+@media (max-width: 700px) and (orientation: portrait) {
+  .lobby-page .shell { width: calc(100% - 24px); padding: 20px 0; }
+  .lobby-page .hero { flex-wrap: wrap; gap: 12px; padding-bottom: 18px; }
+  .lobby-page .hero > div { min-width: 0; flex: 1 1 100%; }
+  .lobby-page h1 { font-size: clamp(28px, 8vw, 40px); line-height: 1.03; }
+  .lobby-page h1 span { display: block; }
+  .lobby-page .eyebrow { font-size: 9px; margin-bottom: 10px; }
+  .lobby-page .lobby-grid { grid-template-columns: minmax(0, 1fr); margin-top: 16px; gap: 14px; }
+  .lobby-page .lobby-card { padding: 16px; }
+  .lobby-page input, .lobby-page select { min-width: 0; font-size: 16px; }
+  .lobby-page input, .lobby-page select, .lobby-page button { min-height: 44px; }
+  .lobby-page .appearance-picker { grid-template-columns: 112px minmax(0, 1fr); margin: 16px 0; }
+  .lobby-page .appearance-picker canvas { width: 100%; height: auto; }
+  .lobby-page .appearance-picker select { height: 44px; }
+  .lobby-page .try-link { min-height: 52px; margin-top: 18px; }
+  .lobby-page .empty-room { padding: 24px 0; }
+  .lobby-page .room-heading { gap: 12px; }
+  .lobby-page .player-list .player-row { grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .lobby-page .player-host { display: none; }
+  .lobby-page .player-ready { grid-column: 3; }
+  .lobby-page .player-team { grid-column: 2; font-size: 10px; }
+  .lobby-page .room-controls { grid-template-columns: minmax(0, 1fr); }
+  .lobby-page .room-controls > * { min-width: 0; }
+  .lobby-page .battle-layout { grid-template-columns: minmax(0, 1fr); }
+  .lobby-page .game-info-panel { grid-template-columns: minmax(0, 1fr); }
+  .lobby-page[data-phase="battle"] .room-card { display: block; }
+  .lobby-page[data-phase="battle"] .room-heading { min-width: 0; }
+  .lobby-page[data-phase="battle"] .player-list { margin-top: 10px; }
+  .lobby-page footer { gap: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+}
