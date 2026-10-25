@@ -1,6 +1,8 @@
+import {loadThemedBitmap} from '../bitmap-map.js?v=bitmap-maps-1';
 // The approved mask PNG supplies collision bits; terrain/decor remain untouched.
 let maskPromise;
-export function loadBrowserTerrainMask(){
+export function loadBrowserTerrainMask(mapId='huancavelica-v2'){
+ if(mapId!=='huancavelica-v2')return loadThemedBitmap(mapId).then(entry=>entry.bits);
  return maskPromise??=(async()=>{
   const image=new Image();image.src=new URL('../assets/huancavelica-v2/mask.png',import.meta.url).href;await image.decode();
   if(image.naturalWidth!==1448||image.naturalHeight!==1086)throw new Error('Invalid terrain mask dimensions');

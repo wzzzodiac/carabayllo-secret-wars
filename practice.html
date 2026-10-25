@@ -1,20 +1,20 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070a12">
-<title>TRY IT — Carabayllo Secret Wars</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="practice.css"></head>
-<body><main class="shell"><header class="hero"><p class="eyebrow">CARABAYLLO SECRET WARS / HUANCAVELICA V2</p><h1>TRY IT</h1><p>Real physics. Real terrain destruction. No room, opponent AI or server.</p></header>
-<nav class="practice-toolbar" aria-label="Practice actions"><a class="menu-link" href="./index.html" id="exitPractice">MAIN MENU</a><button type="button" id="resetArena">RESET ARENA</button><button type="button" id="resetDummy">RESET DUMMY</button><button type="button" id="recoverPlayer">RECOVER PLAYER</button><button type="button" id="practiceSound">SOUND ON</button></nav>
-<p id="practiceMessage" class="message" role="status">Loading approved Huancavelica assets…</p>
-<section class="battle-layout"><div class="game-frame" aria-label="Local Huancavelica practice arena"><canvas id="gameCanvas" width="1600" height="900" tabindex="0" aria-label="Practice arena. A D move, Space jump, W S angle, Q E power, F fire."></canvas></div>
-<aside id="gameInfoPanel" class="game-info-panel"><span class="section-label">LOCAL PRACTICE / NO SERVER</span><h2 id="practiceStatus">LOADING</h2>
-<div class="practice-hp"><span>YOU <strong id="playerHp">100 HP</strong></span><span>DUMMY <strong id="dummyHp">100 HP</strong></span></div><p id="damageFeedback" aria-live="polite">The dummy never receives a turn.</p>
-<label for="practiceWeapon">LOADOUT / ANYTIME BETWEEN ATTACKS</label><select id="practiceWeapon"><option value="basic">BASIC</option><option value="heavy">HEAVY BOMB</option><option value="triple">TRIPLE SHOT</option><option value="cluster">CLUSTER BOMB</option><option value="airstrike">AIR STRIKE</option><option value="nuke">NUKE LASER</option><option value="shield">SHIELD</option><option value="heal">HEAL +20</option></select>
-<button type="button" id="equipPracticeWeapon">EQUIP LOADOUT</button><p id="inventoryInfo">Selected: BASIC / Inventory: empty</p>
-<label for="practiceAngle">ANGLE <output id="angleValue">5°</output></label><input id="practiceAngle" type="range" min="5" max="85" step="1" value="5">
-<label for="practicePower">POWER <output id="powerValue">10%</output></label><input id="practicePower" type="range" min="10" max="100" step="1" value="10">
-<div class="button-row"><button type="button" id="practiceJump">JUMP</button><button type="button" id="practiceFire">FIRE / USE</button></div>
-<p class="practice-help"><kbd>A</kbd> / <kbd>D</kbd> move and air-steer · <kbd>SPACE</kbd> jump · <kbd>W</kbd> / <kbd>S</kbd> angle · <kbd>Q</kbd> / <kbd>E</kbd> power · <kbd>F</kbd> fire.<br>Release to coast, counter-steer to brake. Land before firing. Scroll to zoom, drag to pan, double-click to follow.</p>
-<p class="practice-help">All seven pickup types restock across the authored islands. Touch to collect into the same two inventory slots. Loadout equips slot 1; buttons below select carried items.</p>
-<div class="button-row"><button type="button" id="practiceSlot1">1 BASIC</button><button type="button" id="practiceSlot2">2 EMPTY</button><button type="button" id="practiceSlot3">3 EMPTY</button></div>
-<p class="practice-help">Dummy is an anchored solid training target, even at 0 HP or over destroyed ground. It takes no further damage until reset. Recover your vehicle after a fall, or reset the full arena.</p>
-<details><summary>Session diagnostics / budgets</summary><output id="practiceDiagnostics"></output></details></aside></section></main>
-<script type="module" src="practice.js"></script></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090e18">
+<title>Huancavelica — Carabayllo Secret Wars</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="practice.css?v=pickup-spin-20261025"><link rel="stylesheet" href="appearance.css?v=peru-canon3-20261024"></head>
+<body class="practice-page"><main class="practice-shell">
+<header class="practice-header"><div><h1>CARABAYLLO <span>SECRET WARS</span></h1><select class="map-picker" id="practiceMap" aria-label="Map"><option value="huancavelica-v2">Huancavelica</option><option value="rolling">Chacras del Chillón</option><option value="brokenridge">Cantera de Carabayllo</option></select></div><a href="./index.html" id="exitPractice">MENU ↗</a></header>
+<section class="battle-layout" aria-label="Practice arena and loadout">
+<div class="arena-slot"><div class="game-frame"><canvas id="gameCanvas" width="1600" height="900" tabindex="0" aria-label="Huancavelica. A D move. Space jump. W S angle. Q E power. Hold F to charge Basic and release to fire. 1 2 3 select inventory."></canvas></div></div>
+<aside id="gameInfoPanel" class="game-info-panel" aria-label="Loadout and controls">
+<div class="panel-top"><span class="panel-label">PRACTICE</span><span id="practiceStatus" role="status">Loading</span></div>
+<div class="practice-hp"><span>YOU <strong id="playerHp">100</strong></span><span>TARGET <strong id="dummyHp">100</strong></span></div>
+<div id="practiceAppearance" aria-label="Your character"></div>
+<label class="field" for="practiceWeapon"><span>LOADOUT <small>L reload</small></span><select id="practiceWeapon"><option value="basic">Basic</option><option value="heavy">Heavy Bomb</option><option value="triple">Triple Shot</option><option value="cluster">Cluster Bomb</option><option value="airstrike">Air Strike</option><option value="nuke">Nuke Laser</option><option value="shield">Shield</option><option value="heal">Heal +20</option></select></label>
+<div class="equipped"><span class="panel-label">EQUIPPED</span><canvas id="equippedIcon" width="48" height="48" aria-hidden="true"></canvas><strong id="equippedWeapon">Basic</strong></div>
+<div id="inventoryInfo" class="inventory" aria-label="Inventory slots">1 Basic · 2 — · 3 —</div>
+<label class="field" for="practiceAngle"><span>ANGLE <output id="angleValue">5°</output></span><input id="practiceAngle" type="range" min="5" max="85" step="1" value="5"></label>
+<label class="field" for="practicePower"><span>POWER <output id="powerValue">10%</output></span><input id="practicePower" type="range" min="10" max="100" step="1" value="10"></label>
+<div class="controls" aria-label="Keyboard controls"><p>Move <kbd>A D</kbd> · Jump <kbd>Space</kbd></p><p>Angle <kbd>W S</kbd> · Power <kbd>Q E</kbd></p><p>Fire <kbd>F</kbd> <span id="fireHint">hold / release</span></p><p>Slots <kbd>1 2 3</kbd> · Loadout <kbd>L</kbd></p><p class="utility-keys"><kbd>R</kbd> arena · <kbd>T</kbd> target · <kbd>G</kbd> recover · <kbd>M</kbd> sound</p></div>
+</aside></section>
+<footer class="practice-footer"><p id="practiceMessage" role="status">Loading…</p><span>PC · KEYBOARD + MOUSE</span></footer>
+</main><script type="module" src="practice.js?v=pickup-spin-20261025"></script></body></html>

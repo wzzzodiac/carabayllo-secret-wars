@@ -1,4 +1,4 @@
-import { createRenderer as createBaseRenderer } from './renderer.js?v=phase6d-camera-api-1';
+import { createRenderer as createBaseRenderer } from './renderer.js?v=pickup-spin-20261025';
 
 export function createRenderer(canvas, config) {
   const base = createBaseRenderer(canvas, config);
@@ -214,8 +214,6 @@ export function createRenderer(canvas, config) {
     ctx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height);
     if (room?.arena && ['lobby','countdown','started','finished'].includes(room.status)) {
       const view=exactView(room);
-      drawNukePickupOverlay(room,view);
-      drawSelectedNuke(room,view);
       drawNukeBeam(room,view,Date.now());
       drawPhase6eCountdown(room);
     }

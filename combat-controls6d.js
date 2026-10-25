@@ -1,4 +1,4 @@
-import { initCombatControls as initBaseControls } from './combat-controls.js?v=v098-csw-afk-1';
+import { initCombatControls as initBaseControls } from './combat-controls.js?v=lobby-first-20261024';
 
 export function initCombatControls(gameCanvas) {
   const base = initBaseControls(gameCanvas);

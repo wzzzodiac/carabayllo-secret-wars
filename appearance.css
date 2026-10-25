@@ -1,0 +1,14 @@
+.appearance-picker{display:grid;grid-template-columns:148px minmax(0,1fr);align-items:center;gap:12px;margin:12px 0}
+.appearance-picker canvas{width:148px;height:111px;border-radius:8px;background:radial-gradient(ellipse,#25354c,#0a1423);border:1px solid #2c4059}
+.appearance-fields{display:grid;gap:8px;min-width:0}
+.appearance-picker .appearance-fields label{display:grid;gap:5px;margin:0;color:#91a8c2;font:10px ui-monospace,monospace;letter-spacing:.5px}
+.appearance-picker select{box-sizing:border-box;width:100%;min-width:0;height:30px;padding:4px 6px;border:1px solid #3e526f;border-radius:4px;background:#0a1423;color:#edf4ff;font:11px ui-monospace,monospace}
+.appearance-picker select:focus-visible{outline:2px solid #b4db9e;outline-offset:2px}
+.appearance-picker.is-compact{display:block;margin:0}
+.appearance-picker.is-compact .appearance-fields{grid-template-columns:1fr 1fr;gap:8px}
+.appearance-picker select:disabled{opacity:.5}
+.lobby-avatar{width:40px;height:26px;object-fit:contain;grid-row:1;grid-column:1}
+.lobby-page .player-row{grid-template-columns:40px minmax(0,1fr) auto auto auto;padding:6px 9px}
+.lobby-page .player-index{display:none}
+.lobby-page[data-phase="battle"] .lobby-avatar{width:36px;height:28px}
+@media(max-height:680px){.appearance-picker canvas{width:116px;height:87px}.appearance-picker{margin:8px 0;grid-template-columns:116px minmax(0,1fr)}.appearance-picker select{height:28px}}

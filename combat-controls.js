@@ -14,7 +14,7 @@ export function initCombatControls(gameCanvas) {
   function render() {
     const room = currentRoom, playerId = currentPlayerId;
     if (!room || !['started','finished'].includes(room.status)) {
-      panel.innerHTML = '<div class="game-info-empty"><span class="section-label">BATTLE INFO</span><strong>WAITING FOR MATCH</strong><p>Turn data, controls and weapon selection will appear here.</p></div>';
+      panel.innerHTML = '<div class="game-info-empty"><strong>Starting…</strong></div>';
       return;
     }
 
@@ -47,7 +47,7 @@ export function initCombatControls(gameCanvas) {
 
     panel.innerHTML = `
       <section class="info-block">
-        <div class="info-block-title">BATTLE STATUS</div>
+        <div class="info-block-title">MATCH</div>
         <div class="turn-state${myTurn?'':' spectating'}">${esc(stateText)}</div>
         <div class="info-grid">
           <div><span>TURN</span><strong>${esc(room.match?.turnNumber ?? '—')}</strong></div>
@@ -56,12 +56,8 @@ export function initCombatControls(gameCanvas) {
           <div><span>WIND</span><strong>${arrow} ${esc(wind?.strength ?? 0)}</strong></div>
           <div><span>ANGLE</span><strong>${Math.round(room.match?.aimAngle ?? 45)}°</strong></div>
           <div><span>POWER</span><strong>${Math.round(room.match?.aimPower ?? 55)}%</strong></div>
-          <div><span>JUMPS</span><strong>${esc(room.match?.jumpsRemaining ?? 0)} / 2</strong></div>
-          <div><span>ALIVE</span><strong>${alive} / ${room.players?.length ?? 0}</strong></div>
-          <div><span>BOXES</span><strong>${room.pickups?.length ?? 0}</strong></div>
           <div><span>HP</span><strong>${esc(me?.hp ?? 0)}</strong></div>
           <div><span>SHIELD</span><strong>${me?.shield ? 'ACTIVE 50%' : 'OFF'}</strong></div>
-          <div><span>PHASE</span><strong>${esc(room.phase ?? '6B')}</strong></div>
         </div>
       </section>
       <section class="info-block">
@@ -76,13 +72,12 @@ export function initCombatControls(gameCanvas) {
         </div>
       </section>
       <section class="info-block">
-        <div class="info-block-title">WEAPONS // MAX 3</div>
+        <div class="info-block-title">WEAPONS · 1 2 3</div>
         <div class="weapon-list">
           ${weaponButton(1,'BASIC','always available',selected===1,false,false)}
           ${weaponButton(2,inv1?.label ?? 'EMPTY',inv1 ? 'special item' : 'inventory slot 1',selected===2,!inv1,true)}
           ${weaponButton(3,inv2?.label ?? 'EMPTY',inv2 ? 'special item' : 'inventory slot 2',selected===3,!inv2,true)}
         </div>
-        <p class="pickup-note">Shield and Heal activate instantly without ending your turn. Air Strike uses your aimed impact point, warns the arena, then drops seven staggered shells; self and friendly damage are enabled. Pickups are collected by vehicle-hitbox contact, including movement through them while jumping or falling. AFK skip voting becomes visible only after the active player has shown no activity for 20 seconds; any new active-player action hides it again and clears existing votes.</p>
       </section>`;
   }
 

@@ -9,10 +9,10 @@ export const HUANCAVELICA_V2_SCALE=HUANCAVELICA_V2_WORLD_WIDTH/HUANCAVELICA_V2_I
 export const HUANCAVELICA_V2_WORLD_HEIGHT=HUANCAVELICA_V2_IMAGE_HEIGHT*HUANCAVELICA_V2_SCALE;
 
 const ASSET_URLS=Object.freeze({
-  background:new URL('./assets/huancavelica-v2/background.png',import.meta.url).href,
-  terrain:new URL('./assets/huancavelica-v2/terrain.png',import.meta.url).href,
+  background:new URL('./assets/somber-v1/huancavelica/background.png?v=somber-v1-20261025',import.meta.url).href,
+  terrain:new URL('./assets/somber-v1/huancavelica/terrain.png?v=somber-v1-20261025',import.meta.url).href,
   mask:new URL('./assets/huancavelica-v2/mask.png',import.meta.url).href,
-  decor:new URL('./assets/huancavelica-v2/decor.png',import.meta.url).href
+  decor:new URL('./assets/somber-v1/huancavelica/decor.png?v=somber-v1-20261025',import.meta.url).href
 });
 
 let cleanCollisionMask=null;
