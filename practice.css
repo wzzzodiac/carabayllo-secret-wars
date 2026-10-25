@@ -22,3 +22,23 @@
 
 .practice-header>div{display:flex;align-items:center;gap:20px}.practice-header .map-picker{height:28px;max-width:240px;padding:3px 7px;background:#111e30;border:1px solid #3b526c;border-radius:4px;color:#b7edc3;font:11px ui-monospace,monospace}
 .equipped{align-items:center}.equipped canvas{width:30px;height:30px;flex:0 0 30px}.equipped strong{margin-left:auto}
+
+@media (max-width:700px) and (orientation:portrait){
+ .practice-page{height:auto;min-height:100dvh;overflow:auto}
+ .practice-shell{height:auto;min-height:100dvh;padding:16px 12px;grid-template-rows:auto auto auto;align-content:start;gap:16px}
+ .practice-header{align-items:flex-start;gap:10px;padding-bottom:12px}
+ .practice-header>div{min-width:0;flex:1;flex-direction:column;align-items:flex-start;gap:12px}
+ .practice-header h1{font-size:clamp(17px,5vw,23px);line-height:1.15}
+ .practice-header h1 span{display:block}
+ .practice-header .map-picker{max-width:100%;height:44px;font-size:16px}
+ .practice-header a{min-height:44px;display:flex;align-items:center;padding:8px 0;font-size:12px}
+ .practice-page .battle-layout{grid-template-columns:minmax(0,1fr);gap:14px}
+ .practice-page .arena-slot{display:block}
+ .practice-page .game-frame{max-width:100%;width:100%;aspect-ratio:16/9}
+ .practice-page .game-info-panel{min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:16px}
+ .practice-page .appearance-picker select,.practice-page .field select{height:44px;font-size:16px}
+ .practice-page .field input[type=range]{height:28px}
+ .practice-page .controls{margin-top:0;font-size:11px}
+ .practice-page .practice-footer{align-items:flex-start;flex-direction:column;gap:6px}
+ .practice-page .practice-footer p{white-space:normal;overflow-wrap:anywhere}
+}
