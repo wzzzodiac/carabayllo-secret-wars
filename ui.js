@@ -28,12 +28,18 @@ export function createUI() {
   const matchNotice = q('matchNotice');
   const matchNoticeText = q('matchNoticeText');
   const playMatch = q('playMatch');
+  const partyActions = q('partyActions'), returnToLobbyButton = q('returnToLobby'), leavePartyButton = q('leaveParty');
 
   function setBusy(busy) { createRoomButton.disabled = busy; joinRoomButton.disabled = busy; }
 
   function renderRoom(room, playerId) {
     const hasPlayers = Boolean(room?.players?.length);
     const combatStarted = hasPlayers && ['countdown', 'started', 'finished'].includes(room.status);
+    const member = room?.players?.find(player => player.id === playerId);
+    partyActions.hidden = !member;
+    returnToLobbyButton.hidden = !combatStarted;
+    returnToLobbyButton.disabled = !member?.isHost;
+    returnToLobbyButton.title = member?.isHost ? 'Return everyone to the lobby' : 'Host only';
     document.body.dataset.phase = combatStarted ? 'battle' : hasPlayers ? 'lobby' : 'entry';
     battle.hidden = !combatStarted;
     matchNotice.hidden = !combatStarted;
@@ -107,7 +113,7 @@ export function createUI() {
     serverStatus.textContent = {connected: 'Connected', connecting: 'Connecting…', idle: 'On demand', offline: 'Offline'}[state];
   }
 
-  return Object.freeze({ playerName, roomCode, createRoomButton, joinRoomButton, readyButton, teamAButton, teamBButton, teamModeButton, survivalModeButton, startGameButton, setServerStatus, setMessage: value => { actionMessage.textContent = value; }, setBusy, renderRoom });
+  return Object.freeze({ playerName, roomCode, createRoomButton, joinRoomButton, readyButton, teamAButton, teamBButton, teamModeButton, survivalModeButton, startGameButton, returnToLobbyButton, leavePartyButton, setServerStatus, setMessage: value => { actionMessage.textContent = value; }, setBusy, renderRoom });
 }
 
 function esc(value) {
