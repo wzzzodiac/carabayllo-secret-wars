@@ -108,3 +108,7 @@
   .lobby-page[data-phase="battle"] .player-list { margin-top: 10px; }
   .lobby-page footer { gap: 8px; line-height: 1.5; overflow-wrap: anywhere; }
 }
+
+.party-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.party-actions[hidden] { display: none; }
+.party-actions button { min-height: 40px; font-size: 12px; }
